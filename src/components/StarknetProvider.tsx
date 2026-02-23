@@ -7,15 +7,16 @@ import { mainnet, sepolia } from '@starknet-react/chains';
 export function StarknetProvider({ children }: { children: React.ReactNode }) {
     const { connectors } = useInjectedConnectors({
         recommended: [argent(), braavos()],
-        includeRecommended: 'onlyIfNoConnectors',
+        includeRecommended: 'always',
         order: 'random'
     });
 
     return (
         <StarknetConfig
-            chains={[sepolia, mainnet]}
+            chains={[mainnet, sepolia]}
             provider={publicProvider()}
             connectors={connectors}
+            autoConnect
         >
             {children}
         </StarknetConfig>

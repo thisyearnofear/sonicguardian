@@ -17,6 +17,9 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: "Sonic Guardian | ZK-Acoustic Privacy",
   description: "Immutable Identity Verification via Sonic Strudel DNA on Starknet",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

@@ -93,12 +93,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       if (dna) {
         setDna(dna);
         setDnaHash(dna.hash);
-        sessionManager.createSession(secretVibe.trim(), dna.hash, dna.salt);
-        setStatus('Identity Minted. Your frequency is unique.');
-
+        setStatus('Acoustic Signature Ready. Verify via Playback.');
         visualizerRef.current?.updateDNASequence(dna.dna);
-        visualizerRef.current?.playGenerationAnimation();
-
+        visualizerRef.current?.highlightParticles(Array.from({ length: 8 }, (_, i) => i));
         if (audioEnabled) playAudio('success');
       }
     } catch (error) {
@@ -291,11 +288,17 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     </div>
                   </div>
 
-                  <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">
-                    {phase === 'registration'
-                      ? "Define a unique acoustic landscape. This 'vibe' generates an anonymous credential anchored on Starknet."
-                      : "Recall your sonic signature. Verify your credential via ZK-Social Proof of Frequency."}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-[color:var(--color-muted)] leading-relaxed max-w-[280px]">
+                      {phase === 'registration'
+                        ? "Design your acoustic signature. Hear it, tweak it, then anchor it forever."
+                        : "Synthesize your recall phrase. Your sound is your signature."}
+                    </p>
+                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20">
+                      <div className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-pulse" />
+                      <span className="text-[8px] font-bold text-[color:var(--color-success)] uppercase tracking-tighter">Zero-Knowledge Privacy</span>
+                    </div>
+                  </div>
 
                   <div className="relative group">
                     <input
