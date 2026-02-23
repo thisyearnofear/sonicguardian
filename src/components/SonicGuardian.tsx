@@ -25,6 +25,7 @@ import {
   type MusicalChunk,
   type EncodedPattern
 } from '../lib/entropy-encoder';
+import { StrudelEditor } from './StrudelEditor';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -50,7 +51,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('dark');
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [previewPlayingId, setPreviewPlayingId] = useState<string | null>(null);
+  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const [useSecureGeneration, setUseSecureGeneration] = useState(true);
+  const [activeHaps, setActiveHaps] = useState<any[]>([]);
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -63,6 +66,20 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
   useEffect(() => {
     return () => { stopStrudel(); };
+  }, []);
+
+  useEffect(() => {
+    // Set up visual feedback callback
+    const { setDrawCallback } = require('../lib/strudel');
+    setDrawCallback((haps: any[], time: number) => {
+      // Filter to only active haps (currently playing)
+      const active = haps.filter((h: any) => h.isActive(time));
+      setActiveHaps(active);
+    });
+    
+    return () => {
+      setDrawCallback(null);
+    };
   }, []);
 
   useEffect(() => {
@@ -209,14 +226,19 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (previewPlayingId === id) {
       await stopStrudel();
       setPreviewPlayingId(null);
+      setActiveHaps([]);
       return;
     }
     if (previewPlayingId) {
       await stopStrudel();
     }
+    setActiveHaps([]);
     setPreviewPlayingId(id);
     const ok = await playStrudelCode(patternCode);
-    if (!ok) setPreviewPlayingId(null);
+    if (!ok) {
+      setPreviewPlayingId(null);
+      setActiveHaps([]);
+    }
   };
 
   const handleSuggestIdea = async () => {
@@ -373,15 +395,127 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             </div>
           </div>
 
+          {/* Pattern Showcase Section - Interactive Demo */}
+          <div className="lg:col-span-12 mb-12">
+            <div className="text-center mb-6">
+              <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)] mb-2">
+                Strudel Synthesis Library
+              </h3>
+              <p className="text-xs text-[color:var(--color-muted)]">
+                Click to select • Then hit ▶ to hear
+              </p>
+            </div>
+            
+            {/* Pattern Cards Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
+                <button
+                  key={pattern.name}
+                  onClick={() => setSelectedPatternId(pattern.name)}
+                  className={`group p-4 rounded-xl border transition-all text-left ${
+                    selectedPatternId === pattern.name
+                      ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
+                      : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-all ${
+                    selectedPatternId === pattern.name
+                      ? 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)]'
+                      : 'bg-[color:var(--color-foreground)]/5 text-[color:var(--color-muted)]'
+                  }`}>
+                    {selectedPatternId === pattern.name ? '✓' : '♪'}
+                  </div>
+                  <p className="text-[10px] font-bold mb-1">{pattern.name}</p>
+                  <p className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{pattern.vibe}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Code Display Section - Shows when pattern selected */}
+            {selectedPatternId && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="glass rounded-xl p-6 max-w-3xl mx-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-[color:var(--color-primary)]">
+                        {STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)?.name}
+                      </h4>
+                      <span className="px-2 py-0.5 rounded bg-[color:var(--color-primary)]/10 border border-[color:var(--color-primary)]/20 text-[8px] font-bold text-[color:var(--color-primary)] uppercase">
+                        Strudel Code
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handlePreviewPattern(
+                        STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code,
+                        selectedPatternId
+                      )}
+                      className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${
+                        previewPlayingId === selectedPatternId
+                          ? 'bg-[color:var(--color-primary)]/20 border-[color:var(--color-primary)] text-[color:var(--color-primary)]'
+                          : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                      }`}
+                    >
+                      {previewPlayingId === selectedPatternId ? (
+                        <><span className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" /> Stop</>
+                      ) : (
+                        <>▶ Play</>
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div className={`bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border shadow-2xl relative group transition-all duration-150 ${
+                    previewPlayingId === selectedPatternId && activeHaps.length > 0
+                      ? 'border-[color:var(--color-primary)] shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)] scale-[1.01]'
+                      : 'border-blue-500/20'
+                  }`}>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code)}
+                      className="absolute top-3 right-3 p-2 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 transition-all text-xs"
+                      title="Copy code"
+                    >
+                      📋
+                    </button>
+                    
+                    {/* Activity indicator */}
+                    {previewPlayingId === selectedPatternId && activeHaps.length > 0 && (
+                      <div className="absolute top-3 left-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" />
+                        <span className="text-[8px] text-[color:var(--color-primary)] font-bold uppercase tracking-wider">
+                          {activeHaps.length} event{activeHaps.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <code className={`whitespace-pre-wrap break-all leading-relaxed tracking-wider block ${
+                      previewPlayingId === selectedPatternId && activeHaps.length > 0 ? 'mt-6' : ''
+                    }`}>
+                      {STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)?.code.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
+                        if (['(', ')', '.'].includes(part)) return <span key={i} className="opacity-40">{part}</span>;
+                        if (part === '"' || part === "'") return <span key={i} className="text-pink-400">{part}</span>;
+                        if (['note', 's', 'slow', 'fast', 'distort', 'lpf', 'lpq', 'gain', 'stack', 'room'].includes(part))
+                          return <span key={i} className="text-white font-bold">{part}</span>;
+                        return <span key={i}>{part}</span>;
+                      })}
+                    </code>
+                  </div>
+                  
+                  <p className="text-[9px] text-[color:var(--color-muted)] mt-3 text-center italic">
+                    This pattern demonstrates Strudel's live coding syntax • Hear how code becomes sound
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Interface Cards */}
           <div className="lg:col-span-12 max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8">
 
-            {/* Input Side */}
-            <div className="glass rounded-[var(--border-radius)] p-8 space-y-8 flex flex-col justify-between">
+            {/* Input Side - Streamlined */}
+            <div className="glass rounded-[var(--border-radius)] p-8 space-y-6 flex flex-col justify-between">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold tracking-tight">
-                    {phase === 'registration' ? 'Mint Credential' : 'Prove Ownership'}
+                    {phase === 'registration' ? 'Create Guardian' : 'Recover Access'}
                   </h2>
                   <div className="flex gap-2">
                     <WalletButton />
@@ -408,165 +542,133 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {/* Onboarding hint */}
-                  {showOnboarding && phase === 'registration' && (
-                    <div className="p-3 rounded-xl border border-[color:var(--color-primary)]/20 bg-[color:var(--color-primary)]/5 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold text-[color:var(--color-primary)] uppercase tracking-widest">Bitcoin Guardian Setup</p>
+                {phase === 'registration' ? (
+                  // Registration Flow - Secure First
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse" />
+                        <p className="text-[10px] font-bold text-[color:var(--color-success)] uppercase tracking-widest">
+                          Secure Mode • 256-bit Entropy
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+                        System generates cryptographically secure musical pattern. Memorize the chunks for recovery.
+                      </p>
+                    </div>
+
+                    <div className="relative group">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
+                        Bitcoin Address to Guard
+                      </label>
+                      <input
+                        type="text"
+                        value={btcAddress}
+                        onChange={(e) => setBtcAddress(e.target.value)}
+                        placeholder="bc1q... or 1... or 3..."
+                        className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
+                        disabled={isProcessing}
+                      />
+                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
+                      {btcAddress && !isValidBtcAddress(btcAddress) && (
+                        <p className="text-[9px] text-[color:var(--color-error)] mt-1">Invalid Bitcoin address format</p>
+                      )}
+                    </div>
+
+                    {/* Advanced: Custom Pattern (collapsed by default) */}
+                    {!useSecureGeneration && (
+                      <div className="relative group animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
+                          Custom Vibe (Advanced)
+                        </label>
+                        <input
+                          type="text"
+                          value={secretVibe}
+                          onChange={(e) => setSecretVibe(e.target.value)}
+                          placeholder="e.g. A fast, dark industrial techno loop"
+                          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm italic"
+                          disabled={isProcessing}
+                        />
+                        <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setUseSecureGeneration(!useSecureGeneration)}
+                      className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors underline"
+                    >
+                      {useSecureGeneration ? '→ Use custom vibe instead' : '← Back to secure mode'}
+                    </button>
+
+                    {dnaHash && (
+                      <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
                         <button
-                          onClick={() => setUseSecureGeneration(!useSecureGeneration)}
-                          className={`px-2 py-1 rounded text-[8px] font-bold uppercase tracking-wider transition-all ${
-                            useSecureGeneration 
-                              ? 'bg-[color:var(--color-success)]/20 text-[color:var(--color-success)] border border-[color:var(--color-success)]/40' 
-                              : 'bg-[color:var(--color-muted)]/10 text-[color:var(--color-muted)] border border-[color:var(--color-border)]'
+                          onClick={handleCommitToStarknet}
+                          disabled={isCommiting || !isConnected || !btcAddress || !isValidBtcAddress(btcAddress)}
+                          className={`w-full py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${
+                            onChainStatus === 'success'
+                              ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5'
+                              : 'border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed'
                           }`}
                         >
-                          {useSecureGeneration ? '🔒 Secure Mode' : '🎨 Custom Mode'}
+                          {onChainStatus === 'success' ? (
+                            <>✨ Guardian Anchored</>
+                          ) : (
+                            <>
+                              {isConnected ? '🔒 Anchor to Starknet' : '⚠️ Connect Wallet First'}
+                              {isCommiting && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                            </>
+                          )}
                         </button>
                       </div>
-                      {useSecureGeneration ? (
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-[color:var(--color-success)] font-bold">Recommended: Cryptographically Secure Generation</p>
-                          <ol className="text-[10px] text-[color:var(--color-muted)] space-y-0.5 list-decimal list-inside">
-                            <li>Enter your Bitcoin address to guard</li>
-                            <li>Click <span className="text-white font-bold">Generate Secure Guardian</span></li>
-                            <li>System creates pattern with 128+ bits entropy</li>
-                            <li>Hit <span className="text-white font-bold">▶ Play</span> to hear your unique key</li>
-                            <li>Connect wallet &amp; <span className="text-white font-bold">Anchor</span> with ZK proof</li>
-                          </ol>
-                          <p className="text-[8px] text-[color:var(--color-muted)] italic pt-1">
-                            ⚠️ Save the pattern description securely - you'll need it for recovery
-                          </p>
-                        </div>
-                      ) : (
-                        <ol className="text-[10px] text-[color:var(--color-muted)] space-y-0.5 list-decimal list-inside">
-                          <li>Choose a sound or describe your vibe ↓</li>
-                          <li>Enter your Bitcoin address to guard</li>
-                          <li>Click <span className="text-white font-bold">Mint Sonic DNA</span></li>
-                          <li>Hit <span className="text-white font-bold">▶ Play</span> to hear your guardian key</li>
-                          <li>Connect wallet &amp; <span className="text-white font-bold">Anchor</span> with ZK proof</li>
-                        </ol>
-                      )}
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)]">Sound Library — click ▶ to preview</h3>
-                      {useRealAI && (
-                        <button
-                          onClick={handleSuggestIdea}
-                          disabled={isProcessing}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-[color:var(--color-accent)]/10 border border-[color:var(--color-accent)]/20 text-[8px] font-bold text-[color:var(--color-accent)] uppercase tracking-wider hover:bg-[color:var(--color-accent)]/20 transition-all disabled:opacity-50"
-                        >
-                          ✦ Suggest Idea
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
-                        <div
-                          key={pattern.name}
-                          className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-default group ${previewPlayingId === pattern.name
-                            ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10'
-                            : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40'
-                            }`}
-                        >
-                          <button
-                            onClick={() => handlePreviewPattern(pattern.code, pattern.name)}
-                            className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-all ${previewPlayingId === pattern.name
-                              ? 'bg-[color:var(--color-primary)] text-white animate-pulse'
-                              : 'bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-primary)]/20 text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)]'
-                              }`}
-                          >
-                            {previewPlayingId === pattern.name ? '■' : '▶'}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-bold truncate">{pattern.name}</p>
-                            <p className="text-[9px] text-[color:var(--color-muted)] truncate">{pattern.vibe}</p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              const vibe = pattern.vibe;
-                              phase === 'registration' ? setSecretVibe(vibe) : setRecoveryVibe(vibe);
-                            }}
-                            className="shrink-0 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-[color:var(--color-muted)] border border-[color:var(--color-border)] hover:text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            Use
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-[color:var(--color-muted)] leading-relaxed max-w-[280px]">
-                      {phase === 'registration'
-                        ? "Design your acoustic signature. Hear it, tweak it, then anchor it forever."
-                        : "Synthesize your recall phrase. Your sound is your signature."}
-                    </p>
-                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20">
-                      <div className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-pulse" />
-                      <span className="text-[8px] font-bold text-[color:var(--color-success)] uppercase tracking-tighter">Zero-Knowledge Privacy</span>
-                    </div>
-                  </div>
-
-                  <div className="relative group">
-                    <input
-                      type="text"
-                      value={phase === 'registration' ? secretVibe : recoveryVibe}
-                      onChange={(e) => phase === 'registration' ? setSecretVibe(e.target.value) : setRecoveryVibe(e.target.value)}
-                      placeholder={phase === 'registration' ? "e.g. A fast, dark industrial techno loop" : "Synthesize your recall phrase..."}
-                      className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-4 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-xl italic"
-                      disabled={isProcessing}
-                    />
-                    <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
-                  </div>
-
-                  <div className="relative group mt-4">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-                      Bitcoin Address {phase === 'registration' ? '(to guard)' : '(to recover)'}
-                    </label>
-                    <input
-                      type="text"
-                      value={btcAddress}
-                      onChange={(e) => setBtcAddress(e.target.value)}
-                      placeholder="bc1q... or 1... or 3..."
-                      className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
-                      disabled={isProcessing}
-                    />
-                    <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
-                    {btcAddress && !isValidBtcAddress(btcAddress) && (
-                      <p className="text-[9px] text-[color:var(--color-error)] mt-1">Invalid Bitcoin address format</p>
                     )}
                   </div>
-
-                  {dnaHash && phase === 'registration' && (
-                    <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
-                      <button
-                        onClick={handleCommitToStarknet}
-                        disabled={isCommiting || !isConnected || !btcAddress || !isValidBtcAddress(btcAddress)}
-                        className={`w-full py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${onChainStatus === 'success'
-                          ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5'
-                          : 'border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed'
-                          }`}
-                      >
-                        {onChainStatus === 'success' ? (
-                          <>✨ Bitcoin Guardian Anchored</>
-                        ) : (
-                          <>
-                            {isConnected ? '🔒 Anchor Bitcoin Guardian (ZK-Privacy)' : '⚠️ Connect Wallet to Anchor'}
-                            {isCommiting && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-                          </>
-                        )}
-                      </button>
+                ) : (
+                  // Recovery Flow
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20">
+                      <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+                        Enter your musical chunks or vibe to recover access to your Bitcoin guardian.
+                      </p>
                     </div>
-                  )}
-                </div>
+
+                    <div className="relative group">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
+                        Recovery Phrase
+                      </label>
+                      <input
+                        type="text"
+                        value={recoveryVibe}
+                        onChange={(e) => setRecoveryVibe(e.target.value)}
+                        placeholder="Enter your musical chunks..."
+                        className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm"
+                        disabled={isProcessing}
+                      />
+                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
+                    </div>
+
+                    <div className="relative group">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
+                        Bitcoin Address to Recover
+                      </label>
+                      <input
+                        type="text"
+                        value={btcAddress}
+                        onChange={(e) => setBtcAddress(e.target.value)}
+                        placeholder="bc1q... or 1... or 3..."
+                        className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
+                        disabled={isProcessing}
+                      />
+                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
+                      {btcAddress && !isValidBtcAddress(btcAddress) && (
+                        <p className="text-[9px] text-[color:var(--color-error)] mt-1">Invalid Bitcoin address format</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-4 pt-4">
+              <div className="space-y-4 pt-4 border-t border-[color:var(--color-border)]">
                 <button
                   onClick={phase === 'registration' ? handleGenerate : handleRecovery}
                   disabled={isProcessing}
@@ -574,27 +676,25 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--color-primary)] to-[color:var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative z-10">
-                    {isProcessing ? 'Generating...' : (
+                    {isProcessing ? 'Processing...' : (
                       phase === 'registration' 
-                        ? (useSecureGeneration ? 'Generate Secure Guardian' : 'Mint Sonic DNA')
-                        : 'Verify Identity'
+                        ? 'Generate Guardian'
+                        : 'Verify & Recover'
                     )}
                   </span>
                   {isProcessing && <div className="w-4 h-4 border-2 border-[color:var(--background)] border-t-transparent rounded-full animate-spin relative z-10" />}
                 </button>
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => {
-                      setIsLocked(!isLocked);
-                      setPhase(phase === 'registration' ? 'recovery' : 'registration');
-                      setStatus('');
-                    }}
-                    className="flex-1 py-3 rounded-xl border border-[color:var(--color-border)] text-[color:var(--color-muted)] text-xs font-bold uppercase tracking-widest hover:text-[color:var(--color-foreground)] hover:border-[color:var(--color-foreground)] transition-all"
-                  >
-                    Switch Protocol ⇄
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setIsLocked(!isLocked);
+                    setPhase(phase === 'registration' ? 'recovery' : 'registration');
+                    setStatus('');
+                  }}
+                  className="w-full py-3 rounded-xl border border-[color:var(--color-border)] text-[color:var(--color-muted)] text-xs font-bold uppercase tracking-widest hover:text-[color:var(--color-foreground)] hover:border-[color:var(--color-foreground)] transition-all"
+                >
+                  {phase === 'registration' ? 'Switch to Recovery →' : '← Back to Registration'}
+                </button>
               </div>
             </div>
 
@@ -672,41 +772,32 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 {generatedCode && (
                   <div className="space-y-4 animate-in zoom-in-95 duration-500">
                     <div>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Dynamic Pattern Synthesis</h4>
-                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] font-bold text-white/40 uppercase tracking-tighter">Venice AI Privacy-First</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handlePlayback}
-                            className={`p-2 rounded-lg border transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${isAudioPlaying
-                              ? 'bg-[color:var(--color-primary)]/20 border-[color:var(--color-primary)] text-[color:var(--color-primary)]'
-                              : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/30'
-                              }`}
-                          >
-                            {isAudioPlaying ? (
-                              <><span className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" /> Stop</>
-                            ) : (
-                              <>▶ Play Vibe</>
-                            )}
-                          </button>
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Your Sonic Guardian</h4>
+                          <span className="px-1.5 py-0.5 rounded bg-[color:var(--color-primary)]/10 border border-[color:var(--color-primary)]/20 text-[8px] font-bold text-[color:var(--color-primary)] uppercase tracking-tighter">Live Code</span>
                         </div>
                       </div>
-                      <div className="bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border border-blue-500/20 shadow-2xl overflow-hidden group relative">
-                        <div className="absolute top-0 right-0 p-2 opacity-30 group-hover:opacity-100 transition-opacity flex gap-2">
-                          <button onClick={() => navigator.clipboard.writeText(generatedCode)} className="text-white hover:text-blue-400 transition-colors">📋</button>
-                        </div>
-                        <code className="whitespace-pre-wrap break-all leading-relaxed tracking-wider">
-                          {generatedCode.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
-                            if (['(', ')', '.'].includes(part)) return <span key={i} className="opacity-40">{part}</span>;
-                            if (part === '"' || part === "'") return <span key={i} className="text-pink-400">{part}</span>;
-                            if (['s', 'slow', 'fast', 'distort', 'lpf', 'hpf', 'gain', 'stack', 'bank', 'dec', 'echo', 'rev'].includes(part))
-                              return <span key={i} className="text-white font-bold">{part}</span>;
-                            return <span key={i}>{part}</span>;
-                          })}
-                        </code>
-                      </div>
+                      
+                      {/* Strudel Editor - Full REPL Experience */}
+                      <StrudelEditor 
+                        initialCode={generatedCode}
+                        onCodeChange={(newCode) => {
+                          setGeneratedCode(newCode);
+                          // Regenerate DNA hash when code changes
+                          extractSonicDNA(newCode, { includeTimestamp: true }).then(newDna => {
+                            if (newDna) {
+                              setDna(newDna);
+                              setDnaHash(newDna.hash);
+                            }
+                          });
+                        }}
+                        readOnly={false}
+                      />
+                      
+                      <p className="text-[9px] text-[color:var(--color-muted)] mt-3 italic">
+                        Edit the code above to customize your pattern. Changes update your guardian's DNA hash.
+                      </p>
                     </div>
 
                     {/* Gene Network Breakdown */}
@@ -821,21 +912,50 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
                 {!generatedCode && !status && (
                   <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-6">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-[color:var(--color-primary)] blur-3xl opacity-10 animate-pulse" />
-                      <div className="relative text-6xl opacity-30 animate-float">🎵</div>
-                    </div>
-                    <div className="space-y-3 max-w-[280px]">
-                      <div className="text-2xl font-bold opacity-40 italic tracking-tight">Ready to synthesize</div>
-                      <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-                        Choose a sound from the library or describe your vibe. Your acoustic signature will materialize here as cryptographic code.
-                      </p>
-                      <div className="flex items-center justify-center gap-2 pt-2">
-                        <div className="w-1 h-1 bg-[color:var(--color-primary)] rounded-full animate-ping" />
-                        <div className="w-1 h-1 bg-[color:var(--color-accent)] rounded-full animate-ping" style={{ animationDelay: '0.2s' }} />
-                        <div className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-ping" style={{ animationDelay: '0.4s' }} />
+                    {previewPlayingId ? (
+                      // Show the currently playing preview pattern
+                      <div className="w-full space-y-4 animate-in fade-in duration-500">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                          <div className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" />
+                          <p className="text-xs font-bold text-[color:var(--color-primary)] uppercase tracking-widest">
+                            Now Playing: {STRUDEL_PATTERN_LIBRARY.find(p => p.name === previewPlayingId)?.name}
+                          </p>
+                        </div>
+                        <div className="bg-black/60 rounded-xl p-6 font-mono text-xs text-blue-400 border border-blue-500/20 shadow-2xl max-w-[500px] mx-auto">
+                          <code className="whitespace-pre-wrap break-all leading-relaxed tracking-wider">
+                            {STRUDEL_PATTERN_LIBRARY.find(p => p.name === previewPlayingId)?.code.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
+                              if (['(', ')', '.'].includes(part)) return <span key={i} className="opacity-40">{part}</span>;
+                              if (part === '"' || part === "'") return <span key={i} className="text-pink-400">{part}</span>;
+                              if (['s', 'slow', 'fast', 'distort', 'lpf', 'hpf', 'gain', 'stack', 'note', 'room'].includes(part))
+                                return <span key={i} className="text-white font-bold">{part}</span>;
+                              return <span key={i}>{part}</span>;
+                            })}
+                          </code>
+                        </div>
+                        <p className="text-[9px] text-[color:var(--color-muted)] italic">
+                          Click "Use" to set as your guardian pattern, or generate a secure one below
+                        </p>
                       </div>
-                    </div>
+                    ) : (
+                      // Default empty state
+                      <>
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-[color:var(--color-primary)] blur-3xl opacity-10 animate-pulse" />
+                          <div className="relative text-6xl opacity-30 animate-float">🎵</div>
+                        </div>
+                        <div className="space-y-3 max-w-[280px]">
+                          <div className="text-2xl font-bold opacity-40 italic tracking-tight">Ready to synthesize</div>
+                          <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+                            Click ▶ on any pattern to preview, or generate a secure guardian below. Your acoustic signature will materialize here as cryptographic code.
+                          </p>
+                          <div className="flex items-center justify-center gap-2 pt-2">
+                            <div className="w-1 h-1 bg-[color:var(--color-primary)] rounded-full animate-ping" />
+                            <div className="w-1 h-1 bg-[color:var(--color-accent)] rounded-full animate-ping" style={{ animationDelay: '0.2s' }} />
+                            <div className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-ping" style={{ animationDelay: '0.4s' }} />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

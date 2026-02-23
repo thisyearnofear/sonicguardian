@@ -26,18 +26,19 @@ trait ISonicGuardian<TContractState> {
 mod SonicGuardian {
     use starknet::{get_caller_address, get_block_timestamp};
     use starknet::ContractAddress;
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::pedersen::pedersen;
 
     #[storage]
     struct Storage {
         // Map BTC address to Pedersen commitment
-        commitments: LegacyMap::<felt252, felt252>,
+        commitments: Map::<felt252, felt252>,
         // Map BTC address to Starknet owner
-        owners: LegacyMap::<felt252, ContractAddress>,
+        owners: Map::<felt252, ContractAddress>,
         // Map BTC address to blinding commitment (for verification)
-        blinding_commitments: LegacyMap::<felt252, felt252>,
+        blinding_commitments: Map::<felt252, felt252>,
         // Recovery authorization tokens
-        recovery_tokens: LegacyMap::<felt252, felt252>,
+        recovery_tokens: Map::<felt252, felt252>,
         // Total guardians registered
         guardian_count: u256,
     }

@@ -3,11 +3,13 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+@import './strudel-editor.css';
 
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
   --color-primary: #6366f1;
+  --color-primary-rgb: 99, 102, 241;
   --color-accent: #f43f5e;
   --color-success: #10b981;
   --color-error: #ef4444;
@@ -28,6 +30,7 @@
     --background: #020617;
     --foreground: #f8fafc;
     --color-primary: #818cf8;
+    --color-primary-rgb: 129, 140, 248;
     --color-accent: #fb7185;
     --color-success: #34d399;
     --color-error: #f87171;

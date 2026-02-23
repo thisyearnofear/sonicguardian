@@ -59,3 +59,7 @@ contracts/Scarb.lock
 .starkli-wallets/
 *.keystore.json
 **/keystore.json
+
+# Temporary cloned repos for reference
+strudel-codeberg/
+strudel-repo/

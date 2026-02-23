@@ -1,33 +1,50 @@
 'use client';
 
 /**
- * Strudel playback with proper sample loading
- * Uses @strudel/web for audio synthesis
+ * Strudel playback with proper initialization
+ * Following the pattern from strudel-codeberg/examples/minimal-repl
  */
 
 let audioInitialized = false;
 let isPlaying = false;
-let strudelRepl: any = null;
+let evaluateFunction: any = null;
+let audioContext: any = null;
+let currentPattern: any = null;
+let drawCallback: ((haps: any[], time: number) => void) | null = null;
 
 async function initStrudel() {
-    if (audioInitialized && strudelRepl) return strudelRepl;
+    if (audioInitialized && evaluateFunction) return evaluateFunction;
     
     try {
-        const { repl } = await import('@strudel/web');
+        // Import required modules
+        const { repl, evalScope } = await import('@strudel/core');
+        const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } = await import('@strudel/webaudio');
+        const { transpiler } = await import('@strudel/transpiler');
         
-        // Initialize the REPL with proper settings
-        strudelRepl = repl({
-            defaultSynth: 'triangle',
-            prebake: true, // Preload samples
-            editPattern: (pat: any) => pat,
+        // Get audio context and initialize
+        audioContext = getAudioContext();
+        initAudioOnFirstClick();
+        registerSynthSounds();
+        
+        // Register modules with evalScope BEFORE creating repl
+        await evalScope(
+            import('@strudel/core'),
+            import('@strudel/mini'),
+            import('@strudel/webaudio'),
+            import('@strudel/tonal')
+        );
+        
+        // Create repl with proper configuration
+        const { evaluate } = repl({
+            defaultOutput: webaudioOutput,
+            getTime: () => audioContext.currentTime,
+            transpiler,
         });
         
-        // Wait for audio context to be ready
-        await strudelRepl.start();
-        
+        evaluateFunction = evaluate;
         audioInitialized = true;
         console.log('[strudel] Initialized successfully');
-        return strudelRepl;
+        return evaluate;
     } catch (e) {
         console.error('[strudel] Initialization failed:', e);
         throw e;
@@ -38,15 +55,27 @@ export async function playStrudelCode(code: string): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 
     try {
-        const repl = await initStrudel();
+        const evaluate = await initStrudel();
         
-        if (!repl) {
-            console.error('[strudel] REPL not available');
+        if (!evaluate) {
+            console.error('[strudel] Evaluate function not available');
             return false;
         }
 
-        // Evaluate the code
-        await repl.evaluate(code);
+        // Resume audio context (required for user interaction)
+        if (audioContext) {
+            await audioContext.resume();
+        }
+
+        // Evaluate the code and get the pattern
+        const pattern = await evaluate(code);
+        currentPattern = pattern;
+        
+        // If there's a draw callback, set up visual feedback
+        if (drawCallback && pattern) {
+            setupVisualFeedback(pattern);
+        }
+        
         isPlaying = true;
         console.log('[strudel] Playing:', code.substring(0, 50) + '...');
         return true;
@@ -57,10 +86,54 @@ export async function playStrudelCode(code: string): Promise<boolean> {
     }
 }
 
+function setupVisualFeedback(pattern: any) {
+    if (!drawCallback) return;
+    
+    // Use pattern.draw() to get haps (events) for visual feedback
+    // This follows the same pattern as Strudel's Drawer class
+    const lookbehind = 2; // seconds to look back
+    const lookahead = 0.1; // seconds to look ahead
+    let lastFrame: number | null = null;
+    let visibleHaps: any[] = [];
+    
+    const animate = () => {
+        if (!isPlaying || !audioContext) return;
+        
+        const phase = audioContext.currentTime;
+        
+        if (lastFrame === null) {
+            lastFrame = phase;
+        }
+        
+        // Query haps from last frame till now (max 100ms back)
+        const begin = Math.max(lastFrame ?? phase, phase - 0.1);
+        const haps = pattern.queryArc(begin, phase + lookahead);
+        
+        lastFrame = phase;
+        
+        // Filter out old haps and add new ones
+        visibleHaps = visibleHaps
+            .filter((h: any) => h.whole && h.endClipped >= phase - lookbehind)
+            .concat(haps.filter((h: any) => h.hasOnset()));
+        
+        // Call the draw callback with current haps
+        if (drawCallback) {
+            drawCallback(visibleHaps, phase);
+        }
+        
+        if (isPlaying) {
+            requestAnimationFrame(animate);
+        }
+    };
+    
+    requestAnimationFrame(animate);
+}
+
 export async function stopStrudel(): Promise<void> {
     try {
-        if (strudelRepl) {
-            await strudelRepl.stop();
+        if (evaluateFunction) {
+            // Evaluate empty pattern to stop
+            await evaluateFunction('silence');
             console.log('[strudel] Stopped');
         }
     } catch (e) {
@@ -71,6 +144,10 @@ export async function stopStrudel(): Promise<void> {
 
 export function isStrudelPlaying() {
     return isPlaying;
+}
+
+export function setDrawCallback(callback: ((haps: any[], time: number) => void) | null) {
+    drawCallback = callback;
 }
 
 /**

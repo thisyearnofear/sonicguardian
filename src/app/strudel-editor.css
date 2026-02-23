@@ -1,0 +1,48 @@
+/* Strudel Editor Styles */
+.strudel-editor-container .cm-editor {
+  height: 100%;
+  min-height: 200px;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+}
+
+/* Make active code highlights more visible */
+.strudel-editor-container .cm-activeLine {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Strudel's miniLocation highlights (active events) */
+.strudel-editor-container .cm-miniLocation {
+  background-color: rgba(99, 102, 241, 0.2);
+  border-radius: 2px;
+  animation: pulse-highlight 0.3s ease-in-out;
+}
+
+.strudel-editor-container .cm-miniLocation-active {
+  background-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+@keyframes pulse-highlight {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Cursor and selection */
+.strudel-editor-container .cm-cursor {
+  border-left-color: #818cf8;
+}
+
+.strudel-editor-container .cm-selectionBackground {
+  background-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Gutters */
+.strudel-editor-container .cm-gutters {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
