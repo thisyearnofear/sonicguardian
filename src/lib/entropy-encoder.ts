@@ -4,16 +4,17 @@
  * Enables memorable "musical seed phrases" with full cryptographic security
  */
 
-// Encoding tables for deterministic mapping
-const DRUMS = ['bd', 'sd', 'hh', 'oh', 'cp', 'rim', 'clap', 'cowbell'] as const;
-const BANKS = ['RolandTR808', 'RolandTR909', 'RolandTR606', 'RolandTR707'] as const;
+// Encoding tables for deterministic mapping (synth-based, no samples required)
 const SYNTHS = ['sawtooth', 'sine', 'square', 'triangle'] as const;
 const NOTES = ['c', 'd', 'e', 'f', 'g', 'a', 'b'] as const;
 const ACCIDENTALS = ['', 'b', '#'] as const;
-const OCTAVES = [2, 3, 4, 5] as const;
+const OCTAVES = [1, 2, 3, 4, 5] as const;
 
 // Timing patterns (8 options = 3 bits each)
 const TIMINGS = ['*2', '*4', '*8', '[~ x]', '[x ~]', '[x x ~]', '<x ~ x>', '[[x x] x]'] as const;
+
+// Rhythm note patterns for percussion (using low notes as kicks/bass)
+const RHYTHM_PATTERNS = ['c1*4', 'c1*2', 'c1 ~ c1 ~', '~ c1 ~ c1', 'c1 [c1 c1] ~ c1'] as const;
 
 // Effect ranges
 const DISTORT_RANGE = { min: 0.5, max: 5, step: 0.5 }; // 10 options = ~3.3 bits
@@ -56,26 +57,26 @@ function readBits(entropy: Uint8Array, offset: number, count: number): number {
 }
 
 /**
- * Encode drum layer from entropy bits
+ * Encode rhythm layer from entropy bits (using synths, no samples)
  */
-function encodeDrumLayer(entropy: Uint8Array, offset: number): { code: string; chunks: MusicalChunk[]; bitsUsed: number } {
+function encodeRhythmLayer(entropy: Uint8Array, offset: number): { code: string; chunks: MusicalChunk[]; bitsUsed: number } {
   const chunks: MusicalChunk[] = [];
   let currentOffset = offset;
   
-  // Drum type (3 bits)
-  const drumIndex = readBits(entropy, currentOffset, 3);
-  const drum = DRUMS[drumIndex % DRUMS.length];
+  // Rhythm pattern (3 bits)
+  const patternIndex = readBits(entropy, currentOffset, 3);
+  const pattern = RHYTHM_PATTERNS[patternIndex % RHYTHM_PATTERNS.length];
   currentOffset += 3;
   
-  // Timing pattern (3 bits)
-  const timingIndex = readBits(entropy, currentOffset, 3);
-  const timing = TIMINGS[timingIndex % TIMINGS.length];
-  currentOffset += 3;
-  
-  // Bank (2 bits)
-  const bankIndex = readBits(entropy, currentOffset, 2);
-  const bank = BANKS[bankIndex % BANKS.length];
+  // Synth type for rhythm (2 bits)
+  const synthIndex = readBits(entropy, currentOffset, 2);
+  const synth = SYNTHS[synthIndex % SYNTHS.length];
   currentOffset += 2;
+  
+  // Gain (3 bits)
+  const gainIndex = readBits(entropy, currentOffset, 3);
+  const gain = 0.8 + (gainIndex * 0.1); // 0.8 to 1.5
+  currentOffset += 3;
   
   // Distortion (4 bits)
   const distortIndex = readBits(entropy, currentOffset, 4);
@@ -84,30 +85,25 @@ function encodeDrumLayer(entropy: Uint8Array, offset: number): { code: string; c
   currentOffset += 4;
   
   // Build code
-  const code = `s("${drum}${timing}").bank("${bank}").distort(${distort.toFixed(1)})`;
+  const code = `note("${pattern}").s("${synth}").gain(${gain.toFixed(1)}).distort(${distort.toFixed(1)})`;
   
   // Build chunks
-  const drumName = {
-    'bd': 'kicks', 'sd': 'snare', 'hh': 'hi-hats', 'oh': 'open hats',
-    'cp': 'claps', 'rim': 'rimshots', 'clap': 'claps', 'cowbell': 'cowbell'
-  }[drum] || drum;
-  
-  const timingDesc = {
-    '*2': 'twice per bar', '*4': 'four times', '*8': 'eight times',
-    '[~ x]': 'on 2 and 4', '[x ~]': 'on 1 and 3', '[x x ~]': 'on 1 2 and 3',
-    '<x ~ x>': 'alternating', '[[x x] x]': 'double-time'
-  }[timing] || timing;
-  
-  const bankShort = bank.replace('Roland', '').replace('TR', '');
+  const patternDesc = {
+    'c1*4': 'four on the floor',
+    'c1*2': 'half-time kick',
+    'c1 ~ c1 ~': 'kick on 1 and 3',
+    '~ c1 ~ c1': 'kick on 2 and 4',
+    'c1 [c1 c1] ~ c1': 'syncopated kick'
+  }[pattern] || pattern;
   
   chunks.push({
-    text: `${bankShort} ${drumName} ${timingDesc}`,
+    text: `${synth} rhythm ${patternDesc}`,
     category: 'drum',
-    bits: 12
+    bits: 8
   });
   
   chunks.push({
-    text: `distort by ${distort.toFixed(1)}`,
+    text: `distort ${distort.toFixed(1)} gain ${gain.toFixed(1)}`,
     category: 'effect',
     bits: 4
   });
@@ -139,10 +135,10 @@ function encodeMelodyLayer(entropy: Uint8Array, offset: number): { code: string;
     const accidental = ACCIDENTALS[accidentalIndex % ACCIDENTALS.length];
     currentOffset += 2;
     
-    // Octave (2 bits)
-    const octaveIndex = readBits(entropy, currentOffset, 2);
+    // Octave (3 bits for 5 options)
+    const octaveIndex = readBits(entropy, currentOffset, 3);
     const octave = OCTAVES[octaveIndex % OCTAVES.length];
-    currentOffset += 2;
+    currentOffset += 3;
     
     notes.push(`${note}${accidental}${octave}`);
   }
@@ -177,21 +173,15 @@ function encodeMelodyLayer(entropy: Uint8Array, offset: number): { code: string;
   }).join(' ');
   
   chunks.push({
-    text: `${synth} bass ${noteDesc}`,
+    text: `${synth} melody ${noteDesc}`,
     category: 'melody',
-    bits: 2 + (noteCount * 7) + 2
+    bits: 2 + (noteCount * 8) + 2
   });
   
   chunks.push({
-    text: `lowpass filter at ${filter} hertz`,
+    text: `lowpass ${filter}Hz gain ${gain.toFixed(1)}`,
     category: 'effect',
-    bits: 5
-  });
-  
-  chunks.push({
-    text: `gain ${gain.toFixed(1)}`,
-    category: 'effect',
-    bits: 4
+    bits: 9
   });
   
   return { code, chunks, bitsUsed: currentOffset - offset };
@@ -209,25 +199,25 @@ export function encodePattern(entropy: Uint8Array): EncodedPattern {
   const allChunks: MusicalChunk[] = [];
   let offset = 0;
   
-  // Layer 1: Drum pattern (bits 0-15)
-  const drum1 = encodeDrumLayer(entropy, offset);
-  layers.push(drum1.code);
-  allChunks.push(...drum1.chunks);
-  offset += drum1.bitsUsed;
+  // Layer 1: Rhythm pattern (bits 0-11)
+  const rhythm1 = encodeRhythmLayer(entropy, offset);
+  layers.push(rhythm1.code);
+  allChunks.push(...rhythm1.chunks);
+  offset += rhythm1.bitsUsed;
   
-  // Layer 2: Melody (bits 16-60)
+  // Layer 2: Melody (bits 12-56)
   const melody = encodeMelodyLayer(entropy, offset);
   layers.push(melody.code);
   allChunks.push(...melody.chunks);
   offset += melody.bitsUsed;
   
-  // Layer 3: Second drum pattern (bits 61-75)
-  const drum2 = encodeDrumLayer(entropy, offset);
-  layers.push(drum2.code);
-  allChunks.push(...drum2.chunks);
-  offset += drum2.bitsUsed;
+  // Layer 3: Second rhythm pattern (bits 57-68)
+  const rhythm2 = encodeRhythmLayer(entropy, offset);
+  layers.push(rhythm2.code);
+  allChunks.push(...rhythm2.chunks);
+  offset += rhythm2.bitsUsed;
   
-  // Structure: tempo (bits 76-83, 8 bits = 256 values)
+  // Structure: tempo (bits 69-76, 8 bits = 256 values)
   const tempoIndex = readBits(entropy, offset, 8);
   const tempo = 80 + (tempoIndex % 80); // 80-160 BPM
   offset += 8;

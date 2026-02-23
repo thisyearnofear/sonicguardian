@@ -1,32 +1,35 @@
 # Sonic Guardian
 
-Private Bitcoin recovery using acoustic commitments and zero-knowledge proofs on Starknet.
+Private Bitcoin recovery using musical seed phrases and zero-knowledge proofs on Starknet.
 
 ## 🎯 Overview
 
-Sonic Guardian enables **privacy-preserving recovery** for Bitcoin multisig wallets using memorable acoustic DNA. It combines zero-knowledge proofs (Pedersen commitments) with acoustic synthesis to create a recovery mechanism that's both secure and memorable.
+Sonic Guardian enables **privacy-preserving recovery** for Bitcoin multisig wallets using memorable musical seed phrases. It combines zero-knowledge proofs (Pedersen commitments) with deterministic audio synthesis to create a recovery mechanism that's both cryptographically secure and memorable.
 
-**Problem**: Traditional Bitcoin recovery relies on seed phrases that can be stolen, lost, or phished.
+**Problem**: Traditional Bitcoin recovery relies on 24-word seed phrases that are hard to remember and easy to lose.
 
-**Solution**: Acoustic DNA derived from musical vibes, committed to Starknet using zero-knowledge proofs, serving as a guardian key for Bitcoin multisig recovery.
+**Solution**: Musical seed phrases (5-7 chunks like "909 kicks on 1 and 3, distort by 2.5") with 256-bit entropy, committed to Starknet using zero-knowledge proofs, serving as a guardian key for Bitcoin multisig recovery.
 
 ## 🚀 Features
 
 ### Core Functionality
-- **Acoustic DNA Generation**: Deterministic secrets from musical vibes via AI synthesis
+- **Musical Seed Phrases**: 256-bit entropy encoded as 5-7 memorable musical chunks
+- **Deterministic Synthesis**: Same chunks always produce same Strudel pattern
 - **Pedersen Commitments**: True zero-knowledge proofs hiding DNA on-chain
 - **Bitcoin Integration**: Multisig recovery via sBTC/tBTC bridge
-- **Privacy-Preserving**: No credential exposure during recovery
+- **Auditory Verification**: Verify recovery by listening to your pattern
 
 ### Security
+- **256-bit Entropy**: Equivalent to AES-256, using crypto.getRandomValues()
 - **Zero-Knowledge Proofs**: Pedersen commitments hide DNA cryptographically
 - **Client-Side Cryptography**: All secrets generated and stored locally
-- **Venice AI**: Privacy-focused inference without logging
+- **Deterministic Encoding**: Entropy → Strudel pattern mapping is bijective
 - **Static Build**: No backend, no data collection
 
 ### User Experience
-- **Memorable Recovery**: Sound is easier to remember than 24 words
-- **Real-Time Synthesis**: Hear your acoustic DNA as it's generated
+- **Memorable Recovery**: Musical chunks easier to remember than 24 random words
+- **Real-Time Synthesis**: Hear your guardian key as it's generated
+- **Copy & Export**: Save chunks to password manager or encrypted storage
 - **Mobile Responsive**: Full functionality on all devices
 - **Theme Support**: Light, dark, and system themes
 
@@ -37,7 +40,7 @@ sonicguardian/
 ├── src/
 │   ├── app/                    # Next.js app directory
 │   │   ├── api/               # API routes
-│   │   │   ├── agent/         # AI synthesis endpoints
+│   │   │   ├── agent/         # AI synthesis endpoints (optional)
 │   │   │   └── dna/           # DNA extraction endpoints
 │   │   └── page.tsx           # Main application
 │   ├── components/            # React components
@@ -45,9 +48,10 @@ sonicguardian/
 │   │   ├── WalletButton.tsx   # Starknet wallet
 │   │   └── StarknetProvider.tsx
 │   ├── lib/                   # Core libraries
+│   │   ├── entropy-encoder.ts # 256-bit → Strudel encoding
 │   │   ├── dna.ts            # DNA extraction & hashing
-│   │   ├── ai-agent.ts       # Venice AI integration
-│   │   ├── audio.ts          # Strudel synthesis
+│   │   ├── crypto.ts         # Pedersen commitments
+│   │   ├── strudel.ts        # Audio synthesis
 │   │   ├── storage.ts        # Secure local storage
 │   │   └── visualizer.ts     # DNA visualization
 │   └── hooks/
@@ -62,16 +66,6 @@ sonicguardian/
     ├── STARKNET.md           # Technical architecture
     ├── PRIVACY.md            # Cryptographic analysis
     └── SKILL.md              # AI agent interface
-```
-│   │   └── audio.ts         # Audio generation
-│   ├── __tests__/           # Test suite
-│   │   ├── dna.test.ts      # DNA extraction tests
-│   │   ├── ai-agent.test.ts # AI agent tests
-│   │   ├── storage.test.ts  # Storage tests
-│   │   └── integration.test.ts # Integration tests
-│   └── styles/              # Global styles
-├── package.json
-└── README.md
 ```
 
 ## 🛠️ Installation
@@ -220,26 +214,70 @@ See [contracts/README.md](contracts/README.md) for detailed deployment documenta
 
 ## 🎨 Technical Details
 
-### Acoustic DNA Extraction
+### Musical Seed Phrase Generation
 
-The DNA extraction process ensures deterministic, reproducible secrets:
+The system encodes 256 bits of cryptographic entropy into memorable musical chunks:
 
-1. **AI Synthesis**: Venice AI translates vibe → Strudel pattern code
-2. **AST Parsing**: Extract musical features from code structure
-3. **Normalization**: Sort and deduplicate features for consistency
-4. **Hashing**: Generate deterministic hash from normalized features
-
-Example:
+**Step 1: Generate Entropy**
 ```typescript
-Vibe: "dark industrial techno"
-↓
-Code: stack(s("bd*4").bank("RolandTR909").distort(3), s("hh*8").gain(0.6))
-↓
-Features: ["stack", "s", "bank", "distort", "gain"]
-↓
-DNA: "bank(RolandTR909)|distort(3)|gain(0.6)|s(bd*4)|s(hh*8)|stack"
-↓
-Hash: sha256(DNA + salt)
+const entropy = crypto.getRandomValues(new Uint8Array(32)); // 256 bits
+```
+
+**Step 2: Encode to Strudel Pattern**
+```typescript
+const encoded = encodePattern(entropy);
+// Maps bits deterministically:
+// Bits 0-63:   Drum patterns (kick, snare, timing, bank)
+// Bits 64-127: Melodic content (notes, synth, octaves)
+// Bits 128-191: Effects chain (distort, filter, gain)
+// Bits 192-255: Structure (tempo, layers)
+```
+
+**Step 3: Generate Musical Chunks**
+```typescript
+// Example output:
+[
+  "909 kicks on 1 and 3",           // 12 bits
+  "distort by 2.5",                 // 4 bits
+  "sawtooth bass C#3 F3 Bb2 Eb3",  // 30 bits
+  "lowpass filter at 1200 hertz",   // 5 bits
+  "gain 0.8",                       // 4 bits
+  "808 snare on 2 and 4",           // 12 bits
+  "tempo 128"                       // 8 bits
+]
+// Total: 256 bits entropy
+```
+
+**Step 4: User Saves Chunks**
+- Copy to password manager
+- Write down securely
+- Memorize (easier than 24 random words)
+
+### Recovery Flow
+
+**User provides chunks → System reconstructs pattern → Extracts DNA → Verifies ZK proof**
+
+```typescript
+// 1. User inputs chunks
+const chunks = [
+  "909 kicks on 1 and 3",
+  "distort by 2.5",
+  // ... etc
+];
+
+// 2. Reconstruct Strudel pattern
+const pattern = reconstructFromChunks(chunks);
+
+// 3. Extract DNA hash
+const dna = await extractSonicDNA(pattern);
+
+// 4. Verify Pedersen commitment
+const isValid = await verifyRecovery(btcAddress, dna.hash, blinding);
+
+// 5. If valid, authorize Bitcoin recovery
+if (isValid) {
+  await authorizeBtcRecovery(btcAddress, dna.hash, blinding);
+}
 ```
 
 ### Zero-Knowledge Commitments
@@ -253,7 +291,9 @@ commitment = pedersen_hash(dna_hash, blinding)
 contract.register_guardian(btc_address, commitment)
 
 // Recovery
-user_provides(dna_hash, blinding)
+user_provides(chunks)
+pattern = reconstruct(chunks)
+dna_hash = extract(pattern)
 computed = pedersen_hash(dna_hash, blinding)
 if (computed == stored_commitment) {
   authorize_recovery()
@@ -267,10 +307,25 @@ The commitment reveals nothing about the DNA, yet proves knowledge during recove
 Recovery flow via sBTC/tBTC bridge:
 
 1. User loses hot wallet key
-2. Provides acoustic DNA + hardware wallet signature
-3. Starknet verifies Pedersen commitment
-4. Contract authorizes sBTC/tBTC transaction
-5. Bitcoin multisig executes recovery
+2. Provides musical chunks + hardware wallet signature
+3. System reconstructs pattern and extracts DNA
+4. Starknet verifies Pedersen commitment
+5. Contract authorizes sBTC/tBTC transaction
+6. Bitcoin multisig executes recovery
+
+### Comparison to BIP39
+
+| Aspect | BIP39 Seed Phrases | Sonic Guardian |
+|--------|-------------------|----------------|
+| **Format** | 24 random words | 5-7 musical chunks |
+| **Example** | "witch collapse pride..." | "909 kicks on 1 and 3..." |
+| **Entropy** | 256 bits | 256 bits |
+| **Memorability** | Abstract word list | Musical structure |
+| **Verification** | Checksum only | Play sound + checksum |
+| **Mental Model** | None | Music production workflow |
+| **Recovery** | Type 24 words | Input 5-7 chunks |
+
+**Key Advantage**: Musical chunks leverage auditory memory and semantic structure, making them easier to remember than random words while maintaining equivalent cryptographic security.
 
 ## 📚 API Reference
 

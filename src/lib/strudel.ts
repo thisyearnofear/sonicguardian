@@ -1,46 +1,36 @@
 'use client';
 
 /**
- * Strudel playback using the evaluate() API from @strudel/web.
- * The exported `evaluate` function handles scheduling, audio init,
- * and sample loading internally — no manual REPL or context setup required.
- *
- * Verified exported API for @strudel/web@1.3.0:
- *   - evaluate(code: string): Promise<void>
- *   - initAudio(): Promise<void>
+ * Strudel playback with proper sample loading
+ * Uses @strudel/web for audio synthesis
  */
 
 let audioInitialized = false;
 let isPlaying = false;
+let strudelRepl: any = null;
 
-async function getStrudelAPI(): Promise<{ evaluate: (code: string) => Promise<void>; stop?: () => void } | null> {
-    if (typeof window === 'undefined') return null;
+async function initStrudel() {
+    if (audioInitialized && strudelRepl) return strudelRepl;
+    
     try {
-        const mod = await import('@strudel/web' as any);
-        return {
-            evaluate: mod.evaluate,
-            stop: mod.stop
-        };
-    } catch (e) {
-        console.error('[strudel] Failed to load @strudel/web:', e);
-        return null;
-    }
-}
-
-async function ensureAudio() {
-    if (audioInitialized) return;
-    try {
-        const mod = await import('@strudel/web' as any);
-        if (mod.initStrudel) {
-            await mod.initStrudel();
-        }
-        if (mod.initAudio) {
-            await mod.initAudio();
-        }
+        const { repl } = await import('@strudel/web');
+        
+        // Initialize the REPL with proper settings
+        strudelRepl = repl({
+            defaultSynth: 'triangle',
+            prebake: true, // Preload samples
+            editPattern: (pat: any) => pat,
+        });
+        
+        // Wait for audio context to be ready
+        await strudelRepl.start();
+        
         audioInitialized = true;
+        console.log('[strudel] Initialized successfully');
+        return strudelRepl;
     } catch (e) {
-        // initAudio/initStrudel may fail if already called or environment issues
-        audioInitialized = true;
+        console.error('[strudel] Initialization failed:', e);
+        throw e;
     }
 }
 
@@ -48,20 +38,20 @@ export async function playStrudelCode(code: string): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 
     try {
-        await ensureAudio();
-        const api = await getStrudelAPI();
-
-        if (!api?.evaluate) {
-            console.error('[strudel] evaluate() is not available from @strudel/web');
+        const repl = await initStrudel();
+        
+        if (!repl) {
+            console.error('[strudel] REPL not available');
             return false;
         }
 
-        // evaluate() starts the pattern immediately — calling it stops the previous one
-        await api.evaluate(code);
+        // Evaluate the code
+        await repl.evaluate(code);
         isPlaying = true;
+        console.log('[strudel] Playing:', code.substring(0, 50) + '...');
         return true;
     } catch (error) {
-        console.error('Strudel playback error:', error);
+        console.error('[strudel] Playback error:', error);
         isPlaying = false;
         return false;
     }
@@ -69,18 +59,12 @@ export async function playStrudelCode(code: string): Promise<boolean> {
 
 export async function stopStrudel(): Promise<void> {
     try {
-        const api = await getStrudelAPI();
-        if (api?.stop) {
-            api.stop();
-        } else {
-            // Passing empty string or a silent pattern stops playback
-            const mod = await import('@strudel/web' as any);
-            if (mod.evaluate) {
-                await mod.evaluate('silence');
-            }
+        if (strudelRepl) {
+            await strudelRepl.stop();
+            console.log('[strudel] Stopped');
         }
     } catch (e) {
-        // ignore
+        console.error('[strudel] Stop error:', e);
     }
     isPlaying = false;
 }
@@ -90,60 +74,56 @@ export function isStrudelPlaying() {
 }
 
 /**
- * Curated pattern library — verified against the Strudel sample map.
- * Banks use canonical names: RolandTR808, RolandTR909 (prefix _ separated).
- * Patterns are designed to be distinct and immediately engaging.
+ * Curated pattern library using synths instead of samples
+ * Synths don't require sample loading and work immediately
  */
 export const STRUDEL_PATTERN_LIBRARY = [
     {
         name: 'Techno Pulse',
-        vibe: 'a driving 909-style industrial kick with a fast dark synth loop',
+        vibe: 'a driving industrial kick with a fast dark synth loop',
         code: `stack(
-  s("bd*2, [~ bd] ~").bank("RolandTR909"),
-  s("~ sd ~ sd").bank("RolandTR909"),
-  s("hh*8").bank("RolandTR909").gain(0.4)
+  note("c1*4").s("triangle").gain(1.2),
+  note("~ c2 ~ c2").s("square").gain(0.8),
+  note("c4*8").s("sine").gain(0.3)
 )`,
         category: 'rhythm',
     },
     {
         name: 'Acid Resonance',
-        vibe: 'a squelchy 303 bassline with high resonance and fast distortion',
-        code: `stack(
-  s("bd*4").bank("RolandTR808"),
-  note("c2 [~ c3] bb1 [c2 eb2]").s("sawtooth").lpf(800).lpq(18).distort(1.5).gain(0.7)
-)`,
+        vibe: 'a squelchy bassline with high resonance and distortion',
+        code: `note("c2 [~ c3] bb1 [c2 eb2]").s("sawtooth").lpf(800).lpq(18).distort(1.5).gain(0.7)`,
         category: 'bass',
     },
     {
         name: 'Ambient Drift',
-        vibe: 'layered evolving pads with a slow granular texture and high reverb',
+        vibe: 'layered evolving pads with slow granular texture',
         code: `stack(
-  note("c4 eb4 g4 bb4").s("pad").slow(4).room(0.8).gain(0.6),
-  note("c3").s("pad").slow(8).room(0.9).gain(0.3)
+  note("c4 eb4 g4 bb4").s("triangle").slow(4).room(0.8).gain(0.6),
+  note("c3").s("sine").slow(8).room(0.9).gain(0.3)
 )`,
         category: 'ambient',
     },
     {
-        name: 'Jungle Break',
-        vibe: 'choppy breakbeat with an amen-style pattern and heavy bass',
+        name: 'Bass Groove',
+        vibe: 'deep bass with rhythmic pulse',
+        code: `note("c2 ~ f2 ~, c3*4").s("sawtooth").lpf(400).gain(0.8)`,
+        category: 'bass',
+    },
+    {
+        name: 'Minimal Pulse',
+        vibe: 'minimal techno with sparse elements',
         code: `stack(
-  s("amen").chop(8).speed("<1 0.8 1.2 0.9>").room(0.2),
-  note("c2 ~ f2 ~").s("bass").gain(0.8)
+  note("c1*2").s("triangle").gain(1.0),
+  note("~ c3 ~ ~").s("square").gain(0.6)
 )`,
         category: 'rhythm',
     },
     {
-        name: 'Lo-Fi Drums',
-        vibe: 'a laid back lo-fi hip hop beat at half speed with vinyl warmth',
-        code: `s("bd [~ bd] sd ~, hh*4").bank("RolandTR808").slow(1.5).crush(7).room(0.3)`,
-        category: 'rhythm',
-    },
-    {
         name: 'Deep Space',
-        vibe: 'a slow evolving cosmic drone with reverberant bell tones',
+        vibe: 'slow evolving cosmic drone',
         code: `stack(
-  note("<c4 eb4 g4 f4>").s("gong").slow(6).room(0.95).gain(0.5),
-  note("c2").s("sine").slow(8).gain(0.3).room(0.9)
+  note("<c4 eb4 g4 f4>").s("sine").slow(6).room(0.95).gain(0.5),
+  note("c2").s("triangle").slow(8).gain(0.3).room(0.9)
 )`,
         category: 'ambient',
     },

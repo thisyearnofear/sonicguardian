@@ -1,8 +1,8 @@
 # Sonic Guardian | Bitcoin & Privacy Track
 
-Sonic Guardian enables **private Bitcoin recovery** using acoustic commitments and zero-knowledge proofs on Starknet. It serves as a privacy-preserving guardian for Bitcoin multisig wallets.
+Sonic Guardian enables **private Bitcoin recovery** using musical seed phrases and zero-knowledge proofs on Starknet. It serves as a privacy-preserving guardian for Bitcoin multisig wallets.
 
-## 🔐 Core Innovation: Cryptographically Secure Acoustic Keys
+## 🔐 Core Innovation: Musical Seed Phrases with 256-bit Entropy
 
 Sonic Guardian solves a critical problem in Bitcoin custody: **how to recover funds without exposing recovery credentials**.
 
@@ -12,9 +12,11 @@ Traditional approaches:
 - Social recovery: Exposes guardians to collusion
 
 Sonic Guardian approach:
-- **Secure Pattern Generation**: Cryptographically random Strudel patterns with 128+ bits entropy
-- **Acoustic DNA**: Deterministic extraction from musical features
+- **Musical Seed Phrases**: 5-7 memorable chunks (e.g., "909 kicks on 1 and 3, distort by 2.5")
+- **256-bit Entropy**: Equivalent to AES-256, using crypto.getRandomValues()
+- **Deterministic Encoding**: Entropy → Strudel pattern → Musical chunks
 - **Pedersen Commitments**: Zero-knowledge proofs hide the DNA on-chain
+- **Auditory Verification**: Verify recovery by listening to your pattern
 - **Bitcoin Integration**: Authorizes multisig recovery without revealing credentials
 
 ## 🎯 Use Case: Bitcoin Multisig Recovery
@@ -26,14 +28,16 @@ Sonic Guardian approach:
 4. Key 3: Sonic Guardian (acoustic recovery)
 
 ### Guardian Creation
-1. System generates cryptographically secure Strudel pattern (128+ bits entropy)
-2. User hears and saves the pattern description
-3. Pattern → AST features → DNA hash → Pedersen commitment
-4. Commitment stored on Starknet (zero-knowledge)
+1. System generates 256 bits of cryptographic entropy
+2. Encodes entropy deterministically to Strudel pattern
+3. Breaks pattern into 5-7 musical chunks
+4. User saves chunks (password manager or memorizes)
+5. Pattern → AST features → DNA hash → Pedersen commitment
+6. Commitment stored on Starknet (zero-knowledge)
 
 ### Recovery Phase
-1. User provides pattern description
-2. System regenerates exact Strudel code
+1. User provides musical chunks
+2. System reconstructs exact Strudel pattern
 3. Extracts DNA hash and verifies locally
 4. Starknet contract verifies Pedersen commitment (zero-knowledge)
 5. If valid, authorizes Bitcoin transaction via sBTC/tBTC bridge
@@ -41,13 +45,51 @@ Sonic Guardian approach:
 
 ## 🧬 Technical Architecture
 
-### Secure Pattern Generation
-```typescript
-// Cryptographically random pattern with high entropy
-const pattern = generateSecurePattern(3); // 3 layers
-const entropy = calculatePatternEntropy(pattern); // 128+ bits
+### Musical Seed Phrase Encoding
 
-// Example output:
+**256 bits of entropy → Deterministic Strudel pattern → 5-7 musical chunks**
+
+```typescript
+// Step 1: Generate entropy
+const entropy = crypto.getRandomValues(new Uint8Array(32)); // 256 bits
+
+// Step 2: Encode to Strudel pattern
+const encoded = encodePattern(entropy);
+
+// Bit allocation:
+// Bits 0-63:   Drum patterns (kick type, timing, bank, distortion)
+// Bits 64-127: Melodic content (notes, octaves, synth type, filter)
+// Bits 128-191: Effects chain (distort, lpf, gain, room)
+// Bits 192-255: Structure (tempo, layers, arrangement)
+
+// Step 3: Generate musical chunks
+const chunks = [
+  "909 kicks on 1 and 3",           // 12 bits
+  "distort by 2.5",                 // 4 bits
+  "sawtooth bass C#3 F3 Bb2 Eb3",  // 30 bits
+  "lowpass filter at 1200 hertz",   // 5 bits
+  "gain 0.8",                       // 4 bits
+  "808 snare on 2 and 4",           // 12 bits
+  "tempo 128"                       // 8 bits
+];
+
+// Step 4: Generate Strudel code
+const code = `stack(
+  s("bd[x ~]").bank("RolandTR909").distort(2.5),
+  note("c#3 f3 bb2 eb3").s("sawtooth").lpf(1200).gain(0.8),
+  s("sd[~ x]").bank("RolandTR808")
+).cpm(128)`;
+```
+
+**Entropy Sources:**
+- Drum patterns: 3 bits per drum type (8 options)
+- Timing patterns: 3 bits (8 rhythmic variations)
+- Banks: 2 bits (4 drum machines)
+- Notes: 7 bits per note (7 notes × 3 accidentals × 4 octaves)
+- Effects: 4-5 bits per parameter (continuous ranges)
+- Tempo: 8 bits (80-160 BPM)
+
+**Total: 256 bits** (equivalent to AES-256)
 stack(
   s("bd*4, [~ bd] ~, hh*8").bank("RolandTR909").distort(2.5).lpf(1200),
   note("c#3 f3 bb2 eb3").s("sawtooth").lpf(600).lpq(15).gain(0.8),

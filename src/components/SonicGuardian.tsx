@@ -320,42 +320,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     }
   };
 
-        if (success) {
-          // On-chain verification if connected
-          if (isConnected) {
-            setStatus('Verifying Proof on Starknet...');
-            const onChainMatch = await verifyIdentity(dna.hash);
-            if (!onChainMatch) {
-              setStatus('On-Chain Proof Verification Failed.');
-              if (audioEnabled) playAudio('error');
-              return;
-            }
-          }
-
-          setStatus('Frequency Match Confirmed. Access Granted.');
-          setDna(dna);
-          visualizerRef.current?.updateDNASequence(dna.dna);
-          visualizerRef.current?.highlightParticles(Array.from({ length: 12 }, (_, i) => i));
-          sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dna.hash);
-          onRecovery?.(dna.hash);
-          if (audioEnabled) playAudio('success');
-        } else {
-          setStatus('Frequency Mismatch. Identity Unverified.');
-          visualizerRef.current?.updateDNASequence(dna.dna);
-          visualizerRef.current?.highlightParticles([]);
-          sessionManager.addRecoveryAttempt(recoveryVibe.trim(), false, dna.hash);
-          onFailure?.();
-          if (audioEnabled) playAudio('error');
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      setStatus('Verification Aborted.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const playAudio = (type: any) => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();

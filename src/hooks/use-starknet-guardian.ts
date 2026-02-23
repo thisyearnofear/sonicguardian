@@ -4,7 +4,7 @@ import { useAccount, useContract, useSendTransaction } from '@starknet-react/cor
 import { abi } from '../lib/abi';
 import { pedersen } from '../lib/crypto';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x0';
+const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x0') as `0x${string}`;
 
 export function useStarknetGuardian() {
     const { address, status } = useAccount();

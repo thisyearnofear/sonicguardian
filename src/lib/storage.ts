@@ -119,8 +119,6 @@ export const preferencesManager = {
 export const isAudioEnabled = () => preferencesManager.get().audioEnabled;
 export const setAudioEnabled = (val: boolean) => preferencesManager.set({ audioEnabled: val });
 export const areAnimationsEnabled = () => preferencesManager.get().animationsEnabled;
-export const isRealAIEnabled = () => preferencesManager.get().useRealAI;
-export const setRealAIEnabled = (val: boolean) => preferencesManager.set({ useRealAI: val });
 export const setAnimationsEnabled = (val: boolean) => preferencesManager.set({ animationsEnabled: val });
 export const isRealAIEnabled = () => preferencesManager.get().useRealAI;
 export const setRealAIEnabled = (val: boolean) => preferencesManager.set({ useRealAI: val });
