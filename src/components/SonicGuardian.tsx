@@ -16,7 +16,7 @@ import { getCurrentTheme, setTheme } from '../lib/theme';
 import { SonicVisualizer } from '../lib/visualizer';
 import { WalletButton } from './WalletButton';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
-import { playStrudelCode, stopStrudel, isStrudelPlaying } from '../lib/strudel';
+import { playStrudelCode, stopStrudel, isStrudelPlaying, STRUDEL_PATTERN_LIBRARY } from '../lib/strudel';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -26,12 +26,6 @@ interface SonicGuardianProps {
 export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianProps) {
   const [phase, setPhase] = useState<'registration' | 'recovery'>('registration');
   const [secretVibe, setSecretVibe] = useState('');
-
-  const FREQUENCY_PRESETS = [
-    { name: 'Techno Pulse', vibe: 'a driving 909-style industrial kick with a fast dark synth loop' },
-    { name: 'Ambient Drift', vibe: 'layered evolving pads with a slow granular texture and high reverb' },
-    { name: 'Acid Resonance', vibe: 'a squelchy 303 bassline with high resonance and fast distortion' }
-  ];
   const [generatedCode, setGeneratedCode] = useState('');
   const [dna, setDna] = useState<SonicDNA | null>(null);
   const [dnaHash, setDnaHash] = useState('');
@@ -42,6 +36,8 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [useRealAI, setUseRealAI] = useState(false);
   const [audioEnabled, setAudioState] = useState(true);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('dark');
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [previewPlayingId, setPreviewPlayingId] = useState<string | null>(null);
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -53,7 +49,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   useEffect(() => {
-    return () => stopStrudel();
+    return () => { stopStrudel(); };
   }, []);
 
   useEffect(() => {
@@ -93,7 +89,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       if (dna) {
         setDna(dna);
         setDnaHash(dna.hash);
-        setStatus('Acoustic Signature Ready. Verify via Playback.');
+        sessionManager.createSession(secretVibe.trim(), dna.hash, dna.salt);
+        setStatus('Acoustic Signature Ready. Hit ▶ to hear your identity.');
+        setShowOnboarding(false);
         visualizerRef.current?.updateDNASequence(dna.dna);
         visualizerRef.current?.highlightParticles(Array.from({ length: 8 }, (_, i) => i));
         if (audioEnabled) playAudio('success');
@@ -130,11 +128,45 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (!generatedCode) return;
 
     if (isAudioPlaying) {
-      stopStrudel();
+      await stopStrudel();
       setIsAudioPlaying(false);
     } else {
       setIsAudioPlaying(true);
-      await playStrudelCode(generatedCode);
+      const ok = await playStrudelCode(generatedCode);
+      if (!ok) setIsAudioPlaying(false);
+    }
+  };
+
+  const handlePreviewPattern = async (patternCode: string, id: string) => {
+    if (previewPlayingId === id) {
+      await stopStrudel();
+      setPreviewPlayingId(null);
+      return;
+    }
+    if (previewPlayingId) {
+      await stopStrudel();
+    }
+    setPreviewPlayingId(id);
+    const ok = await playStrudelCode(patternCode);
+    if (!ok) setPreviewPlayingId(null);
+  };
+
+  const handleSuggestIdea = async () => {
+    setStatus('Generating sonic ideas via Venice AI...');
+    setIsProcessing(true);
+    try {
+      const response = await generateStrudelCode(
+        'Give me one single evocative sentence describing a unique musical vibe or mood — no code, just a description.',
+        { useRealAI }
+      );
+      // The AI will return a vibe description, set it as the input
+      const idea = response.code.replace(/[`"']/g, '').trim();
+      setSecretVibe(idea);
+      setStatus('Idea loaded. Click Mint Sonic DNA to synthesize it.');
+    } catch {
+      setStatus('Could not generate idea. Try typing your own vibe.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -273,17 +305,64 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 </div>
 
                 <div className="space-y-4">
+                  {/* Onboarding hint */}
+                  {showOnboarding && phase === 'registration' && (
+                    <div className="p-3 rounded-xl border border-[color:var(--color-primary)]/20 bg-[color:var(--color-primary)]/5 space-y-1">
+                      <p className="text-[10px] font-bold text-[color:var(--color-primary)] uppercase tracking-widest">How it works</p>
+                      <ol className="text-[10px] text-[color:var(--color-muted)] space-y-0.5 list-decimal list-inside">
+                        <li>Preview a sound below, or type your own vibe ↓</li>
+                        <li>Click <span className="text-white font-bold">Mint Sonic DNA</span> to synthesize it into code</li>
+                        <li>Hit <span className="text-white font-bold">▶ Play</span> to hear your identity</li>
+                        <li>Connect wallet &amp; <span className="text-white font-bold">Anchor to Starknet</span></li>
+                      </ol>
+                    </div>
+                  )}
+
                   <div>
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-3">Frequency Library (Strudel Mechanisms)</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {FREQUENCY_PRESETS.map((preset) => (
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)]">Sound Library — click ▶ to preview</h3>
+                      {useRealAI && (
                         <button
-                          key={preset.name}
-                          onClick={() => phase === 'registration' ? setSecretVibe(preset.vibe) : setRecoveryVibe(preset.vibe)}
-                          className="px-3 py-1 text-[10px] border border-[color:var(--color-border)] rounded-full hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] transition-all uppercase tracking-wider bg-[color:var(--color-foreground)]/5"
+                          onClick={handleSuggestIdea}
+                          disabled={isProcessing}
+                          className="flex items-center gap-1 px-2 py-1 rounded bg-[color:var(--color-accent)]/10 border border-[color:var(--color-accent)]/20 text-[8px] font-bold text-[color:var(--color-accent)] uppercase tracking-wider hover:bg-[color:var(--color-accent)]/20 transition-all disabled:opacity-50"
                         >
-                          {preset.name}
+                          ✦ Suggest Idea
                         </button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
+                        <div
+                          key={pattern.name}
+                          className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-default group ${previewPlayingId === pattern.name
+                              ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10'
+                              : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40'
+                            }`}
+                        >
+                          <button
+                            onClick={() => handlePreviewPattern(pattern.code, pattern.name)}
+                            className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-all ${previewPlayingId === pattern.name
+                                ? 'bg-[color:var(--color-primary)] text-white animate-pulse'
+                                : 'bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-primary)]/20 text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)]'
+                              }`}
+                          >
+                            {previewPlayingId === pattern.name ? '■' : '▶'}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold truncate">{pattern.name}</p>
+                            <p className="text-[9px] text-[color:var(--color-muted)] truncate">{pattern.vibe}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const vibe = pattern.vibe;
+                              phase === 'registration' ? setSecretVibe(vibe) : setRecoveryVibe(vibe);
+                            }}
+                            className="shrink-0 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-[color:var(--color-muted)] border border-[color:var(--color-border)] hover:text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            Use
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>

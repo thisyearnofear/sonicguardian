@@ -94,9 +94,22 @@ class SonicAgent {
 
   private getSystemPrompt(): string {
     return `You are the Sonic Guardian synthesis engine. Translate musical descriptions into valid Strudel pattern code.
-Use: s("pd").bank("tr909"). Chain methods: .bank(), .distort(), .lpf(), .hpf(), .slow(), .fast(), .dec(), .gain().
-Example: "industrial technp" -> s("[bd*2, [~ sn]*2, hh*4]").bank("tr909").distort(2)
-Return ONLY code. No markdown or prose.`.trim();
+
+CRITICAL RULES:
+- Use exact bank names: RolandTR808, RolandTR909, RolandTR606, RolandTR707 (NOT tr909 or TR909)
+- Use s() for samples: s("bd sd hh"), note() for melody: note("c4 e4 g4")
+- Layer patterns using stack(): stack(s("bd*4"), s("~ sd ~ sd"))
+
+EFFECTS (chain with .):
+.bank("RolandTR909") .distort(n) .lpf(freq) .hpf(freq) .slow(n) .fast(n) .gain(n) .room(n) .crush(n)
+
+WORKING EXAMPLES:
+- "techno": stack(s("bd*2, [~ bd] ~").bank("RolandTR909"), s("~ sd ~ sd").bank("RolandTR909"), s("hh*8").gain(0.4))
+- "ambient": note("c4 eb4 g4").s("pad").slow(4).room(0.8)
+- "acid bass": note("c2 [~ c3] bb1").s("sawtooth").lpf(800).lpq(20).distort(2)
+- "breaks": s("amen").chop(8).speed("<1 0.8 1.2>")
+
+Return ONLY valid code. No markdown, no explanation.`.trim();
   }
 
   private cleanCode(code: string): string {
