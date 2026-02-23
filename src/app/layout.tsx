@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Space_Mono } from "next/font/google";
 import "./globals.css";
-import { StarknetProvider } from "@/components/StarknetProvider";
+import { ClientOnlyStarknetProvider } from "@/components/ClientOnlyStarknetProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,9 +29,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceMono.variable} antialiased`}
       >
-        <StarknetProvider>
+        <ClientOnlyStarknetProvider>
           {children}
-        </StarknetProvider>
+        </ClientOnlyStarknetProvider>
       </body>
     </html>
   );

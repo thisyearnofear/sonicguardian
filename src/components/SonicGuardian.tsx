@@ -16,6 +16,7 @@ import { getCurrentTheme, setTheme } from '../lib/theme';
 import { SonicVisualizer } from '../lib/visualizer';
 import { WalletButton } from './WalletButton';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
+import { playStrudelCode, stopStrudel, isStrudelPlaying } from '../lib/strudel';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -27,9 +28,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [secretVibe, setSecretVibe] = useState('');
 
   const FREQUENCY_PRESETS = [
-    { name: 'Deep Sea Pulse', vibe: 'a low, slow sub-bass sine wave with character' },
-    { name: 'Industrial Chaos', vibe: 'distorted fast sawtooth rhythms with high-pass resonance' },
-    { name: 'Stellar Resonance', vibe: 'harmonic triangle oscillators layered with slow modulation' }
+    { name: 'Techno Pulse', vibe: 'a driving 909-style industrial kick with a fast dark synth loop' },
+    { name: 'Ambient Drift', vibe: 'layered evolving pads with a slow granular texture and high reverb' },
+    { name: 'Acid Resonance', vibe: 'a squelchy 303 bassline with high resonance and fast distortion' }
   ];
   const [generatedCode, setGeneratedCode] = useState('');
   const [dna, setDna] = useState<SonicDNA | null>(null);
@@ -49,6 +50,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const { isConnected, registerIdentity, verifyIdentity } = useStarknetGuardian();
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => stopStrudel();
+  }, []);
 
   useEffect(() => {
     const theme = getCurrentTheme();
@@ -120,6 +126,18 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       setStatus('On-Chain Commitment Failed. Check wallet.');
     } finally {
       setIsCommiting(false);
+    }
+  };
+
+  const handlePlayback = async () => {
+    if (!generatedCode) return;
+
+    if (isAudioPlaying) {
+      stopStrudel();
+      setIsAudioPlaying(false);
+    } else {
+      setIsAudioPlaying(true);
+      await playStrudelCode(generatedCode);
     }
   };
 
@@ -368,10 +386,27 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 {generatedCode && (
                   <div className="space-y-4 animate-in zoom-in-95 duration-500">
                     <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)] mb-2">Deterministic Strudel Output</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Dynamic Pattern Synthesis</h4>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handlePlayback}
+                            className={`p-2 rounded-lg border transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${isAudioPlaying
+                              ? 'bg-[color:var(--color-primary)]/20 border-[color:var(--color-primary)] text-[color:var(--color-primary)]'
+                              : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                              }`}
+                          >
+                            {isAudioPlaying ? (
+                              <><span className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" /> Stop</>
+                            ) : (
+                              <>▶ Play Vibe</>
+                            )}
+                          </button>
+                        </div>
+                      </div>
                       <div className="bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border border-blue-500/20 shadow-2xl overflow-hidden group relative">
-                        <div className="absolute top-0 right-0 p-2 opacity-30 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => navigator.clipboard.writeText(generatedCode)} className="text-white">📋</button>
+                        <div className="absolute top-0 right-0 p-2 opacity-30 group-hover:opacity-100 transition-opacity flex gap-2">
+                          <button onClick={() => navigator.clipboard.writeText(generatedCode)} className="text-white hover:text-blue-400 transition-colors">📋</button>
                         </div>
                         <code className="whitespace-pre-wrap break-all leading-relaxed tracking-wider">
                           {generatedCode.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
