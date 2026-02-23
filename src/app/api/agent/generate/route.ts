@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       prompt: response.prompt,
       confidence: response.confidence,
       timestamp: response.timestamp,
-      usingRealAI: sonicAgent.isRealAIEnabled()
+      usingRealAI: sonicAgent.satisfiesInferenceRequirements()
     });
   } catch (error: any) {
     return handleAPIError(error);
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       prompt: response.prompt,
       confidence: response.confidence,
       timestamp: response.timestamp,
-      usingRealAI: sonicAgent.isRealAIEnabled()
+      usingRealAI: sonicAgent.satisfiesInferenceRequirements()
     });
   } catch (error: any) {
     return handleAPIError(error);

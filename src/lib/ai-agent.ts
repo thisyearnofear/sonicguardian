@@ -1,7 +1,7 @@
 /**
  * AI Agent for Sonic Guardian
- * Privacy-focused inference using Venice AI (default) with Gemini fallback.
- * Consolidates multiple providers into a unified strategy to prevent bloat.
+ * Pure, privacy-focused inference using Venice AI.
+ * Disables non-private fallbacks to ensure ZK integrity of the acoustic signature.
  */
 
 import { mockAgentGenerate } from './dna';
@@ -10,7 +10,6 @@ export interface AgentOptions {
   useRealAI?: boolean;
   apiKey?: string;
   model?: string;
-  provider?: 'venice' | 'gemini';
 }
 
 export interface AgentResponse {
@@ -21,43 +20,25 @@ export interface AgentResponse {
   timestamp: number;
 }
 
-type ProviderConfig = {
-  url: string;
-  headers: (key: string) => Record<string, string>;
-  formatBody: (prompt: string, model: string, systemPrompt: string) => any;
-  parseResponse: (data: any) => string;
-};
-
 class SonicAgent {
   private cache: Map<string, AgentResponse> = new Map();
   private readonly cacheTTL: number = 5 * 60 * 1000;
 
-  private providers: Record<string, ProviderConfig> = {
-    venice: {
-      url: 'https://api.venice.ai/api/v1/chat/completions',
-      headers: (key) => ({
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`
-      }),
-      formatBody: (prompt, model, system) => ({
-        model: model || 'llama-3.1-405b',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.1
-      }),
-      parseResponse: (data) => data.choices?.[0]?.message?.content
-    },
-    gemini: {
-      url: 'https://generativelanguage.googleapis.com/v1/models/', // Appended later
-      headers: () => ({ 'Content-Type': 'application/json' }),
-      formatBody: (prompt, model, system) => ({
-        contents: [{ parts: [{ text: `${system}\n\nPrompt: ${prompt}` }] }],
-        generationConfig: { temperature: 0.1 }
-      }),
-      parseResponse: (data) => data.candidates?.[0]?.content?.parts?.[0]?.text
-    }
+  private readonly veniceConfig = {
+    url: 'https://api.venice.ai/api/v1/chat/completions',
+    headers: (key: string) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    }),
+    formatBody: (prompt: string, model: string, system: string) => ({
+      model: model || 'llama-3.1-405b',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.1
+    }),
+    parseResponse: (data: any) => data.choices?.[0]?.message?.content
   };
 
   async generateCode(prompt: string, options: AgentOptions = {}): Promise<AgentResponse> {
@@ -67,47 +48,34 @@ class SonicAgent {
     if (cached && Date.now() - cached.timestamp < this.cacheTTL) return cached;
 
     const useRealAI = options.useRealAI ?? (process.env.NEXT_PUBLIC_USE_REAL_AI === 'true');
-    const selectedProvider = options.provider ?? (process.env.NEXT_PUBLIC_AI_PROVIDER as any) ?? 'venice';
+    const veniceKey = process.env.VENICE_API_KEY;
 
-    if (useRealAI) {
-      const providersToTry = selectedProvider === 'venice' ? ['venice', 'gemini'] : ['gemini', 'venice'];
+    if (useRealAI && veniceKey) {
+      try {
+        const response = await fetch(this.veniceConfig.url, {
+          method: 'POST',
+          headers: this.veniceConfig.headers(veniceKey),
+          body: JSON.stringify(this.veniceConfig.formatBody(trimmedPrompt, options.model || '', this.getSystemPrompt()))
+        });
 
-      for (const providerId of providersToTry) {
-        const apiKey = providerId === 'venice' ? process.env.VENICE_API_KEY : process.env.GEMINI_API_KEY;
-        if (!apiKey) continue;
+        if (!response.ok) throw new Error(`Venice Error: ${response.statusText}`);
 
-        try {
-          const config = this.providers[providerId];
-          let url = config.url;
-          if (providerId === 'gemini') {
-            url += `${options.model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`;
-          }
+        const data = await response.json();
+        const rawCode = this.veniceConfig.parseResponse(data);
 
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: config.headers(apiKey),
-            body: JSON.stringify(config.formatBody(trimmedPrompt, options.model || '', this.getSystemPrompt()))
-          });
-
-          if (!response.ok) throw new Error(`${providerId} Error: ${response.statusText}`);
-
-          const data = await response.json();
-          const rawCode = config.parseResponse(data);
-
-          if (rawCode) {
-            const result: AgentResponse = {
-              code: this.cleanCode(rawCode),
-              prompt: trimmedPrompt,
-              confidence: 0.95,
-              provider: providerId,
-              timestamp: Date.now()
-            };
-            this.cache.set(trimmedPrompt, result);
-            return result;
-          }
-        } catch (error) {
-          console.warn(`Provider ${providerId} failed:`, error);
+        if (rawCode) {
+          const result: AgentResponse = {
+            code: this.cleanCode(rawCode),
+            prompt: trimmedPrompt,
+            confidence: 0.98,
+            provider: 'venice',
+            timestamp: Date.now()
+          };
+          this.cache.set(trimmedPrompt, result);
+          return result;
         }
+      } catch (error) {
+        console.warn(`Venice synthesis failed:`, error);
       }
     }
 
@@ -127,8 +95,8 @@ class SonicAgent {
   private getSystemPrompt(): string {
     return `You are the Sonic Guardian synthesis engine. Translate musical descriptions into valid Strudel pattern code.
 Use: s("pd").bank("tr909"). Chain methods: .bank(), .distort(), .lpf(), .hpf(), .slow(), .fast(), .dec(), .gain().
-Example: "industrial" -> s("[bd*2, [~ sn]*2]").bank("tr909").distort(2)
-Return ONLY code. No markdown.`.trim();
+Example: "industrial technp" -> s("[bd*2, [~ sn]*2, hh*4]").bank("tr909").distort(2)
+Return ONLY code. No markdown or prose.`.trim();
   }
 
   private cleanCode(code: string): string {
@@ -140,7 +108,7 @@ Return ONLY code. No markdown.`.trim();
   }
 
   satisfiesInferenceRequirements(): boolean {
-    return !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY);
+    return !!process.env.VENICE_API_KEY;
   }
 }
 

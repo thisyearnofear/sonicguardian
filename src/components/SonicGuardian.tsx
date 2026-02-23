@@ -484,7 +484,8 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 <div>v1.2.0 Stable Network</div>
                 <div className="flex gap-4">
                   <a href="https://strudel.cc" target="_blank" className="hover:text-[color:var(--color-primary)] transition-colors">Strudel.cc</a>
-                  <a href="#" className="hover:text-[color:var(--color-primary)] transition-colors">Whitepaper</a>
+                  <a href="/docs/STARKNET.md" className="hover:text-[color:var(--color-primary)] transition-colors">Dev Docs</a>
+                  <a href="/docs/SKILL.md" className="hover:text-[color:var(--color-primary)] transition-colors text-[color:var(--color-accent)]">AI Agent Skill</a>
                 </div>
               </div>
             </div>
