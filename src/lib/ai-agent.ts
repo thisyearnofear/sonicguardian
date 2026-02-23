@@ -1,99 +1,154 @@
 /**
  * AI Agent for Sonic Guardian
- * Deterministic prompt-to-code generation with Gemini integration and fallback
+ * Privacy-focused inference using Venice AI (default) with Gemini fallback.
+ * Consolidates multiple providers into a unified strategy to prevent bloat.
  */
 
 import { mockAgentGenerate } from './dna';
-import { APIError } from './api';
 
 export interface AgentOptions {
   useRealAI?: boolean;
   apiKey?: string;
   model?: string;
+  provider?: 'venice' | 'gemini';
 }
 
 export interface AgentResponse {
   code: string;
   prompt: string;
   confidence: number;
+  provider: string;
   timestamp: number;
 }
+
+type ProviderConfig = {
+  url: string;
+  headers: (key: string) => Record<string, string>;
+  formatBody: (prompt: string, model: string, systemPrompt: string) => any;
+  parseResponse: (data: any) => string;
+};
 
 class SonicAgent {
   private cache: Map<string, AgentResponse> = new Map();
   private readonly cacheTTL: number = 5 * 60 * 1000;
 
+  private providers: Record<string, ProviderConfig> = {
+    venice: {
+      url: 'https://api.venice.ai/api/v1/chat/completions',
+      headers: (key) => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      }),
+      formatBody: (prompt, model, system) => ({
+        model: model || 'llama-3.1-405b',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1
+      }),
+      parseResponse: (data) => data.choices?.[0]?.message?.content
+    },
+    gemini: {
+      url: 'https://generativelanguage.googleapis.com/v1/models/', // Appended later
+      headers: () => ({ 'Content-Type': 'application/json' }),
+      formatBody: (prompt, model, system) => ({
+        contents: [{ parts: [{ text: `${system}\n\nPrompt: ${prompt}` }] }],
+        generationConfig: { temperature: 0.1 }
+      }),
+      parseResponse: (data) => data.candidates?.[0]?.content?.parts?.[0]?.text
+    }
+  };
+
   async generateCode(prompt: string, options: AgentOptions = {}): Promise<AgentResponse> {
     const trimmedPrompt = prompt.trim().toLowerCase();
 
-    // Cache check
     const cached = this.cache.get(trimmedPrompt);
-    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-      return cached;
-    }
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) return cached;
 
     const useRealAI = options.useRealAI ?? (process.env.NEXT_PUBLIC_USE_REAL_AI === 'true');
-    const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
+    const selectedProvider = options.provider ?? (process.env.NEXT_PUBLIC_AI_PROVIDER as any) ?? 'venice';
 
-    if (useRealAI && apiKey) {
-      try {
-        const response = await this.callGemini(trimmedPrompt, apiKey, options.model);
-        this.cache.set(trimmedPrompt, response);
-        return response;
-      } catch (error) {
-        console.warn('Gemini failed, falling back:', error);
+    if (useRealAI) {
+      const providersToTry = selectedProvider === 'venice' ? ['venice', 'gemini'] : ['gemini', 'venice'];
+
+      for (const providerId of providersToTry) {
+        const apiKey = providerId === 'venice' ? process.env.VENICE_API_KEY : process.env.GEMINI_API_KEY;
+        if (!apiKey) continue;
+
+        try {
+          const config = this.providers[providerId];
+          let url = config.url;
+          if (providerId === 'gemini') {
+            url += `${options.model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`;
+          }
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: config.headers(apiKey),
+            body: JSON.stringify(config.formatBody(trimmedPrompt, options.model || '', this.getSystemPrompt()))
+          });
+
+          if (!response.ok) throw new Error(`${providerId} Error: ${response.statusText}`);
+
+          const data = await response.json();
+          const rawCode = config.parseResponse(data);
+
+          if (rawCode) {
+            const result: AgentResponse = {
+              code: this.cleanCode(rawCode),
+              prompt: trimmedPrompt,
+              confidence: 0.95,
+              provider: providerId,
+              timestamp: Date.now()
+            };
+            this.cache.set(trimmedPrompt, result);
+            return result;
+          }
+        } catch (error) {
+          console.warn(`Provider ${providerId} failed:`, error);
+        }
       }
     }
 
-    // Mock fallback
-    const code = mockAgentGenerate(trimmedPrompt);
-    const response: AgentResponse = {
-      code,
-      prompt: trimmedPrompt,
-      confidence: 0.8,
-      timestamp: Date.now()
-    };
-    this.cache.set(trimmedPrompt, response);
-    return response;
+    return this.getMockResponse(trimmedPrompt);
   }
 
-  private async callGemini(prompt: string, apiKey: string, model: string = 'gemini-1.5-flash'): Promise<AgentResponse> {
-    const systemPrompt = `
-Generate valid Strudel live coding pattern for: "${prompt}". 
-Return ONLY code, no markdown, no explanation.
-Example: "heavy bass" -> s("bass").distort(5).lpf(500)
-`.trim();
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: systemPrompt }] }],
-        generationConfig: { temperature: 0.1, topP: 1, topK: 1 }
-      })
-    });
-
-    if (!response.ok) throw new Error(`Gemini Error: ${response.statusText}`);
-
-    const data = await response.json();
-    const code = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-    if (!code) throw new Error('Empty response from Gemini');
-
+  private getMockResponse(prompt: string): AgentResponse {
     return {
-      code: code.replace(/```(?:javascript|js)?\n?/g, '').replace(/```$/g, '').trim(),
+      code: mockAgentGenerate(prompt),
       prompt,
-      confidence: 0.95,
+      confidence: 0.8,
+      provider: 'mock',
       timestamp: Date.now()
     };
   }
 
-  isRealAIEnabled(): boolean {
-    return !!process.env.GEMINI_API_KEY;
+  private getSystemPrompt(): string {
+    return `You are the Sonic Guardian synthesis engine. Translate musical descriptions into valid Strudel pattern code.
+Use: s("pd").bank("tr909"). Chain methods: .bank(), .distort(), .lpf(), .hpf(), .slow(), .fast(), .dec(), .gain().
+Example: "industrial" -> s("[bd*2, [~ sn]*2]").bank("tr909").distort(2)
+Return ONLY code. No markdown.`.trim();
+  }
+
+  private cleanCode(code: string): string {
+    return code
+      .replace(/```(?:javascript|js)?\n?/g, '')
+      .replace(/```$/g, '')
+      .replace(/^[:$]\s*/, '')
+      .trim();
+  }
+
+  satisfiesInferenceRequirements(): boolean {
+    return !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY);
   }
 }
 
 export const sonicAgent = new SonicAgent();
+
+export function isAgentConfigured(): boolean {
+  return sonicAgent.satisfiesInferenceRequirements();
+}
 
 export async function generateStrudelCode(prompt: string, options?: AgentOptions): Promise<AgentResponse> {
   return await sonicAgent.generateCode(prompt, options);

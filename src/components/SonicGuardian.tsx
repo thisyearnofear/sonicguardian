@@ -216,7 +216,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             Sonic Guardian
           </h1>
           <p className="text-[color:var(--color-muted)] text-lg md:text-xl font-light">
-            Anonymous Credentials via <span className="text-[color:var(--color-foreground)] font-medium">Acoustic Proofs</span>
+            Privacy-Preserving Identity discovery via <span className="text-[color:var(--color-foreground)] font-medium">Agentic Sonic Synthesis</span>
           </p>
         </header>
 
@@ -387,7 +387,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <div className="space-y-4 animate-in zoom-in-95 duration-500">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Dynamic Pattern Synthesis</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Dynamic Pattern Synthesis</h4>
+                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] font-bold text-white/40 uppercase tracking-tighter">Venice AI Privacy-First</span>
+                        </div>
                         <div className="flex gap-2">
                           <button
                             onClick={handlePlayback}
@@ -412,7 +415,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                           {generatedCode.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
                             if (['(', ')', '.'].includes(part)) return <span key={i} className="opacity-40">{part}</span>;
                             if (part === '"' || part === "'") return <span key={i} className="text-pink-400">{part}</span>;
-                            if (['s', 'slow', 'fast', 'distort', 'lpf', 'hpf', 'gain', 'stack'].includes(part))
+                            if (['s', 'slow', 'fast', 'distort', 'lpf', 'hpf', 'gain', 'stack', 'bank', 'dec', 'echo', 'rev'].includes(part))
                               return <span key={i} className="text-white font-bold">{part}</span>;
                             return <span key={i}>{part}</span>;
                           })}
@@ -489,7 +492,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           </div>
         </div>
 
-        {/* Floating AI Toggle */}
+        {/* Floating AI Toggle (Venice AI Focus) */}
         <div className="fixed bottom-8 right-8 z-50">
           <button
             onClick={() => {
@@ -500,27 +503,28 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             className={`glass px-6 py-3 rounded-full flex items-center gap-3 font-bold text-xs tracking-widest uppercase transition-all hover:scale-105 active:scale-95 ${useRealAI ? 'text-[color:var(--color-success)] shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-[color:var(--color-muted)]'}`}
           >
             <div className={`w-2 h-2 rounded-full ${useRealAI ? 'bg-[color:var(--color-success)] animate-pulse' : 'bg-[color:var(--color-muted)]'}`} />
-            {useRealAI ? 'Neural Synthesis Active' : 'Neural Agent Idle'}
+            {useRealAI ? 'Venice AI Synthesis' : 'Inference Offline'}
           </button>
         </div>
+
         {/* Protocol Analysis Section */}
         <section className="mt-24 w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-primary)]">01. Anonymous Credentials</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-primary)]">01. Agentic Synthesis</h4>
             <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Your "vibe" is processed through a deterministic LLM that translates musical subjective data into <span className="text-[color:var(--color-foreground)] font-medium">Starknet-ready commitments</span>.
+              Your "vibe" is translated agentically by <span className="text-[color:var(--color-foreground)] font-medium">Venice AI</span> into valid Strudel pattern code, bridging intuition with cryptographic precision.
             </p>
           </div>
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">02. ZK-Sonic Verifier</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">02. Acoustic Verification</h4>
             <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              We leverage Cairo's efficiency to verify Sigma-style acoustic proofs, enabling <span className="text-[color:var(--color-foreground)] font-medium">Anonymous Authentication</span> for any dApp.
+              We leverage Cairo's efficiency to verify the resulting <span className="text-[color:var(--color-foreground)] font-medium">Acoustic Proofs</span>, ensuring your identity is both heard and cryptographically sound.
             </p>
           </div>
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-success)]">03. Social Recovery Integration</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-success)]">03. Privacy Anchoring</h4>
             <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Integrates with <span className="text-[color:var(--color-foreground)] font-medium">Sumo Login</span> and shielding protocols to provide a privacy-first frontend for the Starknet ecosystem.
+              Credentials are anchored to Starknet using <span className="text-[color:var(--color-foreground)] font-medium">Shielded Protocols</span>, ensuring a privacy-first experience for the entire ecosystem.
             </p>
           </div>
         </section>

@@ -55,7 +55,7 @@ export async function extractSonicDNA(
 
             // Normalize: Round to nearest integer for robustness, and lowercase strings
             const normalizedArgs = args.map(a => {
-              if (typeof a === 'number') return Math.round(a);
+              if (typeof a === 'number') return Math.round(a * 10) / 10; // 1 decimal place precision
               if (typeof a === 'string') return a.toLowerCase().trim();
               return a;
             });
@@ -66,12 +66,14 @@ export async function extractSonicDNA(
       }
     });
 
-    // Normalize: Sort by function name and stringify
-    const normalized = features
-      .filter(f => f.name !== 'evaluate' && f.name !== 'm') // Ignore boilerplates
-      .sort((a, b) => a.name.localeCompare(b.name))
+    // Normalize: Remove duplicates, sort by function name, and stringify
+    // This makes the hash invariant to the ORDER of chainable functions (like .lpf().bank() vs .bank().lpf())
+    const uniqueFeatures = Array.from(new Set(features
+      .filter(f => !['m', 'evaluate', 's', 'stack'].includes(f.name)) // Ignore infrastructure functions
       .map(f => `${f.name}(${f.args.join(',')})`)
-      .join('|');
+    )).sort();
+
+    const normalized = uniqueFeatures.join('|');
 
     // Generate cryptographic hash
     const salt = options.salt || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
