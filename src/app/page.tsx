@@ -1,16 +1,18 @@
 'use client';
 
-import SonicGuardian from '@/components/SonicGuardian';
+import dynamic from 'next/dynamic';
+
+const SonicGuardian = dynamic(() => import('@/components/SonicGuardian'), {
+  ssr: false,
+});
 
 export default function Home() {
   const handleRecoverySuccess = (hash: string) => {
     console.log('Recovery successful with hash:', hash);
-    // In a real implementation, this would trigger wallet key rotation
   };
 
   const handleRecoveryFailure = () => {
     console.log('Recovery failed');
-    // Handle recovery failure
   };
 
   return (

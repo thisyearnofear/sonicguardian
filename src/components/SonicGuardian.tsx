@@ -25,6 +25,12 @@ interface SonicGuardianProps {
 export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianProps) {
   const [phase, setPhase] = useState<'registration' | 'recovery'>('registration');
   const [secretVibe, setSecretVibe] = useState('');
+
+  const FREQUENCY_PRESETS = [
+    { name: 'Deep Sea Pulse', vibe: 'a low, slow sub-bass sine wave with character' },
+    { name: 'Industrial Chaos', vibe: 'distorted fast sawtooth rhythms with high-pass resonance' },
+    { name: 'Stellar Resonance', vibe: 'harmonic triangle oscillators layered with slow modulation' }
+  ];
   const [generatedCode, setGeneratedCode] = useState('');
   const [dna, setDna] = useState<SonicDNA | null>(null);
   const [dnaHash, setDnaHash] = useState('');
@@ -186,13 +192,13 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         {/* Header Section */}
         <header className="text-center mb-16 space-y-4 max-w-2xl">
           <div className="inline-block px-4 py-1 rounded-full border border-[color:var(--color-primary)] text-[color:var(--color-primary)] text-xs font-bold tracking-widest uppercase mb-4 animate-pulse-soft">
-            ZK-Acoustic Recovery Protocol
+            Starknet Privacy Track | ZK-Acoustic Protocol
           </div>
           <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-gradient leading-[1.1]">
             Sonic Guardian
           </h1>
           <p className="text-[color:var(--color-muted)] text-lg md:text-xl font-light">
-            Immutable identity recovery via <span className="text-[color:var(--color-foreground)] font-medium">Sonic Strudel DNA</span>
+            Anonymous Credentials via <span className="text-[color:var(--color-foreground)] font-medium">Acoustic Proofs</span>
           </p>
         </header>
 
@@ -224,7 +230,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold tracking-tight">
-                    {phase === 'registration' ? 'Mint Identity' : 'Verify Signature'}
+                    {phase === 'registration' ? 'Mint Credential' : 'Prove Ownership'}
                   </h2>
                   <div className="flex gap-2">
                     <WalletButton />
@@ -252,10 +258,25 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 </div>
 
                 <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-3">Frequency Library (Strudel Mechanisms)</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {FREQUENCY_PRESETS.map((preset) => (
+                        <button
+                          key={preset.name}
+                          onClick={() => phase === 'registration' ? setSecretVibe(preset.vibe) : setRecoveryVibe(preset.vibe)}
+                          className="px-3 py-1 text-[10px] border border-[color:var(--color-border)] rounded-full hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] transition-all uppercase tracking-wider bg-[color:var(--color-foreground)]/5"
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">
                     {phase === 'registration'
-                      ? "Define a unique acoustic landscape. This 'vibe' generates your deterministic Strudel DNA used for future wallet recovery."
-                      : "Recall your sonic signature. PROVE you are the guardian of this frequency without revealing the vibe itself."}
+                      ? "Define a unique acoustic landscape. This 'vibe' generates an anonymous credential anchored on Starknet."
+                      : "Recall your sonic signature. Verify your credential via ZK-Social Proof of Frequency."}
                   </p>
 
                   <div className="relative group">
@@ -450,21 +471,21 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         {/* Protocol Analysis Section */}
         <section className="mt-24 w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-primary)]">01. Neural Synthesis</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-primary)]">01. Anonymous Credentials</h4>
             <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Your "vibe" is processed through a deterministic LLM agent that translates subjective musical descriptions into complex <span className="text-[color:var(--color-foreground)] font-medium">Strudel pattern code</span>.
+              Your "vibe" is processed through a deterministic LLM that translates musical subjective data into <span className="text-[color:var(--color-foreground)] font-medium">Starknet-ready commitments</span>.
             </p>
           </div>
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">02. Feature Extraction</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">02. ZK-Sonic Verifier</h4>
             <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              We parse the generated AST to extract unique sonic markers—oscillators, filters, and effects—creating an immutable <span className="text-[color:var(--color-foreground)] font-medium">Acoustic Signature</span>.
+              We leverage Cairo's efficiency to verify Sigma-style acoustic proofs, enabling <span className="text-[color:var(--color-foreground)] font-medium">Anonymous Authentication</span> for any dApp.
             </p>
           </div>
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-success)]">03. ZK-Hashing</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-success)]">03. Social Recovery Integration</h4>
             <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              The signature is normalized and hashed using salted SHA-256, allowing you to prove identity ownership without ever storing your secret vibe.
+              Integrates with <span className="text-[color:var(--color-foreground)] font-medium">Sumo Login</span> and shielding protocols to provide a privacy-first frontend for the Starknet ecosystem.
             </p>
           </div>
         </section>

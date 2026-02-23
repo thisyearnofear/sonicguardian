@@ -1,27 +1,34 @@
 # Sonic Guardian | Starknet Privacy Track
 
-This project implements a **ZK-Acoustic Recovery Protocol** for Starknet, designed for the Privacy Track.
+Sonic Guardian is a **ZK-Acoustic Privacy Protocol** that transforms subjective musical "vibes" into immutable, privacy-preserving credentials on Starknet.
 
-## 🧬 Innovation: Acoustic Hashing
-Instead of relying on insecure "secret phrases" or complex hardware, Sonic Guardian uses **Strudel Recursive Patterns** to generate a deterministic "Sonic DNA".
+## 🧬 Innovation: Acoustic Hashing & Strudel Mechanisms
+Instead of static seed phrases, we utilize **Strudel Recursive Patterns** to generate deterministic cryptographic identity.
 
-1.  **Sonic DNA Extraction**: A user's "vibe" (e.g., "fast dark techno loop") is synthesized into a unique Strudel live-coding pattern.
-2.  **Cryptographic Commitment**: We extract the AST (Abstract Syntax Tree) of the pattern, normalize it, and hash it into a `felt252` commitment.
-3.  **On-Chain Anchoring**: This commitment is saved to the `SonicGuardian.cairo` contract on Starknet.
-4.  **ZK-Proof of Frequency**: To recover a wallet, the user re-synthesizes their vibe. The system proves the new pattern matches the on-chain commitment without ever exposing the original vibe or the full pattern.
+1.  **Acoustic Synthesis**: A user's vibe (e.g., *"Deep Sea Pulse"*) is processed via a deterministic Neural Agent into **Strudel Pattern Code**. 
+2.  **AST-to-Felt Normalization**: We parse the Strudel AST to extract unique musical features (oscillators, filters, rhythmic density). These are normalized into a `felt252` commitment.
+3.  **On-Chain Anchoring**: The commitment is anchored to a Cairo Guardian contract.
+4.  **ZK-Proof of Frequency**: Recovery is performed by re-synthesizing the vibe. The verifier proves the new pattern matches the on-chain hash without revealing the original description or the full pattern.
+
+## 🛡️ Privacy Track Alignment
+We implement several key primitives requested for the Starknet Privacy Track:
+
+*   **Anonymous Credentials System**: Sonic DNA acts as an anonymous, multi-factor credential that doesn't rely on PII (Personally Identifiable Information).
+*   **ZK-Social Recovery Integration**: By framing identity as a "Social Vibe," we align with **Sumo Login** and social-attestation patterns.
+*   **Acoustic Sigma Protocols**: The verification flow mimics a Sigma protocol where the "Knowledge of a Vibe" is the secret being proven.
+*   **Shielded UI/UX**: The entire interface is designed for premium, privacy-first consumer interactions, providing a "Shielded Wallet" experience for identity.
 
 ## 🛠️ Technical Stack
-*   **Next.js 14**: Premium frontend experience.
-*   **Starknet.js & Starknet React**: Seamless wallet integration (Argent/Braavos).
-*   **Cairo 1.0**: On-chain guardian contract for immutable identity anchoring.
-*   **Three.js**: High-fidelity visualization of the "Sonic Singularity".
+*   **Next.js 14**: High-fidelity, reactive frontend.
+*   **Starknet.js & Starknet React**: Native connection to Argent-X & Braavos.
+*   **Cairo 1.0**: Optimized on-chain commitment storage and verification.
+*   **Three.js**: Real-time visualization of the "Sonic Singularity" DNA structure.
 
-## 🚀 Hackathon Positioning
-*   **Privacy Track**: Solves the "Secret Recovery Phrase" problem with a privacy-preserving acoustic alternative.
-*   **Technical Depth**: Features a custom Cairo contract and complex AST parsing logic for DNA extraction.
-*   **UX Frontier**: Moves Starknet identity from "mechanical" to "experiential".
+## 🚀 Hackathon Strategy
+1.  **Expose the Strudel Genius**: We provide a "Frequency Library" in the UI to demonstrate how specific musical parameters deterministically change the DNA structure.
+2.  **The "Vibe-to-Proof" Narrative**: We move Starknet identity from a 24-word mechanical chore to an experiential, privacy-preserving ritual.
 
 ### Contract Details (Sepolia)
-*   **Contract**: `contracts/src/lib.cairo`
+*   **Contract Logic**: `contracts/src/lib.cairo`
+*   **Frontend Hook**: `src/hooks/use-starknet-guardian.ts`
 *   **Interface**: `ISonicGuardian`
-*   **Methods**: `register_identity(commitment)`, `verify_identity(proof_hash)`
