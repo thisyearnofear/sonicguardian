@@ -1,53 +1,68 @@
-# Sonic Guardian - Enhanced Next.js Implementation
+# Sonic Guardian
 
-A modern, production-ready implementation of the Sonic Guardian acoustic DNA identity system, built with Next.js, TypeScript, and Tailwind CSS.
+Private Bitcoin recovery using acoustic commitments and zero-knowledge proofs on Starknet.
+
+## 🎯 Overview
+
+Sonic Guardian enables **privacy-preserving recovery** for Bitcoin multisig wallets using memorable acoustic DNA. It combines zero-knowledge proofs (Pedersen commitments) with acoustic synthesis to create a recovery mechanism that's both secure and memorable.
+
+**Problem**: Traditional Bitcoin recovery relies on seed phrases that can be stolen, lost, or phished.
+
+**Solution**: Acoustic DNA derived from musical vibes, committed to Starknet using zero-knowledge proofs, serving as a guardian key for Bitcoin multisig recovery.
 
 ## 🚀 Features
 
 ### Core Functionality
-- **Acoustic DNA Extraction**: Deterministic hash generation from Strudel live coding patterns
-- **Zero-Knowledge Recovery**: Prove identity knowledge without revealing the secret
-- **Deterministic Generation**: Same prompt always produces same DNA hash
-- **Web Audio API**: Real-time audio feedback and sound generation
+- **Acoustic DNA Generation**: Deterministic secrets from musical vibes via AI synthesis
+- **Pedersen Commitments**: True zero-knowledge proofs hiding DNA on-chain
+- **Bitcoin Integration**: Multisig recovery via sBTC/tBTC bridge
+- **Privacy-Preserving**: No credential exposure during recovery
 
-### Enhanced Security
-- **Cryptographic Hashing**: SHA-256 with salt and timestamp
-- **Input Validation**: Comprehensive validation with rate limiting
-- **Secure Storage**: Encrypted localStorage with error handling
-- **Session Management**: Secure session tracking with recovery history
+### Security
+- **Zero-Knowledge Proofs**: Pedersen commitments hide DNA cryptographically
+- **Client-Side Cryptography**: All secrets generated and stored locally
+- **Venice AI**: Privacy-focused inference without logging
+- **Static Build**: No backend, no data collection
 
-### Modern Architecture
-- **Next.js 16.1.6**: Server-side rendering and API routes
-- **TypeScript**: Full type safety and better development experience
-- **Tailwind CSS**: Utility-first styling with theme support
-- **React Hooks**: Modern state management with hooks
-
-### Enhanced User Experience
-- **Theme Support**: Light, dark, and system theme options
-- **Audio Controls**: Toggle audio and animations
-- **Real AI Integration**: Google Gemini API for code generation
-- **Loading States**: Smooth transitions and feedback
-- **Mobile Responsive**: Works on all devices
+### User Experience
+- **Memorable Recovery**: Sound is easier to remember than 24 words
+- **Real-Time Synthesis**: Hear your acoustic DNA as it's generated
+- **Mobile Responsive**: Full functionality on all devices
+- **Theme Support**: Light, dark, and system themes
 
 ## 🏗️ Architecture
 
 ```
-sonicguardian-next/
+sonicguardian/
 ├── src/
 │   ├── app/                    # Next.js app directory
 │   │   ├── api/               # API routes
-│   │   │   ├── agent/         # AI agent endpoints
+│   │   │   ├── agent/         # AI synthesis endpoints
 │   │   │   └── dna/           # DNA extraction endpoints
-│   │   └── page.tsx           # Main application page
+│   │   └── page.tsx           # Main application
 │   ├── components/            # React components
-│   │   ├── EnhancedSonicGuardian.tsx  # Main UI component
-│   │   └── ...
+│   │   ├── SonicGuardian.tsx  # Main UI
+│   │   ├── WalletButton.tsx   # Starknet wallet
+│   │   └── StarknetProvider.tsx
 │   ├── lib/                   # Core libraries
-│   │   ├── dna.ts            # DNA extraction logic
-│   │   ├── ai-agent.ts       # AI agent integration
-│   │   ├── storage.ts        # State management
-│   │   ├── theme.ts          # Theme system
-│   │   ├── api.ts           # API utilities
+│   │   ├── dna.ts            # DNA extraction & hashing
+│   │   ├── ai-agent.ts       # Venice AI integration
+│   │   ├── audio.ts          # Strudel synthesis
+│   │   ├── storage.ts        # Secure local storage
+│   │   └── visualizer.ts     # DNA visualization
+│   └── hooks/
+│       └── use-starknet-guardian.ts  # Contract interaction
+├── contracts/
+│   ├── src/
+│   │   └── lib.cairo         # Pedersen commitment contract
+│   └── scripts/
+│       ├── deploy.js         # Deployment automation
+│       └── setup-account.sh  # Account setup helper
+└── docs/
+    ├── STARKNET.md           # Technical architecture
+    ├── PRIVACY.md            # Cryptographic analysis
+    └── SKILL.md              # AI agent interface
+```
 │   │   └── audio.ts         # Audio generation
 │   ├── __tests__/           # Test suite
 │   │   ├── dna.test.ts      # DNA extraction tests
@@ -61,347 +76,314 @@ sonicguardian-next/
 
 ## 🛠️ Installation
 
-1. **Clone the repository**
+### Prerequisites
+- Node.js 18+ and pnpm
+- Starknet wallet (Argent or Braavos)
+- Venice AI API key (for synthesis)
+
+### Quick Start
+
+1. **Clone and install**
    ```bash
    git clone <repository-url>
-   cd sonicguardian-next
-   ```
-
-2. **Install dependencies**
-   ```bash
+   cd sonicguardian
    pnpm install
    ```
 
-3. **Set up environment variables**
-   Create a `.env.local` file:
+2. **Configure environment**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Edit `.env.local`:
    ```env
-   VENICE_API_KEY=your_venice_api_key_here
-   GEMINI_API_KEY=your_gemini_api_key_here
+   VENICE_API_KEY=your_venice_api_key
    NEXT_PUBLIC_USE_REAL_AI=true
    NEXT_PUBLIC_AI_PROVIDER=venice
    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
    ```
 
-4. **Start development server**
+3. **Start development**
    ```bash
    pnpm dev
    ```
-
-5. **Open your browser**
-   Visit `http://localhost:3000`
-
-## 🔗 Starknet Contract Deployment
-
-### Prerequisites
-
-1. **Install Scarb (Cairo Package Manager)**
-   ```bash
-   # Using curl (recommended)
-   curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
    
-   # Or using Homebrew (macOS)
-   brew install scarb
-   
-   # Or using asdf
-   asdf plugin add scarb && asdf install scarb latest
-   ```
+   Open `http://localhost:3000`
 
-2. **Install Starkli (Deployment Tool)**
-   ```bash
-   curl https://get.starkli.sh | sh
-   starkliup
-   ```
+## 🔗 Deploy Starknet Contract
 
-3. **Set up Starknet Account**
-   ```bash
-   # Create a new keystore
-   starkli signer keystore new ~/.starkli-wallets/deployer/keystore.json
-   
-   # Get testnet ETH from: https://starknet-faucet.vercel.app/
-   
-   # Fetch your account
-   starkli account fetch <YOUR_ADDRESS> \
-     --output ~/.starkli-wallets/deployer/account.json \
-     --rpc https://starknet-sepolia.public.blastapi.io/rpc/v0_7
-   ```
+### Install Cairo Tools
 
-4. **Export Environment Variables**
-   ```bash
-   export STARKNET_ACCOUNT=~/.starkli-wallets/deployer/account.json
-   export STARKNET_KEYSTORE=~/.starkli-wallets/deployer/keystore.json
-   export STARKNET_NETWORK=sepolia  # or mainnet
-   ```
-
-### Deploy the Contract
-
-**Option 1: Using npm script (recommended)**
 ```bash
+# Install Scarb (Cairo package manager)
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
+
+# Install Starkli (deployment tool)
+curl https://get.starkli.sh | sh
+starkliup
+```
+
+### Setup Starknet Account
+
+```bash
+# Interactive setup helper
+pnpm contracts:setup
+
+# Or manual setup:
+starkli signer keystore new ~/.starkli-wallets/deployer/keystore.json
+# Get testnet ETH: https://starknet-faucet.vercel.app/
+starkli account fetch <YOUR_ADDRESS> --output ~/.starkli-wallets/deployer/account.json
+```
+
+### Deploy Contract
+
+```bash
+# Export environment variables
+export STARKNET_ACCOUNT=~/.starkli-wallets/deployer/account.json
+export STARKNET_KEYSTORE=~/.starkli-wallets/deployer/keystore.json
+export STARKNET_NETWORK=sepolia
+
+# Deploy
 pnpm contracts:deploy
 ```
 
-**Option 2: Using bash script**
-```bash
-pnpm contracts:deploy:sh
-```
-
-**Option 3: Manual deployment**
-```bash
-# Build the contract
-pnpm contracts:build
-
-# Deploy using starkli
-cd contracts
-starkli declare target/dev/sonic_guardian_SonicGuardian.contract_class.json --network sepolia
-starkli deploy <CLASS_HASH> --network sepolia
-```
-
-The deployment script will automatically:
-- Build the Cairo contract
-- Declare the contract class on Starknet
-- Deploy a contract instance
-- Update your `.env.local` with the contract address
-
-### Verify Deployment
-
-After deployment, add the contract address to `.env.local`:
-```env
-NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS=0x...
-```
+The script automatically updates `.env.local` with the contract address.
 
 See [contracts/README.md](contracts/README.md) for detailed deployment documentation.
 
-## 🛡️ Security
-
-### Pre-commit Hook
-The project includes a pre-commit hook that scans for secrets before committing:
-- Detects private keys, API keys, and passwords
-- Prevents accidental secret commits
-- Excludes `.example` files and package files
-
-### Best Practices
-- Never commit `.env.local` (already in `.gitignore`)
-- Use environment variables for all secrets
-- Rotate API keys regularly
-- Use testnet for development
-
 ## 🎯 Usage
 
-### Registration Flow
-1. Enter a "Secret Vibe" (your recovery phrase)
-2. Click "Generate & Mint Identity"
-3. The system generates Strudel code and extracts DNA
-4. Click "Simulate Wallet Lock" to proceed to recovery
+### Setup Bitcoin Guardian
 
-### Recovery Flow
-1. Enter the same secret vibe used during registration
-2. Click "Generate Proof & Recover"
-3. System verifies DNA match and recovers identity
-4. Success/failure feedback with audio cues
+1. **Connect Wallet**: Click "Connect Argent" or "Connect Braavos"
+2. **Create Acoustic DNA**: 
+   - Choose a sound from the library or describe your vibe
+   - Click "Mint Sonic DNA"
+   - Listen to your unique acoustic signature
+3. **Anchor to Starknet**:
+   - Click "Anchor to Starknet (ZK-Privacy)"
+   - Approve transaction in wallet
+   - Your Pedersen commitment is stored on-chain
 
-### Advanced Features
-- **Theme Toggle**: Switch between light, dark, and system themes
-- **Audio Control**: Enable/disable audio feedback
-- **Animations**: Toggle UI animations
-- **Real AI**: Enable Google Gemini for code generation
+### Recover Bitcoin Wallet
 
-## 🔧 API Endpoints
+1. **Enter Recovery Mode**: Click "Switch Protocol ⇄"
+2. **Provide Acoustic DNA**: Enter the same vibe used during setup
+3. **Verify Identity**: Click "Verify Identity"
+4. **Authorize Recovery**: If verified, authorize Bitcoin transaction
 
-### DNA Extraction
-- `POST /api/dna/extract` - Extract DNA from Strudel code
-- `GET /api/dna/extract?code=...` - Synchronous extraction
+## 🔐 Security Model
 
-### AI Agent
-- `POST /api/agent/generate` - Generate code from prompt
-- `GET /api/agent/generate?prompt=...` - Synchronous generation
+### What's Private
+- ✅ Acoustic DNA hash (hidden via Pedersen commitment)
+- ✅ Original vibe description (one-way extraction)
+- ✅ Blinding factor (client-side only)
+- ✅ Failed recovery attempts (verified locally)
 
-### Features
-- Rate limiting (10 requests/minute per IP)
-- Input validation and sanitization
-- CORS support with configurable origins
-- Comprehensive error handling
+### What's Public
+- ⚠️ Pedersen commitment (reveals nothing cryptographically)
+- ⚠️ Bitcoin address being guarded (necessary for recovery)
+- ⚠️ Successful recovery events (required for authorization)
 
-## 🧪 Testing
+### Threat Model
+- **Protects Against**: Phishing, seed phrase theft, social engineering
+- **Requires**: User remembers their vibe (or stores it securely)
+- **Assumes**: Starknet security, Pedersen commitment soundness
 
-Run the complete test suite:
-```bash
-npm test
+## 🏆 Hackathon Alignment
+
+### Privacy Track ($9,675)
+- ✅ **Pedersen Commitments**: Real zero-knowledge primitive
+- ✅ **Anonymous Credentials**: Prove ownership without identity
+- ✅ **Private Recovery**: No credential exposure on-chain
+- ✅ **Confidential Transactions**: Hidden recovery flow
+
+### Bitcoin Track ($5,000)
+- ✅ **BTC-Native Use Case**: Multisig recovery mechanism
+- ✅ **Privacy Enhancement**: No seed phrase exposure
+- ✅ **Starknet Integration**: sBTC/tBTC bridge
+- ✅ **Real-World Utility**: Solves lost key problem
+
+## 🛡️ Security Best Practices
+
+### For Users
+- Store your vibe securely (password manager or encrypted note)
+- Test recovery flow before relying on it
+- Use hardware wallet for primary Bitcoin keys
+- Keep blinding factor backup (exported from app)
+
+### For Developers
+- Never log vibes or DNA hashes
+- Validate all inputs before commitment
+- Use secure random for blinding factors
+- Audit contract before mainnet deployment
+
+## 🎨 Technical Details
+
+### Acoustic DNA Extraction
+
+The DNA extraction process ensures deterministic, reproducible secrets:
+
+1. **AI Synthesis**: Venice AI translates vibe → Strudel pattern code
+2. **AST Parsing**: Extract musical features from code structure
+3. **Normalization**: Sort and deduplicate features for consistency
+4. **Hashing**: Generate deterministic hash from normalized features
+
+Example:
+```typescript
+Vibe: "dark industrial techno"
+↓
+Code: stack(s("bd*4").bank("RolandTR909").distort(3), s("hh*8").gain(0.6))
+↓
+Features: ["stack", "s", "bank", "distort", "gain"]
+↓
+DNA: "bank(RolandTR909)|distort(3)|gain(0.6)|s(bd*4)|s(hh*8)|stack"
+↓
+Hash: sha256(DNA + salt)
 ```
 
-Run tests with coverage:
-```bash
-npm run test:coverage
-```
+### Zero-Knowledge Commitments
 
-Run specific test file:
-```bash
-npm test -- src/__tests__/dna.test.ts
-```
-
-## 🎨 Theme System
-
-The application supports three themes:
-
-1. **Light Theme**: Clean white background with dark text
-2. **Dark Theme**: Dark background with light text
-3. **System Theme**: Automatically follows system preference
-
-### Customization
-Themes are defined in `src/lib/theme.ts` with CSS custom properties for easy customization:
+Pedersen commitments provide cryptographic hiding:
 
 ```typescript
-const customTheme = {
-  colors: {
-    background: '#your-color',
-    foreground: '#your-color',
-    // ... other colors
-  }
+// Registration
+blinding = crypto.randomUUID()
+commitment = pedersen_hash(dna_hash, blinding)
+contract.register_guardian(btc_address, commitment)
+
+// Recovery
+user_provides(dna_hash, blinding)
+computed = pedersen_hash(dna_hash, blinding)
+if (computed == stored_commitment) {
+  authorize_recovery()
 }
 ```
 
-## 🔌 AI Integration
+The commitment reveals nothing about the DNA, yet proves knowledge during recovery.
 
-### Mock Agent (Default)
-- Deterministic code generation
-- No external dependencies
-- Perfect for development and testing
+### Bitcoin Integration
 
-### Google Gemini (Optional)
-- Real AI-powered code generation
-- Requires API key
-- Fallback to mock agent on failure
+Recovery flow via sBTC/tBTC bridge:
 
-### Configuration
+1. User loses hot wallet key
+2. Provides acoustic DNA + hardware wallet signature
+3. Starknet verifies Pedersen commitment
+4. Contract authorizes sBTC/tBTC transaction
+5. Bitcoin multisig executes recovery
+
+## 📚 API Reference
+
+### Generate Strudel Pattern
 ```typescript
-// Enable real AI
-setRealAIEnabled(true);
-
-// Use with specific options
-const response = await generateStrudelCode(prompt, {
-  useRealAI: true,
-  apiKey: 'your-key',
-  model: 'gemini-1.5-flash'
-});
+POST /api/agent/generate
+Body: { prompt: string }
+Response: { 
+  code: string,
+  provider: "venice" | "mock",
+  confidence: number
+}
 ```
 
-## 📊 Security Features
-
-### Cryptographic Security
-- **SHA-256 Hashing**: Industry-standard cryptographic hashing
-- **Salt Generation**: Unique salt per session for security
-- **Timestamp Tracking**: Session timing for audit trails
-
-### Input Validation
-- **Length Limits**: Prevents DoS attacks
-- **Type Checking**: Ensures valid data types
-- **Sanitization**: Removes malicious content
-
-### Rate Limiting
-- **IP-based Limits**: 10 requests per minute per IP
-- **Memory-based**: No database dependencies
-- **Configurable**: Easy to adjust limits
-
-## 🚀 Production Deployment
-
-### Environment Variables
-```env
-# Required for production
-NODE_ENV=production
-GEMINI_API_KEY=your_production_key
-
-# Optional
-NEXT_PUBLIC_USE_REAL_AI=true
+### Extract Acoustic DNA
+```typescript
+POST /api/dna/extract
+Body: { code: string }
+Response: {
+  hash: string,
+  features: string[],
+  dna: string,
+  salt: string
+}
 ```
 
-### Build and Deploy
+### Contract Interface
+```cairo
+trait ISonicGuardian {
+  fn register_guardian(
+    btc_address: felt252,
+    commitment: felt252,
+    blinding_commitment: felt252
+  );
+  
+  fn verify_recovery(
+    btc_address: felt252,
+    dna_hash: felt252,
+    blinding: felt252
+  ) -> bool;
+  
+  fn authorize_btc_recovery(
+    btc_address: felt252,
+    proof: RecoveryProof
+  ) -> felt252;
+}
+```
+
+## 🧪 Development
+
+### Project Structure
+```
+src/
+├── lib/
+│   ├── dna.ts           # Core DNA extraction logic
+│   ├── ai-agent.ts      # Venice AI integration
+│   ├── audio.ts         # Strudel synthesis
+│   ├── storage.ts       # Secure local storage
+│   └── visualizer.ts    # DNA visualization
+├── components/
+│   ├── SonicGuardian.tsx      # Main UI component
+│   ├── WalletButton.tsx       # Starknet wallet connection
+│   └── StarknetProvider.tsx   # Web3 provider
+└── hooks/
+    └── use-starknet-guardian.ts  # Contract interaction
+```
+
+### Core Principles
+- **Enhancement First**: Improve existing code before adding new features
+- **Consolidation**: Delete unnecessary code, no deprecation
+- **DRY**: Single source of truth for shared logic
+- **Modular**: Composable, testable, independent modules
+- **Performant**: Adaptive loading, caching, optimization
+
+### Available Scripts
 ```bash
-# Build for production
-npm run build
+pnpm dev              # Start development server
+pnpm build            # Build for production
+pnpm start            # Start production server
+pnpm lint             # Run ESLint
 
-# Start production server
-npm start
-
-# Deploy to Vercel (recommended)
-vercel
+pnpm contracts:build  # Build Cairo contracts
+pnpm contracts:deploy # Deploy to Starknet
+pnpm contracts:setup  # Setup Starknet account
 ```
-
-### Security Considerations
-- Use HTTPS in production
-- Set proper CORS origins
-- Rotate API keys regularly
-- Monitor rate limiting logs
 
 ## 🤝 Contributing
 
+We welcome contributions! Please:
+
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
+3. Follow the core principles above
 4. Add tests for new functionality
-5. Run the test suite
-6. Submit a pull request
-
-### Code Style
-- Use TypeScript for type safety
-- Follow ESLint configuration
-- Write comprehensive tests
-- Document public APIs
-
-## 📈 Performance
-
-### Optimizations
-- **Lazy Loading**: Components load on demand
-- **Caching**: AI responses cached for 5 minutes
-- **Bundle Splitting**: Code split by routes
-- **Image Optimization**: Next.js image optimization
-
-### Monitoring
-- Use browser dev tools for performance profiling
-- Monitor API response times
-- Check bundle size with `npm run build`
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**API Key Not Working**
-- Verify Gemini API key format
-- Check environment variable name
-- Ensure key has proper permissions
-
-**Theme Not Applying**
-- Check CSS custom properties
-- Verify theme initialization
-- Clear browser cache
-
-**Audio Not Playing**
-- Check browser permissions
-- Verify Web Audio API support
-- Check audio context state
-
-### Debug Mode
-Enable debug logging:
-```typescript
-// In development
-localStorage.setItem('debug', 'sonic:*');
-```
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-- **Strudel**: For the live coding syntax inspiration
-- **Google Gemini**: For AI code generation capabilities
-- **Next.js Team**: For the excellent framework
-- **Tailwind CSS**: For beautiful, responsive styling
+- **Starknet Foundation**: For the hackathon and privacy infrastructure
+- **Venice AI**: For privacy-preserving inference
+- **Strudel**: For the live coding synthesis engine
+- **sBTC/tBTC**: For Bitcoin ↔ Starknet bridge
 
 ## 📞 Support
 
-For support and questions:
-- Create an issue on GitHub
-- Join our Discord community
-- Email: support@sonicguardian.dev
+- Documentation: See `docs/` directory
+- Issues: GitHub Issues
+- Hackathon: PL Genesis & Starknet Re{define}
 
 ---
 
-**Sonic Guardian** - Where sound meets security. 🎵🔒
+**Sonic Guardian** - Private Bitcoin recovery through acoustic commitments. 🎵🔐

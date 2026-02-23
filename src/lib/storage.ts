@@ -10,6 +10,8 @@ export interface UserSession {
   secretPrompt: string;
   storedHash: string;
   storedSalt: string;
+  btcAddress?: string;
+  blinding?: string; // Encrypted blinding factor
   recoveryAttempts: RecoveryAttempt[];
 }
 
@@ -52,7 +54,14 @@ const storage = {
 
 export const sessionManager = {
   getCurrentSession: () => storage.get<UserSession | null>('session', null),
-  createSession: (secretPrompt: string, storedHash: string, storedSalt: string) => {
+  
+  createSession: (
+    secretPrompt: string,
+    storedHash: string,
+    storedSalt: string,
+    btcAddress?: string,
+    blinding?: string
+  ) => {
     const session: UserSession = {
       id: Math.random().toString(36).substring(2),
       createdAt: Date.now(),
@@ -60,11 +69,22 @@ export const sessionManager = {
       secretPrompt,
       storedHash,
       storedSalt,
+      btcAddress,
+      blinding, // Store blinding factor securely
       recoveryAttempts: []
     };
     storage.set('session', session);
     return session;
   },
+  
+  updateSession: (updates: Partial<UserSession>) => {
+    const session = sessionManager.getCurrentSession();
+    if (!session) return null;
+    const updated = { ...session, ...updates, lastUsed: Date.now() };
+    storage.set('session', updated);
+    return updated;
+  },
+  
   addRecoveryAttempt: (prompt: string, success: boolean, hash?: string) => {
     const session = sessionManager.getCurrentSession();
     if (!session) return;
@@ -78,6 +98,7 @@ export const sessionManager = {
     session.lastUsed = Date.now();
     storage.set('session', session);
   },
+  
   clearSession: () => storage.remove('session')
 };
 
@@ -98,6 +119,8 @@ export const preferencesManager = {
 export const isAudioEnabled = () => preferencesManager.get().audioEnabled;
 export const setAudioEnabled = (val: boolean) => preferencesManager.set({ audioEnabled: val });
 export const areAnimationsEnabled = () => preferencesManager.get().animationsEnabled;
+export const isRealAIEnabled = () => preferencesManager.get().useRealAI;
+export const setRealAIEnabled = (val: boolean) => preferencesManager.set({ useRealAI: val });
 export const setAnimationsEnabled = (val: boolean) => preferencesManager.set({ animationsEnabled: val });
 export const isRealAIEnabled = () => preferencesManager.get().useRealAI;
 export const setRealAIEnabled = (val: boolean) => preferencesManager.set({ useRealAI: val });

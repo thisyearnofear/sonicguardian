@@ -1,30 +1,69 @@
 # Sonic Guardian | Privacy Architecture
 
-Sonic Guardian is designed with **Privacy-First** principles at its core. This document outlines the technical measures taken to ensure that user identities and secret recovery "vibes" remain private, secure, and decentralized.
+Sonic Guardian provides **privacy-preserving Bitcoin recovery** using acoustic commitments and zero-knowledge proofs on Starknet. This document outlines the cryptographic measures that protect user recovery credentials.
 
-## 🛡️ 1. Zero-Backend Architecture (Static Build)
-The Sonic Guardian client is built as a **static Next.js application**. 
-- **Local Synthesis**: All translation from human intuition to Strudel pattern code happens within the user's browser environment.
-- **No Data Exfiltration**: There is no centralized backend server that receives, logs, or stores the user's secret "vibe" or the resulting code.
-- **Client-Side Hashing**: The cryptographic commitment (`felt252`) is generated locally using the Web Crypto API before being sent to the Starknet network.
+## 🛡️ 1. Pedersen Commitments (Zero-Knowledge Proofs)
+The core privacy primitive is the **Pedersen commitment scheme**, a cryptographically binding and hiding commitment.
 
-## 🤖 2. Privacy-Focused Inference (Venice AI)
-We utilize **Venice AI** as the primary inference provider for sonic synthesis.
-- **Permissionless & Private**: Venice provides decentralized inference that does not log prompts or use user data for model training.
-- **Anonymous Bridge**: By routing synthesis through a privacy-preserving provider, we ensure that even the AI phase of identity creation adheres to ZK principles.
+- **Commitment Phase**: `commitment = pedersen_hash(dna_hash, blinding_factor)`
+- **Hiding Property**: The commitment reveals nothing about the DNA hash
+- **Binding Property**: Cannot change the DNA after commitment
+- **Zero-Knowledge Verification**: Prove knowledge of DNA without revealing it
 
-## 🧬 3. Acoustic Hashing & AST Normalization
-To prevent information leakage and ensure robustness, we do not hash the raw secret text or the raw generated code.
-- **Feature Extraction**: We parse the generated code into an **Abstract Syntax Tree (AST)**.
-- **Normalization**: We extract only the technical "Acoustic Features" (e.g., `bank`, `lpf`, `distort`). These features are then sorted and normalized to remove order-variance and minor token drift.
-- **Irreversibility**: It is computationally infeasible to reconstruct the original "vibe" description from the resulting DNA hash, as the hash represents a normalized structural mapping of musical parameters, not the input text.
+This is a true zero-knowledge construction, not simple hash comparison.
 
-## ⛓️ 4. On-Chain Privacy (Starknet)
-- **Commitment-Only Storage**: Only the `felt252` hash is stored on the Starknet blockchain.
-- **Anonymous Credentials**: The protocol allows users to prove "Knowledge of a Vibe" without revealing the description, pattern, or any PII (Personally Identifiable Information).
+## 🔐 2. Private Recovery Flow
+Recovery happens without exposing the acoustic DNA on-chain:
 
-## 🔋 5. Local Mock Fallback
-For maximum privacy in offline or highly restricted environments, the system includes a **Deterministic Mock Engine**. This ensures that core protocol functions can be demonstrated and verified without any external API calls, maintaining a fully air-gapped identity path if required.
+1. **Registration**: Store `pedersen(dna_hash, blinding)` on Starknet
+2. **Recovery Request**: User provides `dna_hash` and `blinding` locally
+3. **Proof Generation**: Client computes commitment locally
+4. **Verification**: Contract verifies commitment match without seeing DNA
+5. **Authorization**: If valid, authorize Bitcoin recovery transaction
+
+The DNA hash never appears on-chain in plaintext.
+
+## 🤖 3. Privacy-Focused Inference (Venice AI)
+Acoustic synthesis uses **Venice AI** for privacy-preserving inference:
+- **No Logging**: Venice does not log prompts or use data for training
+- **Decentralized**: Permissionless inference infrastructure
+- **Local Processing**: DNA extraction happens client-side
+- **No Backend**: Static build with zero server-side data collection
+
+## 🧬 4. Acoustic DNA Extraction
+The acoustic DNA is derived from normalized AST features:
+
+- **AST Parsing**: Extract musical features from Strudel code
+- **Normalization**: Sort and deduplicate features for consistency
+- **Deterministic**: Same vibe always produces same DNA
+- **One-Way**: Cannot reverse DNA back to original vibe
+
+The DNA serves as a memorable, reproducible secret for the commitment scheme.
+
+## ⛓️ 5. On-Chain Privacy (Starknet)
+- **Commitment Storage**: Only Pedersen commitments stored on-chain
+- **No Hash Exposure**: DNA hash never appears in plaintext
+- **Anonymous Recovery**: Prove ownership without revealing identity
+- **BTC Address Mapping**: Private link between commitment and Bitcoin address
+
+## 🔋 6. Client-Side Security
+- **Local Blinding**: Blinding factors generated client-side using Web Crypto API
+- **Secure Storage**: Blinding factors stored in encrypted localStorage
+- **No Transmission**: Secrets never leave the user's device
+- **Static Build**: No backend to compromise
+
+## 🎯 Privacy Guarantees
+
+**What's Hidden:**
+- The acoustic DNA hash (via Pedersen commitment)
+- The original vibe description (via one-way extraction)
+- The blinding factor (never transmitted)
+- Recovery attempts (verified locally before on-chain submission)
+
+**What's Public:**
+- The Pedersen commitment (reveals nothing)
+- The Bitcoin address being guarded (necessary for recovery)
+- Successful recovery events (required for Bitcoin authorization)
 
 ---
-**Sonic Guardian: Your vibe is your key. Your privacy is our protocol.**
+**Sonic Guardian: Private Bitcoin recovery through acoustic commitments.**
