@@ -16,6 +16,21 @@ We implement several key primitives requested for the Starknet Privacy Track. Fo
 *   **Anonymous Credentials**: Sonic DNA acts as an anonymous, multi-factor credential.
 *   **Acoustic Sigma Protocols**: Verification flow proves "Knowledge of a Vibe" without exposure.
 
+## 🕹️ The User Journey
+1.  **Vibe Entrance**: User defines a subjective "Sonic Signature" (e.g., "Deep sea techno pulse").
+2.  **Agentic Synthesis**: Our privacy-focused agent translates the vibe into Strudel pattern code.
+3.  **DNA Extraction**: We parse the code's **AST** to extract deterministic "resonant features," creating a stable **Sonic DNA** hash.
+4.  **On-Chain Anchor**: The user connects their Starknet wallet and stores the DNA hash as an immutable commitment.
+5.  **Acoustic Recovery**: To verify, the user re-enters their vibe. If the newly synthesized DNA matches the on-chain anchor, access is granted.
+
+## 🏗️ Project Status & AX
+- **Mobile Optimized**: The UI is fully responsive, bringing a premium "Resonant Identity" experience to mobile devices.
+- **Pure Private Inference**: Non-private fallbacks (Gemini) have been removed to ensure protocol integrity.
+- **Agent Experience (AX)**: We provide a [SKILL.md](./SKILL.md) for LLM agents to programmatically integrate with the Sonic Guardian protocol.
+
+---
+**Build Strategy**: Static Next.js Export for Zero-Backend trust and IPFS compatibility.
+
 ## 🛠️ Technical Stack
 *   **Next.js 14**: High-fidelity, reactive frontend.
 *   **Venice AI**: Default privacy-focused inference backbone.

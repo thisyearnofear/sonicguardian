@@ -425,47 +425,59 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
                     {/* Gene Network Breakdown */}
                     {dna && (
-                      <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)]">Acoustic Signature Breakdown</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {dna.features.map((feature: string) => (
-                            <div
-                              key={feature}
-                              className="group relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-[color:var(--color-primary)]/5 border border-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-wider hover:bg-[color:var(--color-primary)]/10 transition-all cursor-default overflow-hidden"
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--color-primary)]/0 to-[color:var(--color-primary)]/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                              <div className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-primary)] shadow-[0_0_8px_var(--color-primary)]" />
-                              {feature}
+                      <div className="space-y-6 pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)]">Acoustic Signature Breakdown</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)] mb-3 opacity-60">Resonant Features</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {dna.features.map((feature: string) => (
+                                <div
+                                  key={feature}
+                                  className="group relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-[color:var(--color-primary)]/5 border border-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-wider hover:bg-[color:var(--color-primary)]/10 transition-all cursor-default"
+                                >
+                                  <div className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-primary)] shadow-[0_0_8px_var(--color-primary)]" />
+                                  {feature}
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          </div>
+
+                          <div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)] mb-3 opacity-60">Pattern Intensity</h4>
+                            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 opacity-20">
+                              {Array.from({ length: 16 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="aspect-square bg-[color:var(--color-primary)] rounded-sm animate-pulse"
+                                  style={{
+                                    animationDelay: `${i * 100}ms`,
+                                    opacity: 0.2 + (Math.sin(i * 0.5) * 0.1)
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Pattern Matrix: A rhythmic grid that flickers to represent the live pattern structure */}
-                        <div className="grid grid-cols-8 gap-1 pt-2 opacity-20">
-                          {Array.from({ length: 16 }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="aspect-square bg-[color:var(--color-primary)] rounded-sm animate-pulse"
-                              style={{
-                                animationDelay: `${i * 100}ms`,
-                                opacity: 0.2 + (Math.sin(i * 0.5) * 0.1)
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {dnaHash && (
-                      <div className="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-1">DNA Hash</h4>
-                          <p className="font-mono text-[10px] truncate opacity-60 italic">{dnaHash}</p>
-                        </div>
-                        <div className="text-right">
-                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-1">State</h4>
-                          <p className="text-[10px] font-bold text-[color:var(--color-success)] uppercase tracking-widest">Immutable</p>
-                        </div>
+                        {dnaHash && (
+                          <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t border-white/5">
+                            <div className="overflow-hidden">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-1">DNA Hash</h4>
+                              <p className="font-mono text-[9px] sm:text-[10px] truncate opacity-60 italic">{dnaHash}</p>
+                            </div>
+                            <div className="sm:text-right shrink-0">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-1">State</h4>
+                              <p className="text-[10px] font-bold text-[color:var(--color-success)] uppercase tracking-widest flex items-center gap-2 sm:justify-end">
+                                <span className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-ping" />
+                                Immutable Anchor
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -484,12 +496,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 <div>v1.2.0 Stable Network</div>
                 <div className="flex gap-4">
                   <a href="https://strudel.cc" target="_blank" className="hover:text-[color:var(--color-primary)] transition-colors">Strudel.cc</a>
-                  <a href="/docs/STARKNET.md" className="hover:text-[color:var(--color-primary)] transition-colors">Dev Docs</a>
-                  <a href="/docs/SKILL.md" className="hover:text-[color:var(--color-primary)] transition-colors text-[color:var(--color-accent)]">AI Agent Skill</a>
+                  <a href="/docs/STARKNET.md" target="_blank" className="hover:text-[color:var(--color-primary)] transition-colors">Dev Docs</a>
+                  <a href="/docs/SKILL.md" target="_blank" className="hover:text-[color:var(--color-primary)] transition-colors text-[color:var(--color-accent)]">AI Agent Skill</a>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
