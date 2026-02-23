@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prepare": "husky",
+    "contracts:build": "cd contracts && scarb build",
+    "contracts:deploy": "node contracts/scripts/deploy.js",
+    "contracts:deploy:sh": "cd contracts && ./scripts/deploy.sh",
+    "contracts:setup": "cd contracts && ./scripts/setup-account.sh"
   },
   "dependencies": {
     "@starknet-io/get-starknet": "4.0.8",
@@ -40,6 +45,7 @@
   },
   "devDependencies": {
     "@types/three": "^0.160.0",
-    "@types/webcrypto": "0.0.30"
+    "@types/webcrypto": "0.0.30",
+    "husky": "9.1.7"
   }
 }

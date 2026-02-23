@@ -69,23 +69,120 @@ sonicguardian-next/
 
 2. **Install dependencies**
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Set up environment variables**
    Create a `.env.local` file:
    ```env
+   VENICE_API_KEY=your_venice_api_key_here
    GEMINI_API_KEY=your_gemini_api_key_here
-   NEXT_PUBLIC_USE_REAL_AI=false
+   NEXT_PUBLIC_USE_REAL_AI=true
+   NEXT_PUBLIC_AI_PROVIDER=venice
+   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
    ```
 
 4. **Start development server**
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 5. **Open your browser**
    Visit `http://localhost:3000`
+
+## 🔗 Starknet Contract Deployment
+
+### Prerequisites
+
+1. **Install Scarb (Cairo Package Manager)**
+   ```bash
+   # Using curl (recommended)
+   curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
+   
+   # Or using Homebrew (macOS)
+   brew install scarb
+   
+   # Or using asdf
+   asdf plugin add scarb && asdf install scarb latest
+   ```
+
+2. **Install Starkli (Deployment Tool)**
+   ```bash
+   curl https://get.starkli.sh | sh
+   starkliup
+   ```
+
+3. **Set up Starknet Account**
+   ```bash
+   # Create a new keystore
+   starkli signer keystore new ~/.starkli-wallets/deployer/keystore.json
+   
+   # Get testnet ETH from: https://starknet-faucet.vercel.app/
+   
+   # Fetch your account
+   starkli account fetch <YOUR_ADDRESS> \
+     --output ~/.starkli-wallets/deployer/account.json \
+     --rpc https://starknet-sepolia.public.blastapi.io/rpc/v0_7
+   ```
+
+4. **Export Environment Variables**
+   ```bash
+   export STARKNET_ACCOUNT=~/.starkli-wallets/deployer/account.json
+   export STARKNET_KEYSTORE=~/.starkli-wallets/deployer/keystore.json
+   export STARKNET_NETWORK=sepolia  # or mainnet
+   ```
+
+### Deploy the Contract
+
+**Option 1: Using npm script (recommended)**
+```bash
+pnpm contracts:deploy
+```
+
+**Option 2: Using bash script**
+```bash
+pnpm contracts:deploy:sh
+```
+
+**Option 3: Manual deployment**
+```bash
+# Build the contract
+pnpm contracts:build
+
+# Deploy using starkli
+cd contracts
+starkli declare target/dev/sonic_guardian_SonicGuardian.contract_class.json --network sepolia
+starkli deploy <CLASS_HASH> --network sepolia
+```
+
+The deployment script will automatically:
+- Build the Cairo contract
+- Declare the contract class on Starknet
+- Deploy a contract instance
+- Update your `.env.local` with the contract address
+
+### Verify Deployment
+
+After deployment, add the contract address to `.env.local`:
+```env
+NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS=0x...
+```
+
+See [contracts/README.md](contracts/README.md) for detailed deployment documentation.
+
+## 🛡️ Security
+
+### Pre-commit Hook
+The project includes a pre-commit hook that scans for secrets before committing:
+- Detects private keys, API keys, and passwords
+- Prevents accidental secret commits
+- Excludes `.example` files and package files
+
+### Best Practices
+- Never commit `.env.local` (already in `.gitignore`)
+- Use environment variables for all secrets
+- Rotate API keys regularly
+- Use testnet for development
 
 ## 🎯 Usage
 

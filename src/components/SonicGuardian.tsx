@@ -454,9 +454,18 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               <div className="absolute -right-4 -bottom-4 opacity-5 font-bold text-8xl pointer-events-none tracking-tighter italic">STRUDEL</div>
 
               <div className="space-y-6 relative z-10">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[color:var(--color-success)] animate-pulse" />
-                  <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)]">Live Stream Analysis</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[color:var(--color-success)] animate-pulse" />
+                    <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)]">Live Stream Analysis</h3>
+                  </div>
+                  {!status && !generatedCode && (
+                    <div className="flex gap-1">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-1 h-3 bg-[color:var(--color-primary)]/20 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {status ? (
@@ -466,9 +475,47 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3 opacity-30">
-                    <div className="h-4 w-3/4 bg-[color:var(--color-border)] rounded animate-pulse" />
-                    <div className="h-4 w-1/2 bg-[color:var(--color-border)] rounded animate-pulse" />
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-foreground)]/[0.02] border-dashed relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[color:var(--color-primary)]/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[2000ms] infinite" />
+                      <div className="relative z-10 space-y-3">
+                        <div className="flex items-center justify-between text-[9px] font-mono text-[color:var(--color-muted)] border-b border-[color:var(--color-border)] pb-2 mb-2">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-pulse" />
+                            NETWORK_STABLE
+                          </span>
+                          <span className="opacity-50">v1.2.0-ACX</span>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-mono text-[color:var(--color-muted)] leading-relaxed">
+                            <span className="text-[color:var(--color-primary)]">▸</span> <span className="text-[color:var(--color-primary)] font-bold">SYSTEM_READY:</span> Waiting for acoustic input...
+                          </p>
+                          <p className="text-[10px] font-mono text-[color:var(--color-muted)]/60 leading-relaxed italic">
+                            Protocol ⇄ ZK-Acoustic ready. Sonic DNA will appear here once synthesized.
+                          </p>
+                        </div>
+                        <div className="pt-2 grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[8px] font-bold text-[color:var(--color-muted)]/40 uppercase">
+                              <span>Env Noise</span>
+                              <span>-84dB</span>
+                            </div>
+                            <div className="h-0.5 bg-[color:var(--color-border)]/30 rounded-full overflow-hidden">
+                              <div className="h-full bg-[color:var(--color-primary)]/40 w-1/3 animate-pulse" />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[8px] font-bold text-[color:var(--color-muted)]/40 uppercase">
+                              <span>Quantum Drift</span>
+                              <span>0.002%</span>
+                            </div>
+                            <div className="h-0.5 bg-[color:var(--color-border)]/30 rounded-full overflow-hidden">
+                              <div className="h-full bg-[color:var(--color-accent)]/40 w-1/2 animate-pulse" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -573,9 +620,22 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 )}
 
                 {!generatedCode && !status && (
-                  <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-4">
-                    <div className="text-4xl opacity-20 animate-float italic font-bold">Waiting for input...</div>
-                    <p className="text-xs text-[color:var(--color-muted)] max-w-[200px]">Sonic DNA will appear here once the protocol is initiated.</p>
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-6">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-[color:var(--color-primary)] blur-3xl opacity-10 animate-pulse" />
+                      <div className="relative text-6xl opacity-30 animate-float">🎵</div>
+                    </div>
+                    <div className="space-y-3 max-w-[280px]">
+                      <div className="text-2xl font-bold opacity-40 italic tracking-tight">Ready to synthesize</div>
+                      <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+                        Choose a sound from the library or describe your vibe. Your acoustic signature will materialize here as cryptographic code.
+                      </p>
+                      <div className="flex items-center justify-center gap-2 pt-2">
+                        <div className="w-1 h-1 bg-[color:var(--color-primary)] rounded-full animate-ping" />
+                        <div className="w-1 h-1 bg-[color:var(--color-accent)] rounded-full animate-ping" style={{ animationDelay: '0.2s' }} />
+                        <div className="w-1 h-1 bg-[color:var(--color-success)] rounded-full animate-ping" style={{ animationDelay: '0.4s' }} />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

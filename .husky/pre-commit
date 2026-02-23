@@ -1,0 +1,24 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🛡️ Running Secret Scan..."
+
+# Grep for sensitive patterns in staged files (excluding package.json, pnpm-lock.yaml, and .example files)
+STAGED_FILES=$(git diff --cached --name-only | grep -vE "package.json|pnpm-lock.yaml|\.example$")
+
+if [ -n "$STAGED_FILES" ]; then
+  # Check for private keys, secret keys, and api keys that look like real ones (not placeholder)
+  # This pattern looks for assignments to variables containing 'KEY' or 'SECRET' followed by something that isn't 'your_' or 'YOUR_'
+  SECRETS_FOUND=$(git diff --cached $STAGED_FILES | grep -iE "(PRIVATE_KEY|SECRET|API_KEY|PASSWORD)=" | grep -vE "(=['\"]?(your_|YOUR_|placeholder|env|process\.env))" || true)
+
+  if [ -n "$SECRETS_FOUND" ]; then
+    echo "❌ ERROR: Potential Leak Detected!"
+    echo "--------------------------------------------------"
+    echo "$SECRETS_FOUND"
+    echo "--------------------------------------------------"
+    echo "Please remove the secrets or use placeholders/environment variables."
+    exit 1
+  fi
+fi
+
+echo "✅ No secrets detected in staged files."
