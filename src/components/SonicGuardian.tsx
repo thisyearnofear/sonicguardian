@@ -258,19 +258,19 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               {/* Central Glow */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[color:var(--color-primary)] rounded-full blur-[100px] opacity-30" />
 
-              {/* Problem → Insight → Solution — float over the visualizer */}
+              {/* Problem → Concept → Utility — float over the visualizer */}
               <div className="absolute bottom-4 left-0 right-0 flex flex-col sm:flex-row gap-2 px-4 justify-center">
                 <div className="glass px-3 py-2 rounded-xl border border-red-500/20 backdrop-blur-md max-w-[200px]">
                   <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-0.5">😩 The Problem</p>
-                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Passwords stolen. Biometrics centralized. Your identity is someone else's database.</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Passwords get stolen. Biometrics get cloned. Centralized identity is a point of failure.</p>
                 </div>
                 <div className="glass px-3 py-2 rounded-xl border border-[color:var(--color-primary)]/30 backdrop-blur-md max-w-[200px]">
-                  <p className="text-[9px] font-bold text-[color:var(--color-primary)] uppercase tracking-widest mb-0.5">🎵 The Insight</p>
-                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Sound is deeply personal. Your musical vibe is uniquely yours and impossible to fake.</p>
+                  <p className="text-[9px] font-bold text-[color:var(--color-primary)] uppercase tracking-widest mb-0.5">🎵 The Concept</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Your vibe is your signature. Transform a subjective mood into a cryptographic Sonic DNA.</p>
                 </div>
                 <div className="glass px-3 py-2 rounded-xl border border-[color:var(--color-success)]/30 backdrop-blur-md max-w-[200px]">
-                  <p className="text-[9px] font-bold text-[color:var(--color-success)] uppercase tracking-widest mb-0.5">🔒 The Solution</p>
-                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Your vibe → Sonic DNA → Starknet anchor. No passwords. No databases. Just sound.</p>
+                  <p className="text-[9px] font-bold text-[color:var(--color-success)] uppercase tracking-widest mb-0.5">🔒 The Utility</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Use DNA as a "Guardian" for account recovery or to authorize Starknet session keys.</p>
                 </div>
               </div>
             </div>

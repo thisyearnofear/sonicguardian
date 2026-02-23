@@ -31,12 +31,15 @@ async function ensureAudio() {
     if (audioInitialized) return;
     try {
         const mod = await import('@strudel/web' as any);
+        if (mod.initStrudel) {
+            await mod.initStrudel();
+        }
         if (mod.initAudio) {
             await mod.initAudio();
         }
         audioInitialized = true;
     } catch (e) {
-        // initAudio may not be needed on some versions; continue
+        // initAudio/initStrudel may fail if already called or environment issues
         audioInitialized = true;
     }
 }
