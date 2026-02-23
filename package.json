@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@starknet-io/get-starknet": "4.0.8",
-    "@starknet-react/chains": "4.0.1",
-    "@starknet-react/core": "5.1.4",
+    "@starknet-react/chains": "5.0.3",
+    "@starknet-react/core": "5.0.3",
     "@strudel/core": "1.2.6",
     "@strudel/mini": "1.2.6",
     "@strudel/transpiler": "1.2.6",
