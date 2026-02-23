@@ -8,6 +8,7 @@ import { validators } from './api';
  */
 export interface SonicDNA {
   dna: string;
+  features: string[];
   hash: string;
   salt: string;
   timestamp: number;
@@ -79,6 +80,7 @@ export async function extractSonicDNA(
 
     return {
       dna: normalized,
+      features: features.map(f => f.name).filter((v, i, a) => a.indexOf(v) === i), // Uniques
       hash: hash,
       salt: salt,
       timestamp: timestamp

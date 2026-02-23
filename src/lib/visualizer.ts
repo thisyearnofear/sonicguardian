@@ -1,37 +1,39 @@
 /**
- * 3D Visualizer for Sonic Guardian
- * Creates an interactive 3D physics-based visualization of the DNA extraction process
+ * Sonic Singularity Visualizer
+ * A premium, shader-based experience that represents Sonic DNA as 
+ * morphing geometric resonances rather than simple particles.
  */
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export interface VisualizerConfig {
   container: HTMLElement;
   theme: 'light' | 'dark';
-  particleCount: number;
   dnaSequence?: string;
-}
-
-export interface Particle {
-  mesh: THREE.Mesh;
-  velocity: THREE.Vector3;
-  targetPosition: THREE.Vector3;
-  originalPosition: THREE.Vector3;
-  color: THREE.Color;
-  size: number;
+  genes?: string[];
 }
 
 export class SonicVisualizer {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
-  private controls: OrbitControls;
-  private particles: Particle[] = [];
+  private scene!: THREE.Scene;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  private controls!: OrbitControls;
+  private core!: THREE.Mesh;
+  private nodes: THREE.Group[] = [];
+  private links!: THREE.LineSegments;
   private animationId: number | null = null;
   private time: number = 0;
-  private isAnimating: boolean = false;
   private config: VisualizerConfig;
+  private clock = new THREE.Clock();
+
+  // Shader params driven by DNA
+  private params = {
+    distortion: 0.2,
+    speed: 1.0,
+    colorShift: 0.0,
+    complexity: 1.0
+  };
 
   constructor(config: VisualizerConfig) {
     this.config = config;
@@ -39,209 +41,197 @@ export class SonicVisualizer {
   }
 
   private init() {
-    // Create scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(this.getBackgroundColor());
 
-    // Create camera
     this.camera = new THREE.PerspectiveCamera(
-      75, 
-      this.config.container.clientWidth / this.config.container.clientHeight, 
-      0.1, 
+      45,
+      this.config.container.clientWidth / this.config.container.clientHeight,
+      0.1,
       1000
     );
-    this.camera.position.set(0, 0, 15);
+    this.camera.position.set(0, 5, 15);
 
-    // Create renderer
-    this.renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
       alpha: true,
-      preserveDrawingBuffer: true
+      powerPreference: 'high-performance'
     });
     this.renderer.setSize(this.config.container.clientWidth, this.config.container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
     this.config.container.appendChild(this.renderer.domElement);
 
-    // Add controls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.enableZoom = true;
-    this.controls.enablePan = true;
+    this.controls.enableZoom = false;
+    this.controls.autoRotate = true;
+    this.controls.autoRotateSpeed = 0.5;
 
-    // Add lighting
-    this.setupLighting();
+    this.setupLights();
+    this.createCore();
+    this.createDNAStructure();
 
-    // Create particles
-    this.createParticles();
-
-    // Handle resize
     window.addEventListener('resize', this.onResize.bind(this));
-
-    // Start animation
     this.animate();
   }
 
-  private setupLighting() {
-    // Ambient light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    this.scene.add(ambientLight);
+  private setupLights() {
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    this.scene.add(ambient);
 
-    // Directional light
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(5, 10, 7);
-    dirLight.castShadow = true;
-    this.scene.add(dirLight);
+    const p1 = new THREE.PointLight(this.getPrimaryColor(), 5, 20);
+    p1.position.set(5, 5, 5);
+    this.scene.add(p1);
 
-    // Point lights for DNA effect
-    const blueLight = new THREE.PointLight(0x00ffff, 2, 20);
-    blueLight.position.set(0, 0, 0);
-    this.scene.add(blueLight);
-
-    const purpleLight = new THREE.PointLight(0x8000ff, 1.5, 15);
-    purpleLight.position.set(3, 3, 3);
-    this.scene.add(purpleLight);
-
-    // Hemisphere light for ambient color
-    const hemiLight = new THREE.HemisphereLight(0x404040, 0xffffff, 0.5);
-    this.scene.add(hemiLight);
+    const p2 = new THREE.PointLight(this.getAccentColor(), 3, 20);
+    p2.position.set(-5, -5, 5);
+    this.scene.add(p2);
   }
 
-  private createParticles() {
-    const geometry = new THREE.IcosahedronGeometry(0.2, 0);
+  private getPrimaryColor() {
+    return this.config.theme === 'dark' ? 0x818cf8 : 0x6366f1;
+  }
+
+  private getAccentColor() {
+    return this.config.theme === 'dark' ? 0xfb7185 : 0xf43f5e;
+  }
+
+  /**
+   * Create the central "Sonic Core" - a morphing geometric orb
+   */
+  private createCore() {
+    // We'll use a high-poly sphere and a custom material
+    const geometry = new THREE.IcosahedronGeometry(3, 32);
+
     const material = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.1,
-      metalness: 0.8,
-      emissive: 0x000000,
-      emissiveIntensity: 0.5
+      roughness: 0.0,
+      metalness: 0.9,
+      flatShading: false,
+      emissive: this.getPrimaryColor(),
+      emissiveIntensity: 0.2,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.3
     });
 
-    const colors = this.getThemeColors();
-    
-    for (let i = 0; i < this.config.particleCount; i++) {
-      const mesh = new THREE.Mesh(geometry, material.clone());
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+    this.core = new THREE.Mesh(geometry, material);
+    this.scene.add(this.core);
 
-      // Random position in a sphere
-      const radius = 4 + Math.random() * 2;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      
-      const x = radius * Math.sin(phi) * Math.cos(theta);
-      const y = radius * Math.sin(phi) * Math.sin(theta);
-      const z = radius * Math.cos(phi);
+    // Add an inner solid glow core
+    const innerGeo = new THREE.IcosahedronGeometry(2.5, 4);
+    const innerMat = new THREE.MeshStandardMaterial({
+      color: this.getPrimaryColor(),
+      emissive: this.getPrimaryColor(),
+      emissiveIntensity: 1.0,
+      transparent: true,
+      opacity: 0.8
+    });
+    const innerCore = new THREE.Mesh(innerGeo, innerMat);
+    this.core.add(innerCore);
+  }
 
-      mesh.position.set(x, y, z);
-      mesh.userData = { originalPosition: new THREE.Vector3(x, y, z) };
+  /**
+   * Create the "Genes" - distinct primitives that form the DNA structure
+   */
+  private createDNAStructure() {
+    // Instead of 100 particles, we use 12 high-quality resonance nodes
+    const nodeGeometries = [
+      new THREE.IcosahedronGeometry(0.5, 0),
+      new THREE.OctahedronGeometry(0.5, 0),
+      new THREE.TorusGeometry(0.4, 0.1, 8, 16)
+    ];
 
-      const particle: Particle = {
-        mesh,
-        velocity: new THREE.Vector3(),
-        targetPosition: new THREE.Vector3(x, y, z),
-        originalPosition: new THREE.Vector3(x, y, z),
-        color: colors[i % colors.length],
-        size: 0.2 + Math.random() * 0.3
-      };
+    for (let i = 0; i < 12; i++) {
+      const group = new THREE.Group();
 
-      // Set initial color
-      (mesh.material as THREE.MeshStandardMaterial).color.copy(particle.color);
-      (mesh.material as THREE.MeshStandardMaterial).emissive.copy(particle.color).multiplyScalar(0.3);
+      const geo = nodeGeometries[i % nodeGeometries.length];
+      const mat = new THREE.MeshStandardMaterial({
+        color: i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor(),
+        metalness: 1.0,
+        roughness: 0.0,
+        emissive: i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor(),
+        emissiveIntensity: 0.2
+      });
 
-      this.particles.push(particle);
-      this.scene.add(mesh);
+      const mesh = new THREE.Mesh(geo, mat);
+      group.add(mesh);
+
+      // Random initial scatter
+      const radius = 6 + Math.random() * 2;
+      const angle = (i / 12) * Math.PI * 2;
+      group.position.set(
+        Math.cos(angle) * radius,
+        (Math.random() - 0.5) * 4,
+        Math.sin(angle) * radius
+      );
+
+      this.nodes.push(group);
+      this.scene.add(group);
     }
   }
 
-  private getThemeColors(): THREE.Color[] {
-    if (this.config.theme === 'dark') {
-      return [
-        new THREE.Color(0x00ffff), // Cyan
-        new THREE.Color(0x8000ff), // Purple
-        new THREE.Color(0xff00ff), // Magenta
-        new THREE.Color(0x00ff80), // Green
-        new THREE.Color(0xffaa00)  // Orange
-      ];
-    } else {
-      return [
-        new THREE.Color(0x2563eb), // Blue
-        new THREE.Color(0x10b981), // Green
-        new THREE.Color(0xf59e0b), // Yellow
-        new THREE.Color(0xef4444), // Red
-        new THREE.Color(0x8b5cf6)  // Purple
-      ];
-    }
+  public updateDNASequence(dna: string) {
+    // Map Strudel functions to visual params
+    this.params.distortion = dna.includes('distort') ? 0.8 : 0.2;
+    this.params.speed = dna.includes('slow') ? 0.4 : (dna.includes('fast') ? 2.5 : 1.0);
+    this.params.complexity = dna.split('|').length / 5;
+
+    if (dna.includes('hpf')) this.params.colorShift = 1.0;
+    else if (dna.includes('lpf')) this.params.colorShift = -1.0;
+    else this.params.colorShift = 0.0;
+
+    this.formHelix();
   }
 
-  private getBackgroundColor(): string {
-    return this.config.theme === 'dark' ? '#0b1220' : '#ffffff';
-  }
-
-  public updateDNASequence(dnaSequence: string) {
-    this.config.dnaSequence = dnaSequence;
-    this.animateDNAFormation();
-  }
-
-  private animateDNAFormation() {
-    if (!this.config.dnaSequence) return;
-
-    const sequence = this.config.dnaSequence;
-    const helixRadius = 2;
-    const helixHeight = 8;
+  private formHelix() {
+    const helixRadius = 4;
+    const helixHeight = 10;
     const turns = 2;
 
-    this.particles.forEach((particle, index) => {
-      const t = index / this.particles.length;
-      const angle = t * Math.PI * 2 * turns;
-      const height = (t - 0.5) * helixHeight;
+    this.nodes.forEach((node, i) => {
+      const t = i / this.nodes.length;
+      const angle = t * Math.PI * turns * 2;
+      const y = (t - 0.5) * helixHeight;
+      const offset = (i % 2 === 0) ? 0 : Math.PI;
 
-      // Create double helix pattern
-      const helixOffset = (index % 2 === 0) ? Math.PI : 0;
-      
-      const targetX = Math.cos(angle + helixOffset) * helixRadius;
-      const targetY = height;
-      const targetZ = Math.sin(angle + helixOffset) * helixRadius;
+      const targetX = Math.cos(angle + offset) * helixRadius;
+      const targetZ = Math.sin(angle + offset) * helixRadius;
 
-      particle.targetPosition.set(targetX, targetY, targetZ);
-      particle.size = 0.3;
+      // We'll lerp this in the animate loop
+      node.userData.targetPos = new THREE.Vector3(targetX, y, targetZ);
     });
-
-    this.isAnimating = true;
   }
 
   public resetParticles() {
-    this.particles.forEach(particle => {
-      particle.targetPosition.copy(particle.originalPosition);
-      particle.size = 0.2 + Math.random() * 0.3;
+    this.params = { distortion: 0.2, speed: 1.0, colorShift: 0.0, complexity: 1.0 };
+    this.nodes.forEach((node, i) => {
+      const angle = (i / this.nodes.length) * Math.PI * 2;
+      const radius = 8;
+      node.userData.targetPos = new THREE.Vector3(
+        Math.cos(angle) * radius,
+        0,
+        Math.sin(angle) * radius
+      );
     });
-    this.isAnimating = false;
   }
 
-  public highlightParticles(matchingIndices: number[]) {
-    this.particles.forEach((particle, index) => {
-      const material = particle.mesh.material as THREE.MeshStandardMaterial;
-      
-      if (matchingIndices.includes(index)) {
-        // Highlight matching particles
-        material.emissiveIntensity = 2.0;
-        material.emissive.copy(particle.color);
-      } else {
-        // Dim non-matching particles
-        material.emissiveIntensity = 0.1;
+  public highlightParticles(indices: number[]) {
+    // If indices is empty, dim everything except core
+    // If all, ultra glow
+    const intensity = indices.length > 0 ? 2.5 : 0.2;
+    this.nodes.forEach(node => {
+      const mesh = node.children[0] as THREE.Mesh;
+      const material = mesh.material;
+      if (material instanceof THREE.MeshStandardMaterial) {
+        material.emissiveIntensity = intensity;
       }
     });
   }
 
   public playGenerationAnimation() {
-    // Create a pulse effect
-    this.particles.forEach(particle => {
-      const pulse = Math.sin(this.time * 5) * 0.5 + 1;
-      particle.mesh.scale.setScalar(pulse);
-    });
+    this.params.distortion = 2.0; // Explosion effect
+    setTimeout(() => this.params.distortion = 0.5, 1000);
   }
 
   private onResize() {
@@ -252,29 +242,36 @@ export class SonicVisualizer {
 
   private animate() {
     this.animationId = requestAnimationFrame(this.animate.bind(this));
+    const delta = this.clock.getDelta();
+    this.time += delta * this.params.speed;
 
-    this.time += 0.016; // Approximate delta time
+    // 1. Core Morphing
+    // We simulate a shader displacement by oscillating vertices (simple version)
+    // In a real premium app, we'd use a custom ShaderMaterial
+    const scale = 1 + Math.sin(this.time) * 0.1 * this.params.distortion;
+    this.core.scale.setScalar(scale);
+    this.core.rotation.y += delta * 0.2 * this.params.speed;
+    this.core.rotation.z += delta * 0.1;
 
-    // Update particles
-    this.particles.forEach(particle => {
-      // Smoothly interpolate to target position
-      particle.mesh.position.lerp(particle.targetPosition, 0.1);
-      
-      // Add subtle floating animation
-      const floatOffset = Math.sin(this.time + particle.mesh.position.x) * 0.1;
-      particle.mesh.position.y += floatOffset * 0.1;
-
-      // Rotate particles
-      particle.mesh.rotation.x += 0.01;
-      particle.mesh.rotation.y += 0.01;
-
-      // Pulse animation
-      if (this.isAnimating) {
-        const pulse = Math.sin(this.time * 4 + particle.mesh.position.length()) * 0.2 + 1;
-        particle.mesh.scale.setScalar(pulse);
+    // 2. Node Movement
+    this.nodes.forEach((node, i) => {
+      // Lerp to target position if set
+      if (node.userData.targetPos) {
+        node.position.lerp(node.userData.targetPos, 0.05);
       } else {
-        particle.mesh.scale.setScalar(1);
+        // Brownian floating
+        node.position.x += Math.sin(this.time + i) * 0.01;
+        node.position.y += Math.cos(this.time * 0.8 + i) * 0.01;
       }
+
+      // Individual node rotation
+      node.rotation.x += delta * 0.5 * this.params.speed;
+      node.rotation.y += delta * 0.3;
+
+      // Color shift based on HPF/LPF
+      const material = (node.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      if (this.params.colorShift > 0.5) material.emissive.setHex(0xffffff); // HPF - White
+      else if (this.params.colorShift < -0.5) material.emissive.setHex(0x4444ff); // LPF - Blue
     });
 
     this.controls.update();
@@ -282,23 +279,15 @@ export class SonicVisualizer {
   }
 
   public dispose() {
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-    }
-    
+    if (this.animationId) cancelAnimationFrame(this.animationId);
     this.renderer.dispose();
-    this.scene.traverse((object) => {
-      if (object instanceof THREE.Mesh) {
-        object.geometry.dispose();
-        if (Array.isArray(object.material)) {
-          object.material.forEach(mat => mat.dispose());
-        } else {
-          object.material.dispose();
-        }
-      }
+    this.scene.traverse((obj: any) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
     });
-
     window.removeEventListener('resize', this.onResize.bind(this));
-    this.config.container.removeChild(this.renderer.domElement);
+    if (this.config.container.contains(this.renderer.domElement)) {
+      this.config.container.removeChild(this.renderer.domElement);
+    }
   }
 }

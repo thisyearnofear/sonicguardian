@@ -19,14 +19,14 @@ export type APIResponse<T> = APISuccess<T> | APIError;
 /**
  * Enhanced error handling for API responses
  */
-export class APIError extends Error {
+export class BaseAPIError extends Error {
   constructor(
     public message: string,
     public code: string = 'UNKNOWN_ERROR',
     public status: number = 500
   ) {
     super(message);
-    this.name = 'APIError';
+    this.name = 'BaseAPIError';
   }
 }
 
@@ -41,16 +41,16 @@ class RateLimiter {
   isAllowed(identifier: string): boolean {
     const now = Date.now();
     const userRequests = this.requests.get(identifier) || [];
-    
+
     // Remove old requests outside the window
     const validRequests = userRequests.filter(
       timestamp => now - timestamp < this.windowMs
     );
-    
+
     if (validRequests.length >= this.maxRequests) {
       return false;
     }
-    
+
     validRequests.push(now);
     this.requests.set(identifier, validRequests);
     return true;
@@ -65,27 +65,27 @@ export const rateLimiter = new RateLimiter();
 export const validators = {
   prompt: (prompt: string): string => {
     if (!prompt || typeof prompt !== 'string') {
-      throw new APIError('Invalid prompt provided', 'INVALID_PROMPT', 400);
+      throw new BaseAPIError('Invalid prompt provided', 'INVALID_PROMPT', 400);
     }
-    
+
     const trimmed = prompt.trim();
     if (trimmed.length < 3 || trimmed.length > 500) {
-      throw new APIError('Prompt must be between 3 and 500 characters', 'INVALID_PROMPT_LENGTH', 400);
+      throw new BaseAPIError('Prompt must be between 3 and 500 characters', 'INVALID_PROMPT_LENGTH', 400);
     }
-    
+
     return trimmed;
   },
 
   code: (code: string): string => {
     if (!code || typeof code !== 'string') {
-      throw new APIError('Invalid code provided', 'INVALID_CODE', 400);
+      throw new BaseAPIError('Invalid code provided', 'INVALID_CODE', 400);
     }
-    
+
     const trimmed = code.trim();
     if (trimmed.length > 1000) {
-      throw new APIError('Code too long', 'CODE_TOO_LONG', 400);
+      throw new BaseAPIError('Code too long', 'CODE_TOO_LONG', 400);
     }
-    
+
     return trimmed;
   }
 };
@@ -94,8 +94,8 @@ export const validators = {
  * CORS headers for API responses
  */
 export const getCORSHeaders = () => ({
-  'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
-    ? 'https://yourdomain.com' 
+  'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production'
+    ? 'https://yourdomain.com'
     : '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -123,10 +123,10 @@ export const createAPIError = (
   code: string = 'UNKNOWN_ERROR',
   status: number = 500
 ): Response => {
-  return new Response(JSON.stringify({ 
-    success: false, 
-    error, 
-    code 
+  return new Response(JSON.stringify({
+    success: false,
+    error,
+    code
   }), {
     status,
     headers: {

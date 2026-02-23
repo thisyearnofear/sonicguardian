@@ -1,0 +1,69 @@
+
+> sonicguardian-next@0.1.0 build /Users/udingethe/Dev/sonicguardian
+> next build
+
+   ▲ Next.js 14.0.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/6) ...
+   Generating static pages (1/6) 
+   Generating static pages (2/6) 
+Error: unsupported channel for spec version: 0.8.1
+    at new fh (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:66748)
+    at new s (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:1:204538)
+    at new fH (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:82325)
+    at /Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:166214
+    at gW (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:162292)
+    at chains (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:159916)
+    at gq (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:161820)
+    at nP (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:45321)
+    at n$ (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61978)
+    at nE (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:44877)
+   Generating static pages (4/6) 
+
+Error occurred prerendering page "/". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: unsupported channel for spec version: 0.8.1
+    at new fh (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:66748)
+    at new s (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:1:204538)
+    at new fH (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:82325)
+    at /Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:166214
+    at gW (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:162292)
+    at chains (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:159916)
+    at gq (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:161820)
+    at nP (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:45321)
+    at n$ (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61978)
+    at nE (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:44877)
+Error: unsupported channel for spec version: 0.8.1
+    at new fh (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:66748)
+    at new s (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:1:204538)
+    at new fH (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:82325)
+    at /Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:166214
+    at gW (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:162292)
+    at chains (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:159916)
+    at gq (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:161820)
+    at nP (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:45321)
+    at n$ (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61978)
+    at nE (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:44877)
+
+Error occurred prerendering page "/_not-found". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: unsupported channel for spec version: 0.8.1
+    at new fh (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:66748)
+    at new s (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:1:204538)
+    at new fH (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:82325)
+    at /Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:166214
+    at gW (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:162292)
+    at chains (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:159916)
+    at gq (/Users/udingethe/Dev/sonicguardian/.next/server/chunks/232.js:9:161820)
+    at nP (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:45321)
+    at n$ (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61978)
+    at nE (/Users/udingethe/Dev/sonicguardian/node_modules/.pnpm/next@14.0.4_react-dom@18.2.0_react@18.2.0__react@18.2.0/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:44877)
+ ✓ Generating static pages (6/6) 
+
+> Export encountered errors on following paths:
+	/_not-found
+	/page: /
+ ELIFECYCLE  Command failed with exit code 1.
