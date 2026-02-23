@@ -236,36 +236,43 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       <div className="bg-gradient-mesh" />
 
       <main className="relative z-10 container mx-auto px-4 py-12 flex flex-col items-center">
-        {/* Header Section */}
-        <header className="text-center mb-16 space-y-4 max-w-2xl">
-          <div className="inline-block px-4 py-1 rounded-full border border-[color:var(--color-primary)] text-[color:var(--color-primary)] text-xs font-bold tracking-widest uppercase mb-4 animate-pulse-soft">
-            Starknet Privacy Track | ZK-Acoustic Protocol
+        {/* Header — tight, just the badge + title */}
+        <header className="text-center mb-6 space-y-3 max-w-2xl">
+          <div className="inline-block px-3 py-1 rounded-full border border-[color:var(--color-primary)]/40 text-[color:var(--color-primary)] text-[10px] font-bold tracking-widest uppercase animate-pulse-soft">
+            Starknet Privacy Track ✦ ZK-Acoustic Protocol
           </div>
-          <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-gradient leading-[1.1]">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-gradient leading-[1.05]">
             Sonic Guardian
           </h1>
-          <p className="text-[color:var(--color-muted)] text-lg md:text-xl font-light">
-            Privacy-Preserving Identity discovery via <span className="text-[color:var(--color-foreground)] font-medium">Agentic Sonic Synthesis</span>
-          </p>
         </header>
 
         {/* Core Protocol Container */}
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
-          {/* Visualizer - The Heart of the System */}
-          <div className="lg:col-span-12 flex flex-col items-center justify-center mb-12">
+          {/* Visualizer — full size, with narrative overlaid inside */}
+          <div className="lg:col-span-12 flex flex-col items-center justify-center mb-4">
             <div
               ref={visualizerContainerRef}
               className="relative w-full h-[300px] md:h-[500px] animate-float"
             >
               {/* Central Glow */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[color:var(--color-primary)] rounded-full blur-[100px] opacity-30" />
-            </div>
 
-            <div className="mt-8 flex gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-[color:var(--color-muted)]">
-              <span className="flex items-center gap-1"><div className="w-1 h-1 bg-[color:var(--color-primary)] rounded-full" /> Quantum State</span>
-              <span className="flex items-center gap-1"><div className="w-1 h-1 bg-[color:var(--color-accent)] rounded-full" /> Resonant Frequency</span>
-              <span className="flex items-center gap-1"><div className="w-1 h-1 bg-[color:var(--color-success)] rounded-full" /> DNA Integrity</span>
+              {/* Problem → Insight → Solution — float over the visualizer */}
+              <div className="absolute bottom-4 left-0 right-0 flex flex-col sm:flex-row gap-2 px-4 justify-center">
+                <div className="glass px-3 py-2 rounded-xl border border-red-500/20 backdrop-blur-md max-w-[200px]">
+                  <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-0.5">😩 The Problem</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Passwords stolen. Biometrics centralized. Your identity is someone else's database.</p>
+                </div>
+                <div className="glass px-3 py-2 rounded-xl border border-[color:var(--color-primary)]/30 backdrop-blur-md max-w-[200px]">
+                  <p className="text-[9px] font-bold text-[color:var(--color-primary)] uppercase tracking-widest mb-0.5">🎵 The Insight</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Sound is deeply personal. Your musical vibe is uniquely yours and impossible to fake.</p>
+                </div>
+                <div className="glass px-3 py-2 rounded-xl border border-[color:var(--color-success)]/30 backdrop-blur-md max-w-[200px]">
+                  <p className="text-[9px] font-bold text-[color:var(--color-success)] uppercase tracking-widest mb-0.5">🔒 The Solution</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Your vibe → Sonic DNA → Starknet anchor. No passwords. No databases. Just sound.</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -336,15 +343,15 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         <div
                           key={pattern.name}
                           className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-default group ${previewPlayingId === pattern.name
-                              ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10'
-                              : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40'
+                            ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10'
+                            : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40'
                             }`}
                         >
                           <button
                             onClick={() => handlePreviewPattern(pattern.code, pattern.name)}
                             className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-all ${previewPlayingId === pattern.name
-                                ? 'bg-[color:var(--color-primary)] text-white animate-pulse'
-                                : 'bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-primary)]/20 text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)]'
+                              ? 'bg-[color:var(--color-primary)] text-white animate-pulse'
+                              : 'bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-primary)]/20 text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)]'
                               }`}
                           >
                             {previewPlayingId === pattern.name ? '■' : '▶'}
