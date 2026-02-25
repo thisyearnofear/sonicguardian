@@ -26,13 +26,36 @@ import {
   type EncodedPattern
 } from '../lib/entropy-encoder';
 import { StrudelEditor } from './StrudelEditor';
+import GiftApp from './GiftApp';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
   onFailure?: () => void;
+  initialMode?: 'protocol' | 'gift';
 }
 
-export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianProps) {
+const ProtocolHeader = () => (
+  <div className="flex items-center gap-4 mb-8 p-4 rounded-2xl bg-[color:var(--color-primary)]/5 border border-[color:var(--color-primary)]/20 animate-in fade-in slide-in-from-top-4 duration-700">
+    <div className="w-12 h-12 rounded-full bg-[color:var(--color-primary)]/20 flex items-center justify-center text-xl">🛡️</div>
+    <div>
+      <h3 className="text-sm font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Guardian Protocol Core</h3>
+      <p className="text-[10px] text-[color:var(--color-muted)]">Enterprise-grade ZK-recovery for high-value Bitcoin assets.</p>
+    </div>
+  </div>
+);
+
+const ShowcaseHeader = () => (
+  <div className="flex items-center gap-4 mb-8 p-4 rounded-2xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20 animate-in fade-in slide-in-from-top-4 duration-700">
+    <div className="w-12 h-12 rounded-full bg-[color:var(--color-accent)]/20 flex items-center justify-center text-xl">🎁</div>
+    <div>
+      <h3 className="text-sm font-bold uppercase tracking-widest text-[color:var(--color-accent)]">Showcase: Bitcoin Birthday Cards</h3>
+      <p className="text-[10px] text-[color:var(--color-muted)]">A frictionless "Vibe Coding" demo: Gift Bitcoin with a musical soul.</p>
+    </div>
+  </div>
+);
+
+export default function SonicGuardian({ onRecovery, onFailure, initialMode = 'protocol' }: SonicGuardianProps) {
+  const [activeTab, setActiveTab] = useState<'protocol' | 'gift'>(initialMode);
   const [phase, setPhase] = useState<'registration' | 'recovery'>('registration');
   const [secretVibe, setSecretVibe] = useState('');
   const [btcAddress, setBtcAddress] = useState('');
@@ -133,10 +156,12 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           return;
         }
         
+        setStatus('Agent synthesizing vibe into Strudel code...');
         const agentResponse = await generateStrudelCode(secretVibe, { useRealAI });
         code = agentResponse.code;
         chunks = [];
         entropy = 0;
+        setStatus('Agent Synthesis Complete. Acoustic DNA extracted.');
       }
       
       setGeneratedCode(code);
@@ -301,14 +326,14 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           const onChainMatch = await verifyRecovery(btcAddress, dna.hash, session.blinding);
           
           if (!onChainMatch) {
-            setStatus('On-Chain Verification Failed.');
+            setStatus('On-Chain Verification Failed. Guardian hash mismatch.');
             if (audioEnabled) playAudio('error');
             setIsProcessing(false);
             return;
           }
           
           // Authorize recovery
-          setStatus('Authorizing Bitcoin Recovery...');
+          setStatus('Validating Pedersen Commitment & Authorizing...');
           try {
             await authorizeBtcRecovery(btcAddress, dna.hash, session.blinding);
             setStatus('Recovery Authorized! You can now access your Bitcoin.');
@@ -366,9 +391,38 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         </header>
 
         {/* Core Protocol Container */}
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="w-full max-w-6xl space-y-12">
+          
+          {/* Tab Selection */}
+          <div className="flex justify-center gap-8 border-b border-[color:var(--color-border)] mb-12">
+            <button 
+              onClick={() => setActiveTab('protocol')}
+              className={`pb-4 text-xs font-bold uppercase tracking-[0.3em] transition-all relative ${activeTab === 'protocol' ? 'text-[color:var(--color-primary)]' : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]'}`}
+            >
+              01. Protocol Core
+              {activeTab === 'protocol' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-primary)] shadow-[0_0_10px_var(--color-primary)]" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab('gift')}
+              className={`pb-4 text-xs font-bold uppercase tracking-[0.3em] transition-all relative ${activeTab === 'gift' ? 'text-[color:var(--color-accent)]' : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]'}`}
+            >
+              02. Showcase: Gifting
+              {activeTab === 'gift' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-accent)] shadow-[0_0_10px_var(--color-accent)]" />}
+              <span className="absolute -top-1 -right-4 px-1.5 py-0.5 rounded bg-[color:var(--color-accent)]/20 text-[color:var(--color-accent)] text-[7px] font-bold border border-[color:var(--color-accent)]/30">APP</span>
+            </button>
+          </div>
 
-          {/* Visualizer — full size, with narrative overlaid inside */}
+          {activeTab === 'gift' ? (
+            <div className="space-y-8">
+              <ShowcaseHeader />
+              <GiftApp />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <ProtocolHeader />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+              {/* Visualizer — full size, with narrative overlaid inside */}
           <div className="lg:col-span-12 flex flex-col items-center justify-center mb-4">
             <div
               ref={visualizerContainerRef}
@@ -970,7 +1024,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Floating AI Toggle (Venice AI Focus) */}

@@ -89,6 +89,9 @@ importers:
       starknet:
         specifier: 9.4.0
         version: 9.4.0(typescript@5.3.3)(zod@3.25.76)
+      starkzap:
+        specifier: 1.0.0
+        version: 1.0.0(typescript@5.3.3)(zod@3.25.76)
       tailwind-merge:
         specifier: ^2.2.1
         version: 2.6.1
@@ -2045,6 +2048,23 @@ packages:
   starknet@9.4.0:
     resolution: {integrity: sha512-5T5vs5M7hKuQ+U5eEqvTZyaag9rq+H5D4t53NdIh7sxnZhveoms2fmExMBO90xPBI41WVl2j7L2rxRSK42REAA==}
     engines: {node: '>=22'}
+
+  starkzap@1.0.0:
+    resolution: {integrity: sha512-6SrwECz82I9PHJz2X59MMoySikmiq9vlV2iG4xWhtu71iEoJb46TPkfZ4IsGdAi3ab1JVUHC3sCRLRmYJSIRpQ==, tarball: https://registry.npmjs.org/starkzap/-/starkzap-1.0.0.tgz}
+    peerDependencies:
+      '@cartridge/controller': ^0.13.9
+      '@ethersproject/shims': '*'
+      fast-text-encoding: '*'
+      react-native-get-random-values: '*'
+    peerDependenciesMeta:
+      '@cartridge/controller':
+        optional: true
+      '@ethersproject/shims':
+        optional: true
+      fast-text-encoding:
+        optional: true
+      react-native-get-random-values:
+        optional: true
 
   stop-iteration-iterator@1.1.0:
     resolution: {integrity: sha512-eLoXW/DHyl62zxY4SCaIgnRhuMr6ri4juEYARS8E6sCEqzKpOiE521Ucofdx+KnDZl5xmvGYaaKCk5FEOxJCoQ==}
@@ -4606,6 +4626,13 @@ snapshots:
       lossless-json: 4.3.0
       pako: 2.1.0
       ts-mixer: 6.0.4
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  starkzap@1.0.0(typescript@5.3.3)(zod@3.25.76):
+    dependencies:
+      starknet: 9.4.0(typescript@5.3.3)(zod@3.25.76)
     transitivePeerDependencies:
       - typescript
       - zod

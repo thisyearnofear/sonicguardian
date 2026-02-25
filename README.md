@@ -1,23 +1,34 @@
 # Sonic Guardian
 
-Private Bitcoin recovery using musical seed phrases and zero-knowledge proofs on Starknet.
+Universal Private Key Alternative and Recovery Layer for the decentralized web, powered by **Starkzap** and **Starknet ZK-Proofs**.
 
-## 🎯 Overview
+## 🎯 Vision
 
-Sonic Guardian enables **privacy-preserving recovery** for Bitcoin multisig wallets using memorable musical seed phrases. It combines zero-knowledge proofs (Pedersen commitments) with deterministic audio synthesis to create a recovery mechanism that's both cryptographically secure and memorable.
+Sonic Guardian transforms the abstract, technical, and often risky handling of seed phrases into a memorable, auditory, and cryptographically secure experience.
 
-**Problem**: Traditional Bitcoin recovery relies on 24-word seed phrases that are hard to remember and easy to lose.
+**Sonic Guardian's Solution**:
+1. **Memorable**: Uses 5-7 musical chunks (e.g., "909 kicks on 1 and 3") that leverage auditory memory and semantic structure.
+2. **Private**: Never reveals the secret on-chain. Uses **Pedersen Commitments** on Starknet to store a zero-knowledge "DNA hash".
+3. **Universal**: Can be used as a recovery layer for any Bitcoin/Starknet wallet or as a primary authentication factor for "vibe-centric" apps.
 
-**Solution**: Musical seed phrases (5-7 chunks like "909 kicks on 1 and 3, distort by 2.5") with 256-bit entropy, committed to Starknet using zero-knowledge proofs, serving as a guardian key for Bitcoin multisig recovery.
+---
+
+## 🎁 Feature Showcase: Bitcoin Birthday Cards
+
+To demonstrate the power and emotional resonance of the Sonic Guardian protocol, we've built **Bitcoin Birthday Cards**. It serves as a high-fidelity demonstration of how musical DNA can safely transport value to non-crypto users by combining **Starkzap's Social Login** with **Sonic Guardian Recovery**.
 
 ## 🚀 Features
 
-### Core Functionality
-- **Musical Seed Phrases**: 256-bit entropy encoded as 5-7 memorable musical chunks
-- **Deterministic Synthesis**: Same chunks always produce same Strudel pattern
-- **Pedersen Commitments**: True zero-knowledge proofs hiding DNA on-chain
-- **Bitcoin Integration**: Multisig recovery via sBTC/tBTC bridge
-- **Auditory Verification**: Verify recovery by listening to your pattern
+### Core Protocol
+- **Acoustic ZK-Commitments**: True zero-knowledge proofs hiding DNA on-chain via Pedersen hashes.
+- **Musical Seed Phrases**: 256-bit entropy encoded as 5-7 memorable musical chunks.
+- **Universal Recovery**: A private key alternative for Bitcoin and Starknet wallets.
+- **Auditory Verification**: Verify identity by "hearing" your unique acoustic pattern.
+
+### Showcase App: Bitcoin Birthday Cards
+- **Zero-Friction Gifting**: Send BTC as a musical memory via Starkzap.
+- **Social Onboarding**: Claim gifts instantly with Google/Apple login.
+- **The "Aha!" Moment**: The realization that the *music* is the key to the vault.
 
 ### Security
 - **256-bit Entropy**: Equivalent to AES-256, using crypto.getRandomValues()

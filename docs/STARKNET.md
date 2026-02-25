@@ -1,6 +1,19 @@
-# Sonic Guardian | Bitcoin & Privacy Track
+# Sonic Guardian | Bitcoin, Privacy & Starkzap
 
-Sonic Guardian enables **private Bitcoin recovery** using musical seed phrases and zero-knowledge proofs on Starknet. It serves as a privacy-preserving guardian for Bitcoin multisig wallets.
+Sonic Guardian enables **private Bitcoin recovery and gifting** using musical seed phrases, zero-knowledge proofs on Starknet, and **Starkzap's Bitcoin SDK**.
+
+## 🔐 Core Innovation: Musical Seed Phrases & Starkzap Integration
+
+Sonic Guardian solves two critical problems in Bitcoin:
+1. **Recovery**: How to recover funds without exposing recovery credentials.
+2. **Gifting**: How to give Bitcoin to non-crypto friends without technical friction.
+
+### Starkzap Integration
+Starkzap provides the underlying plumbing for Bitcoin operations on Starknet, including:
+- **Social Login**: Onboard non-crypto users via Google/Apple.
+- **Gasless Transactions**: Pay for transactions in any token.
+- **Bitcoin Wallets**: Instant Bitcoin wallet creation for recipients.
+- **Yield Aggregation**: Optional yield generation for gifted funds.
 
 ## 🔐 Core Innovation: Musical Seed Phrases with 256-bit Entropy
 
@@ -20,6 +33,15 @@ Sonic Guardian approach:
 - **Bitcoin Integration**: Authorizes multisig recovery without revealing credentials
 
 ## 🎯 Use Case: Bitcoin Multisig Recovery
+
+### 2. Bitcoin Birthday Cards (Powered by Starkzap)
+1. **Sender Creates Vibe**: Chooses a musical theme and attaches BTC.
+2. **Commitment**: The "vibe" (DNA) is committed to Starknet via Pedersen hash.
+3. **Gift Locking**: BTC is locked in a Starkzap vault, keyed to the Pedersen commitment.
+4. **Recipient Onboarding**: Recipient logs in via Starkzap social login (no seed phrase).
+5. **Claiming**: Recipient enters the "vibe" chunks (from the physical/digital card).
+6. **Reveal**: System verifies DNA hash against the vault's commitment.
+7. **Unlock**: Starkzap releases BTC to the recipient's wallet.
 
 ### Setup Phase
 1. User creates Bitcoin 2-of-3 multisig wallet
