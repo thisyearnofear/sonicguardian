@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractSonicDNA } from '@/lib/dna';
-import { rateLimiter, createAPIResponse, createAPIError, getCORSHeaders } from '@/lib/api';
+import { rateLimiter, createAPIResponse, createAPIError, validators, validateEnvironment } from '@/lib/api';
 
 /**
  * DNA Extraction API Route
@@ -12,6 +12,9 @@ import { rateLimiter, createAPIResponse, createAPIError, getCORSHeaders } from '
  */
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment first
+    validateEnvironment();
+
     const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
     if (!rateLimiter.isAllowed(clientIP)) {
       return createAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
@@ -20,7 +23,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { code, options } = body;
 
-    const dna = await extractSonicDNA(code, {
+    // Validate code
+    const validatedCode = validators.code(code);
+
+    const dna = await extractSonicDNA(validatedCode, {
       salt: options?.salt,
       includeTimestamp: true
     });
@@ -44,6 +50,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Validate environment first
+    validateEnvironment();
+
     const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
     if (!rateLimiter.isAllowed(clientIP)) {
       return createAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
@@ -56,7 +65,10 @@ export async function GET(request: NextRequest) {
       return createAPIError('Code parameter is required', 'MISSING_CODE', 400);
     }
 
-    const dna = await extractSonicDNA(code, {
+    // Validate code
+    const validatedCode = validators.code(code);
+
+    const dna = await extractSonicDNA(validatedCode, {
       includeTimestamp: true
     });
 

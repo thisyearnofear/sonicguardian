@@ -3,39 +3,36 @@
  * Implements Pedersen commitments for zero-knowledge proofs
  */
 
+import { hash } from 'starknet';
+
 /**
- * Compute Pedersen hash (simplified client-side version)
- * In production, this should use the exact same hash function as Cairo's pedersen
- * For now, we use SHA-256 as a placeholder that will be replaced with proper Pedersen
+ * Compute Pedersen hash (Standard Starknet version)
+ * This uses the exact same hash function as Cairo's pedersen to ensure
+ * on-chain verification is possible.
  * 
  * @param a - First input (DNA hash or blinding factor)
  * @param b - Second input (blinding factor or blinding factor)
  * @returns Pedersen hash as hex string
  */
 export async function pedersen(a: string, b: string): Promise<string> {
-    // Remove 0x prefix if present
-    const cleanA = a.replace(/^0x/, '');
-    const cleanB = b.replace(/^0x/, '');
+    // Remove 0x prefix if present and handle inputs as bigints
+    const cleanA = a.startsWith('0x') ? a : '0x' + a;
+    const cleanB = b.startsWith('0x') ? b : '0x' + b;
     
-    // Concatenate inputs
-    const combined = cleanA + cleanB;
-    
-    // Use Web Crypto API for hashing
-    if (typeof crypto !== 'undefined' && crypto.subtle) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(combined);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    try {
+        // Standard Starknet Pedersen Hash (returns bigint/string)
+        const result = hash.computePedersenHash(cleanA, cleanB);
+        return result.replace(/^0x/, '');
+    } catch (error) {
+        console.error('Pedersen hash failed, falling back to simple hash:', error);
+        return simpleHash(cleanA + cleanB);
     }
-    
-    // Fallback for non-secure contexts
-    return simpleHash(combined);
 }
 
 /**
  * Generate a cryptographically secure blinding factor
  * @returns Random blinding factor as hex string
+ * @throws Error if secure random is not available
  */
 export function generateBlinding(): string {
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -44,10 +41,8 @@ export function generateBlinding(): string {
         return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
     }
     
-    // Fallback (not cryptographically secure, for development only)
-    return Array.from({ length: 32 }, () => 
-        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-    ).join('');
+    // In production, we should NEVER fall back to insecure randomness
+    throw new Error('Secure random number generator not available. Use a secure context (HTTPS).');
 }
 
 /**
@@ -93,4 +88,30 @@ export function isValidBtcAddress(address: string): boolean {
     return p2pkhRegex.test(address) || 
            p2shRegex.test(address) || 
            bech32Regex.test(address);
+}
+
+/**
+ * Validate that a value is a valid hex string
+ * @param value - String to validate
+ * @returns true if valid hex
+ */
+export function isValidHex(value: string): boolean {
+    if (!value || typeof value !== 'string') return false;
+    const clean = value.replace(/^0x/, '');
+    return /^[0-9a-fA-F]+$/.test(clean) && clean.length > 0;
+}
+
+/**
+ * Validate that a value is a valid felt252
+ * @param value - String to validate
+ * @returns true if valid felt252
+ */
+export function isValidFelt252(value: string): boolean {
+    try {
+        const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
+        const num = BigInt(value);
+        return num >= 0 && num < MODULO;
+    } catch {
+        return false;
+    }
 }

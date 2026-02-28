@@ -4,11 +4,19 @@ export const abi = [
         "type": "interface",
         "items": [
             {
-                "name": "register_identity",
+                "name": "register_guardian",
                 "type": "function",
                 "inputs": [
                     {
+                        "name": "btc_address",
+                        "type": "core::felt252"
+                    },
+                    {
                         "name": "commitment",
+                        "type": "core::felt252"
+                    },
+                    {
+                        "name": "blinding_commitment",
                         "type": "core::felt252"
                     }
                 ],
@@ -16,15 +24,19 @@ export const abi = [
                 "state_mutability": "external"
             },
             {
-                "name": "verify_identity",
+                "name": "verify_recovery",
                 "type": "function",
                 "inputs": [
                     {
-                        "name": "user",
-                        "type": "core::starknet::contract_address"
+                        "name": "btc_address",
+                        "type": "core::felt252"
                     },
                     {
-                        "name": "proof_hash",
+                        "name": "dna_hash",
+                        "type": "core::felt252"
+                    },
+                    {
+                        "name": "blinding",
                         "type": "core::felt252"
                     }
                 ],
@@ -36,17 +48,52 @@ export const abi = [
                 "state_mutability": "view"
             },
             {
-                "name": "get_commitment",
+                "name": "authorize_btc_recovery",
                 "type": "function",
                 "inputs": [
                     {
-                        "name": "user",
-                        "type": "core::starknet::contract_address"
+                        "name": "btc_address",
+                        "type": "core::felt252"
+                    },
+                    {
+                        "name": "dna_hash",
+                        "type": "core::felt252"
+                    },
+                    {
+                        "name": "blinding",
+                        "type": "core::felt252"
                     }
                 ],
                 "outputs": [
                     {
                         "type": "core::felt252"
+                    }
+                ],
+                "state_mutability": "external"
+            },
+            {
+                "name": "get_commitment",
+                "type": "function",
+                "inputs": [
+                    {
+                        "name": "btc_address",
+                        "type": "core::felt252"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "type": "core::felt252"
+                    }
+                ],
+                "state_mutability": "view"
+            },
+            {
+                "name": "get_guardian_count",
+                "type": "function",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "type": "core::integer::u256"
                     }
                 ],
                 "state_mutability": "view"

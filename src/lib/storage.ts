@@ -62,56 +62,98 @@ export const sessionManager = {
     btcAddress?: string,
     blinding?: string
   ) => {
-    const session: UserSession = {
-      id: Math.random().toString(36).substring(2),
-      createdAt: Date.now(),
-      lastUsed: Date.now(),
-      secretPrompt,
-      storedHash,
-      storedSalt,
-      btcAddress,
-      blinding, // Store blinding factor securely
-      recoveryAttempts: []
-    };
-    storage.set('session', session);
-    return session;
+    try {
+      const session: UserSession = {
+        id: Math.random().toString(36).substring(2),
+        createdAt: Date.now(),
+        lastUsed: Date.now(),
+        secretPrompt,
+        storedHash,
+        storedSalt,
+        btcAddress,
+        blinding, // Store blinding factor securely
+        recoveryAttempts: []
+      };
+      storage.set('session', session);
+      return session;
+    } catch (error) {
+      console.error('Failed to create session:', error);
+      return null;
+    }
   },
   
   updateSession: (updates: Partial<UserSession>) => {
     const session = sessionManager.getCurrentSession();
     if (!session) return null;
-    const updated = { ...session, ...updates, lastUsed: Date.now() };
-    storage.set('session', updated);
-    return updated;
+    try {
+      const updated = { ...session, ...updates, lastUsed: Date.now() };
+      storage.set('session', updated);
+      return updated;
+    } catch (error) {
+      console.error('Failed to update session:', error);
+      return null;
+    }
   },
   
   addRecoveryAttempt: (prompt: string, success: boolean, hash?: string) => {
     const session = sessionManager.getCurrentSession();
     if (!session) return;
-    session.recoveryAttempts.push({
-      id: Math.random().toString(36).substring(2),
-      timestamp: Date.now(),
-      prompt,
-      success,
-      hash
-    });
-    session.lastUsed = Date.now();
-    storage.set('session', session);
+    try {
+      session.recoveryAttempts.push({
+        id: Math.random().toString(36).substring(2),
+        timestamp: Date.now(),
+        prompt,
+        success,
+        hash
+      });
+      
+      // Keep only last 10 attempts
+      if (session.recoveryAttempts.length > 10) {
+        session.recoveryAttempts.splice(0, session.recoveryAttempts.length - 10);
+      }
+      
+      session.lastUsed = Date.now();
+      storage.set('session', session);
+    } catch (error) {
+      console.error('Failed to add recovery attempt:', error);
+    }
   },
   
-  clearSession: () => storage.remove('session')
+  clearSession: () => {
+    try {
+      storage.remove('session');
+    } catch (error) {
+      console.error('Failed to clear session:', error);
+    }
+  }
 };
 
 export const preferencesManager = {
-  get: () => storage.get<UserPreferences>('prefs', {
-    theme: 'system',
-    audioEnabled: true,
-    animationsEnabled: true,
-    useRealAI: false
-  }),
+  get: () => {
+    try {
+      return storage.get<UserPreferences>('prefs', {
+        theme: 'system',
+        audioEnabled: true,
+        animationsEnabled: true,
+        useRealAI: false
+      });
+    } catch (error) {
+      console.error('Failed to get preferences:', error);
+      return {
+        theme: 'system',
+        audioEnabled: true,
+        animationsEnabled: true,
+        useRealAI: false
+      };
+    }
+  },
   set: (updates: Partial<UserPreferences>) => {
-    const current = preferencesManager.get();
-    storage.set('prefs', { ...current, ...updates });
+    try {
+      const current = preferencesManager.get();
+      storage.set('prefs', { ...current, ...updates });
+    } catch (error) {
+      console.error('Failed to update preferences:', error);
+    }
   }
 };
 

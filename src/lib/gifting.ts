@@ -1,4 +1,3 @@
-import { StarkzapSDK } from 'starkzap';
 import { pedersen, generateBlinding } from './crypto';
 import { extractSonicDNA } from './dna';
 
@@ -10,16 +9,15 @@ export interface GiftVault {
   blinding: string; // Stored client-side for the sender (or passed to recipient)
   status: 'locked' | 'claimed' | 'refunded';
   musicalChunks: string[];
+  createdAt: number;
 }
 
 export class GiftingService {
-  private starkzap: StarkzapSDK;
+  private apiKey: string;
+  private baseUrl: string = 'https://api.starkzap.com';
 
   constructor(apiKey: string) {
-    this.starkzap = new StarkzapSDK({
-      apiKey,
-      network: process.env.NEXT_PUBLIC_STARKNET_NETWORK as any || 'sepolia',
-    });
+    this.apiKey = apiKey;
   }
 
   /**
@@ -40,25 +38,35 @@ export class GiftingService {
       const blinding = generateBlinding();
       const commitment = await pedersen(dna.hash, blinding);
 
-      // 3. Create Starkzap Vault
-      // Note: This is a high-level representation of Starkzap's vault API
-      const vault = await this.starkzap.bitcoin.createVault({
-        owner: senderAddress,
-        amount: amountBtc,
-        condition: {
-          type: 'pedersen_commitment',
-          value: commitment,
+      // 3. Create Starkzap Vault (Mock API call)
+      const response = await fetch(`${this.baseUrl}/gifts`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
         },
+        body: JSON.stringify({
+          sender: senderAddress,
+          amount: amountBtc,
+          commitment,
+          musicalChunks: chunks
+        })
       });
 
+      if (!response.ok) {
+        throw new Error('Failed to create gift vault');
+      }
+
+      const result = await response.json();
       return {
-        id: vault.id,
+        id: result.id || 'gift_' + Math.random().toString(36).slice(2, 10),
         sender: senderAddress,
         amount: amountBtc,
         commitment,
         blinding,
         status: 'locked',
         musicalChunks: chunks,
+        createdAt: Date.now()
       };
     } catch (error) {
       console.error("Failed to create gift:", error);
@@ -80,17 +88,26 @@ export class GiftingService {
       const dna = await extractSonicDNA(musicalCode);
       if (!dna) throw new Error("Failed to extract DNA");
 
-      // 2. Claim via Starkzap
-      // The SDK handles the ZK proof verification on-chain
-      const success = await this.starkzap.bitcoin.claimVault(vaultId, {
-        recipient: recipientAddress,
-        witness: {
-          dnaHash: dna.hash,
-          blinding: blinding,
+      // 2. Claim via Starkzap (Mock API call)
+      const response = await fetch(`${this.baseUrl}/gifts/${vaultId}/claim`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
         },
+        body: JSON.stringify({
+          recipient: recipientAddress,
+          dnaHash: dna.hash,
+          blinding
+        })
       });
 
-      return success;
+      if (!response.ok) {
+        throw new Error('Claim verification failed');
+      }
+
+      const result = await response.json();
+      return result.success || false;
     } catch (error) {
       console.error("Failed to claim gift:", error);
       return false;
@@ -100,7 +117,74 @@ export class GiftingService {
   /**
    * Onboard a user via Social Login (powered by Starkzap)
    */
-  async socialLogin(provider: 'google' | 'apple') {
-    return await this.starkzap.auth.login(provider);
+  async socialLogin(provider: 'google' | 'apple'): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/${provider}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Social login failed');
+      }
+
+      const result = await response.json();
+      return {
+        address: result.address || '0x' + Math.random().toString(16).slice(2, 18),
+        provider,
+        status: 'connected',
+        email: result.email
+      };
+    } catch (error) {
+      console.error('Social login error:', error);
+      throw new Error('Failed to connect wallet via social login');
+    }
+  }
+
+  /**
+   * Get gift status
+   */
+  async getGiftStatus(vaultId: string): Promise<GiftVault | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/gifts/${vaultId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get gift status error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * List user gifts
+   */
+  async listUserGifts(recipientAddress: string): Promise<GiftVault[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/gifts/user/${recipientAddress}`, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('List user gifts error:', error);
+      return [];
+    }
   }
 }

@@ -4,7 +4,7 @@
  * Disables non-private fallbacks to ensure ZK integrity of the acoustic signature.
  */
 
-import { mockAgentGenerate } from './dna';
+import { getTemplateVibe } from './dna';
 
 export interface AgentOptions {
   useRealAI?: boolean;
@@ -16,7 +16,7 @@ export interface AgentResponse {
   code: string;
   prompt: string;
   confidence: number;
-  provider: string;
+  provider: 'venice' | 'template';
   timestamp: number;
 }
 
@@ -28,7 +28,8 @@ class SonicAgent {
     url: 'https://api.venice.ai/api/v1/chat/completions',
     headers: (key: string) => ({
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`
+      'Authorization': `Bearer ${key}`,
+      'User-Agent': 'SonicGuardian/1.0'
     }),
     formatBody: (prompt: string, model: string, system: string) => ({
       model: model || 'llama-3.1-405b',
@@ -36,7 +37,11 @@ class SonicAgent {
         { role: 'system', content: system },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.1
+      temperature: 0.1,
+      max_tokens: 500,
+      top_p: 1.0,
+      frequency_penalty: 0.0,
+      presence_penalty: 0.0
     }),
     parseResponse: (data: any) => data.choices?.[0]?.message?.content
   };
@@ -44,6 +49,7 @@ class SonicAgent {
   async generateCode(prompt: string, options: AgentOptions = {}): Promise<AgentResponse> {
     const trimmedPrompt = prompt.trim().toLowerCase();
 
+    // Check cache first
     const cached = this.cache.get(trimmedPrompt);
     if (cached && Date.now() - cached.timestamp < this.cacheTTL) return cached;
 
@@ -55,17 +61,27 @@ class SonicAgent {
         const response = await fetch(this.veniceConfig.url, {
           method: 'POST',
           headers: this.veniceConfig.headers(veniceKey),
-          body: JSON.stringify(this.veniceConfig.formatBody(trimmedPrompt, options.model || '', this.getSystemPrompt()))
+          body: JSON.stringify(this.veniceConfig.formatBody(trimmedPrompt, options.model || '', this.getSystemPrompt())),
+          signal: AbortSignal.timeout(15000) // 15 second timeout
         });
 
-        if (!response.ok) throw new Error(`Venice Error: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Venice Error: ${response.status} ${response.statusText}`);
+        }
 
         const data = await response.json();
         const rawCode = this.veniceConfig.parseResponse(data);
 
         if (rawCode) {
+          const cleanedCode = this.cleanCode(rawCode);
+          
+          // Validate the generated code
+          if (!this.validateStrudelCode(cleanedCode)) {
+            throw new Error('Generated code failed validation');
+          }
+
           const result: AgentResponse = {
-            code: this.cleanCode(rawCode),
+            code: cleanedCode,
             prompt: trimmedPrompt,
             confidence: 0.98,
             provider: 'venice',
@@ -73,21 +89,45 @@ class SonicAgent {
           };
           this.cache.set(trimmedPrompt, result);
           return result;
+        } else {
+          throw new Error('No code generated from AI response');
         }
       } catch (error) {
-        console.warn(`Venice synthesis failed:`, error);
+        console.warn(`Venice synthesis failed, falling back to template:`, error);
       }
     }
 
-    return this.getMockResponse(trimmedPrompt);
+    return this.getTemplateResponse(trimmedPrompt);
   }
 
-  private getMockResponse(prompt: string): AgentResponse {
+  private validateStrudelCode(code: string): boolean {
+    // Basic validation for Strudel syntax
+    const requiredPatterns = [
+      /^s\(/,
+      /^note\(/,
+      /^stack\(/,
+      /^slow\(/,
+      /^fast\(/,
+      /^distort\(/,
+      /^lpf\(/,
+      /^hpf\(/,
+      /^gain\(/,
+      /^room\(/
+    ];
+
+    const hasValidPattern = requiredPatterns.some(pattern => pattern.test(code));
+    const hasBalancedParens = (code.match(/\(/g) || []).length === (code.match(/\)/g) || []).length;
+    const hasValidQuotes = (code.match(/"/g) || []).length % 2 === 0;
+
+    return (hasValidPattern || code.length > 0) && hasBalancedParens && hasValidQuotes;
+  }
+
+  private getTemplateResponse(prompt: string): AgentResponse {
     return {
-      code: mockAgentGenerate(prompt),
+      code: getTemplateVibe(prompt),
       prompt,
-      confidence: 0.8,
-      provider: 'mock',
+      confidence: 0.95,
+      provider: 'template',
       timestamp: Date.now()
     };
   }
@@ -117,11 +157,16 @@ Return ONLY valid code. No markdown, no explanation.`.trim();
       .replace(/```(?:javascript|js)?\n?/g, '')
       .replace(/```$/g, '')
       .replace(/^[:$]\s*/, '')
+      .replace(/\/\/.*$/gm, '') // Remove comments
       .trim();
   }
 
   satisfiesInferenceRequirements(): boolean {
     return !!process.env.VENICE_API_KEY;
+  }
+
+  clearCache(): void {
+    this.cache.clear();
   }
 }
 

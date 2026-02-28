@@ -28,7 +28,11 @@ export async function extractSonicDNA(
 ): Promise<SonicDNA | null> {
   try {
     // Validate input
-    const validatedCode = validators.code(code);
+    const validatedCode = code.trim();
+    
+    if (!validatedCode) {
+      throw new Error('Empty code provided');
+    }
 
     const features: Array<{ name: string; args: (string | number)[] }> = [];
     const ast = parse(validatedCode, {
@@ -94,27 +98,78 @@ export async function extractSonicDNA(
 }
 
 /**
- * Synchronous version for simple mock generation
+ * Detects if a prompt contains musical chunks and reconstructs the code
  */
-export function mockAgentGenerate(prompt: string): string {
+export function detectAndReconstructCode(prompt: string): string | null {
+  const lines = prompt.split('\n').map(l => l.trim().toLowerCase());
+  
+  // Look for chunk patterns: "1. sawtooth rhythm...", "2. distort..."
+  const chunks = lines.filter(l => /^\d+\./.test(l) || l.includes('rhythm') || l.includes('melody'));
+  
+  if (chunks.length < 3) return null; // Not a chunk-based prompt
+
+  try {
+    let rhythmLayers: string[] = [];
+    let melodyLayer = '';
+    let tempo = 120;
+
+    // Very basic deterministic reconstruction for demo
+    // In production, this would use a formal grammar
+    lines.forEach(line => {
+      const clean = line.replace(/^\d+\.\s*/, '');
+      
+      if (clean.includes('rhythm')) {
+        const synth = clean.split(' ')[0];
+        const pattern = clean.includes('four on the floor') ? 'c1*4' : 
+                       clean.includes('half-time') ? 'c1*2' : 'c1 ~ c1 ~';
+        rhythmLayers.push(`note("${pattern}").s("${synth}")`);
+      } else if (clean.includes('melody')) {
+        const synth = clean.split(' ')[0];
+        const notes = clean.split('melody ')[1]?.toUpperCase() || 'C4 E4 G4';
+        melodyLayer = `note("${notes.toLowerCase()}").s("${synth}")`;
+      } else if (clean.includes('tempo')) {
+        tempo = parseInt(clean.match(/\d+/)?.[0] || '120');
+      }
+    });
+
+    if (rhythmLayers.length > 0 || melodyLayer) {
+      return `stack(\n  ${[...rhythmLayers, melodyLayer].filter(Boolean).join(',\n  ')}\n).cpm(${tempo})`;
+    }
+  } catch (e) {
+    console.warn('Failed to reconstruct code from chunks:', e);
+  }
+
+  return null;
+}
+
+/**
+ * Professional version for AI synthesis fallback
+ */
+export function getTemplateVibe(prompt: string): string {
   const lowerPrompt = prompt.toLowerCase();
 
-  // Deterministic Logic for Demo
-  if (lowerPrompt.includes("muffled") || lowerPrompt.includes("dark")) {
-    return `s("bass").slow(2).distort(5).lpf(500)`;
+  // Reconstruct if it looks like chunks
+  const reconstructed = detectAndReconstructCode(prompt);
+  if (reconstructed) return reconstructed;
+
+  // High-quality templates instead of simple mocks
+  if (lowerPrompt.includes("techno")) {
+    return `stack(s("bd*4"), s("~ sd ~ sd").bank("RolandTR909"), s("hh*16").gain(0.4)).cpm(128)`;
   }
-  if (lowerPrompt.includes("techno") || lowerPrompt.includes("fast")) {
-    return `stack(s("bd*4"), s("hh*8").gain(0.8))`;
+  if (lowerPrompt.includes("ambient") || lowerPrompt.includes("dark")) {
+    return `note("c2 [eb2 g2] bb1").s("sawtooth").lpf(400).lpq(10).slow(2).room(0.8)`;
   }
-  if (lowerPrompt.includes("bright") || lowerPrompt.includes("sharp")) {
-    return `s("saw").hpf(2000).fast(2)`.trim();
+  if (lowerPrompt.includes("acid")) {
+    return `note("c3(3,8)").s("sawtooth").lpf("<400 800 1200>").lpq(20).distort(2)`;
   }
-  // Default fallback
-  return `s("bd").slow(2)`;
+  
+  // Generic but valid Strudel code
+  return `s("bd [~ sd] [bd bd] sd").bank("RolandTR808")`;
 }
 
 /**
  * Generates a hash from a string using Web Crypto API
+ * Requires a secure context (HTTPS or localhost)
  */
 export async function generateHash(input: string): Promise<string> {
   if (typeof crypto !== 'undefined' && crypto.subtle) {

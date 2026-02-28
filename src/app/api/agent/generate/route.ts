@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { generateStrudelCode, sonicAgent } from '@/lib/ai-agent';
-import { rateLimiter, createAPIResponse, createAPIError } from '@/lib/api';
+import { rateLimiter, createAPIResponse, createAPIError, validators, validateEnvironment } from '@/lib/api';
 
 /**
  * AI Agent Generation API Route
@@ -12,6 +12,9 @@ import { rateLimiter, createAPIResponse, createAPIError } from '@/lib/api';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment first
+    validateEnvironment();
+
     const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
     if (!rateLimiter.isAllowed(clientIP)) {
       return createAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
@@ -20,7 +23,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { prompt, options } = body;
 
-    const response = await generateStrudelCode(prompt, options);
+    // Validate prompt
+    const validatedPrompt = validators.prompt(prompt);
+
+    const response = await generateStrudelCode(validatedPrompt, options);
 
     return createAPIResponse({
       code: response.code,
@@ -39,6 +45,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Validate environment first
+    validateEnvironment();
+
     const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
     if (!rateLimiter.isAllowed(clientIP)) {
       return createAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
@@ -51,7 +60,10 @@ export async function GET(request: NextRequest) {
       return createAPIError('Prompt parameter is required', 'MISSING_PROMPT', 400);
     }
 
-    const response = await generateStrudelCode(prompt);
+    // Validate prompt
+    const validatedPrompt = validators.prompt(prompt);
+
+    const response = await generateStrudelCode(validatedPrompt);
 
     return createAPIResponse({
       code: response.code,

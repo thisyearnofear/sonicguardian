@@ -1,153 +1,286 @@
 'use client';
 
+import { evaluate } from '@strudel/core';
+import { webaudioInit } from '@strudel/webaudio';
+import { transpile } from '@strudel/transpiler';
+
 /**
- * Strudel playback with proper initialization
- * Following the pattern from strudel-codeberg/examples/minimal-repl
+ * Strudel Code Parser, Validator, and Player
+ * Parses Strudel patterns, validates them, and plays audio
  */
 
+export interface ParsedPattern {
+  code: string;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface PatternValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// State for Strudel playback
 let audioInitialized = false;
-let isPlaying = false;
-let evaluateFunction: any = null;
-let audioContext: any = null;
 let currentPattern: any = null;
-let drawCallback: ((haps: any[], time: number) => void) | null = null;
+let drawCb: ((haps: any[], time: number) => void) | null = null;
 
-async function initStrudel() {
-    if (audioInitialized && evaluateFunction) return evaluateFunction;
-    
-    try {
-        // Import required modules
-        const { repl, evalScope } = await import('@strudel/core');
-        const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } = await import('@strudel/webaudio');
-        const { transpiler } = await import('@strudel/transpiler');
-        
-        // Get audio context and initialize
-        audioContext = getAudioContext();
-        initAudioOnFirstClick();
-        registerSynthSounds();
-        
-        // Register modules with evalScope BEFORE creating repl
-        await evalScope(
-            import('@strudel/core'),
-            import('@strudel/mini'),
-            import('@strudel/webaudio'),
-            import('@strudel/tonal')
-        );
-        
-        // Create repl with proper configuration
-        const { evaluate } = repl({
-            defaultOutput: webaudioOutput,
-            getTime: () => audioContext.currentTime,
-            transpiler,
-        });
-        
-        evaluateFunction = evaluate;
-        audioInitialized = true;
-        console.log('[strudel] Initialized successfully');
-        return evaluate;
-    } catch (e) {
-        console.error('[strudel] Initialization failed:', e);
-        throw e;
-    }
+/**
+ * Initialize Strudel audio context
+ */
+async function initStrudelAudio() {
+  if (audioInitialized) return;
+  
+  try {
+    await webaudioInit();
+    audioInitialized = true;
+  } catch (error) {
+    console.error('Failed to initialize Strudel audio:', error);
+  }
 }
 
+/**
+ * Play Strudel code pattern
+ */
 export async function playStrudelCode(code: string): Promise<boolean> {
-    if (typeof window === 'undefined') return false;
-
-    try {
-        const evaluate = await initStrudel();
-        
-        if (!evaluate) {
-            console.error('[strudel] Evaluate function not available');
-            return false;
-        }
-
-        // Resume audio context (required for user interaction)
-        if (audioContext) {
-            await audioContext.resume();
-        }
-
-        // Evaluate the code and get the pattern
-        const pattern = await evaluate(code);
-        currentPattern = pattern;
-        
-        // If there's a draw callback, set up visual feedback
-        if (drawCallback && pattern) {
-            setupVisualFeedback(pattern);
-        }
-        
-        isPlaying = true;
-        console.log('[strudel] Playing:', code.substring(0, 50) + '...');
-        return true;
-    } catch (error) {
-        console.error('[strudel] Playback error:', error);
-        isPlaying = false;
-        return false;
+  try {
+    await initStrudelAudio();
+    
+    if (currentPattern) {
+      currentPattern.stop();
     }
+    
+    const transpiled = transpile(code);
+    const pattern = evaluate(transpiled);
+    pattern.start();
+    currentPattern = pattern;
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to play Strudel code:', error);
+    return false;
+  }
 }
 
-function setupVisualFeedback(pattern: any) {
-    if (!drawCallback) return;
-    
-    // Use pattern.draw() to get haps (events) for visual feedback
-    // This follows the same pattern as Strudel's Drawer class
-    const lookbehind = 2; // seconds to look back
-    const lookahead = 0.1; // seconds to look ahead
-    let lastFrame: number | null = null;
-    let visibleHaps: any[] = [];
-    
-    const animate = () => {
-        if (!isPlaying || !audioContext) return;
-        
-        const phase = audioContext.currentTime;
-        
-        if (lastFrame === null) {
-            lastFrame = phase;
-        }
-        
-        // Query haps from last frame till now (max 100ms back)
-        const begin = Math.max(lastFrame ?? phase, phase - 0.1);
-        const haps = pattern.queryArc(begin, phase + lookahead);
-        
-        lastFrame = phase;
-        
-        // Filter out old haps and add new ones
-        visibleHaps = visibleHaps
-            .filter((h: any) => h.whole && h.endClipped >= phase - lookbehind)
-            .concat(haps.filter((h: any) => h.hasOnset()));
-        
-        // Call the draw callback with current haps
-        if (drawCallback) {
-            drawCallback(visibleHaps, phase);
-        }
-        
-        if (isPlaying) {
-            requestAnimationFrame(animate);
-        }
-    };
-    
-    requestAnimationFrame(animate);
-}
-
-export async function stopStrudel(): Promise<void> {
-    try {
-        if (evaluateFunction) {
-            // Evaluate empty pattern to stop
-            await evaluateFunction('silence');
-            console.log('[strudel] Stopped');
-        }
-    } catch (e) {
-        console.error('[strudel] Stop error:', e);
+/**
+ * Stop Strudel playback
+ */
+export function stopStrudel() {
+  try {
+    if (currentPattern) {
+      currentPattern.stop();
+      currentPattern = null;
     }
-    isPlaying = false;
+  } catch (error) {
+    console.error('Failed to stop Strudel:', error);
+  }
 }
 
-export function isStrudelPlaying() {
-    return isPlaying;
-}
-
+/**
+ * Set callback for visualizer updates
+ */
 export function setDrawCallback(callback: ((haps: any[], time: number) => void) | null) {
-    drawCallback = callback;
+  drawCb = callback;
+}
+
+/**
+ * Check if Strudel is currently playing
+ */
+export function isStrudelPlaying(): boolean {
+  return currentPattern !== null;
+}
+
+/**
+ * Parse and validate Strudel code
+ */
+export function parseStrudelCode(code: string): ParsedPattern {
+  try {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // Basic syntax validation
+    if (!code || typeof code !== 'string') {
+      errors.push('Code must be a non-empty string');
+      return { code, isValid: false, errors, warnings };
+    }
+    
+    // Check for potentially dangerous patterns
+    const dangerousPatterns = [
+      /eval\s*\(/i,
+      /Function\s*\(/i,
+      /import\s*\(/i,
+      /require\s*\(/i,
+      /fetch\s*\(/i,
+      /XMLHttpRequest/i,
+      /WebSocket/i,
+      /crypto\.subtle/i,
+      /localStorage/i,
+      /sessionStorage/i,
+      /document\.cookie/i
+    ];
+    
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(code)) {
+        errors.push(`Potentially dangerous code pattern detected: ${pattern.source}`);
+      }
+    }
+    
+    // Check for allowed Strudel functions
+    const allowedFunctions = [
+      'note', 's', 'gain', 'lpf', 'hpf', 'distort', 'room', 'stack', 'slow', 'fast', 'cpm'
+    ];
+    
+    const functionRegex = /\b(\w+)\s*\(/g;
+    let match;
+    while ((match = functionRegex.exec(code)) !== null) {
+      const funcName = match[1];
+      if (!allowedFunctions.includes(funcName)) {
+        warnings.push(`Unknown function: ${funcName}`);
+      }
+    }
+    
+    // Check for valid note patterns
+    const notePattern = /note\s*\(\s*["']([^"']+)["']\s*\)/g;
+    while ((match = notePattern.exec(code)) !== null) {
+      const notes = match[1];
+      if (!isValidNotePattern(notes)) {
+        errors.push(`Invalid note pattern: ${notes}`);
+      }
+    }
+    
+    return {
+      code,
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  } catch (error) {
+    console.error('Failed to parse Strudel code:', error);
+    return {
+      code,
+      isValid: false,
+      errors: ['Failed to parse code'],
+      warnings: []
+    };
+  }
+}
+
+/**
+ * Validate note patterns
+ */
+function isValidNotePattern(notes: string): boolean {
+  try {
+    // Simple validation for note patterns
+    const noteRegex = /^[a-gA-G][#b]?\d*\s*([*~\[\]<>x\s]|\/\d+)*$/;
+    return noteRegex.test(notes.trim());
+  } catch (error) {
+    console.error('Failed to validate note pattern:', error);
+    return false;
+  }
+}
+
+/**
+ * Sanitize Strudel code
+ */
+export function sanitizeStrudelCode(code: string): string {
+  try {
+    // Remove potentially dangerous patterns
+    let sanitized = code
+      .replace(/eval\s*\(/gi, '/* eval removed */')
+      .replace(/Function\s*\(/gi, '/* Function removed */')
+      .replace(/import\s*\(/gi, '/* import removed */')
+      .replace(/require\s*\(/gi, '/* require removed */')
+      .replace(/fetch\s*\(/gi, '/* fetch removed */')
+      .replace(/XMLHttpRequest/gi, '/* XMLHttpRequest removed */')
+      .replace(/WebSocket/gi, '/* WebSocket removed */')
+      .replace(/crypto\.subtle/gi, '/* crypto.subtle removed */')
+      .replace(/localStorage/gi, '/* localStorage removed */')
+      .replace(/sessionStorage/gi, '/* sessionStorage removed */')
+      .replace(/document\.cookie/gi, '/* document.cookie removed */');
+    
+    return sanitized;
+  } catch (error) {
+    console.error('Failed to sanitize Strudel code:', error);
+    return code;
+  }
+}
+
+/**
+ * Extract notes from Strudel code
+ */
+export function extractNotes(code: string): string[] {
+  try {
+    const notes: string[] = [];
+    const notePattern = /note\s*\(\s*["']([^"']+)["']\s*\)/g;
+    let match;
+    
+    while ((match = notePattern.exec(code)) !== null) {
+      const noteString = match[1];
+      const individualNotes = noteString.split(/\s+/).filter(n => n.trim());
+      notes.push(...individualNotes);
+    }
+    
+    return notes;
+  } catch (error) {
+    console.error('Failed to extract notes:', error);
+    return [];
+  }
+}
+
+/**
+ * Validate pattern complexity
+ */
+export function validatePatternComplexity(code: string): { isValid: boolean; complexity: number; warnings: string[] } {
+  try {
+    const warnings: string[] = [];
+    let complexity = 0;
+    
+    // Count function calls
+    const functionCalls = (code.match(/\w+\s*\(/g) || []).length;
+    complexity += functionCalls;
+    
+    // Count nested structures
+    const nestedStacks = (code.match(/stack\s*\(/g) || []).length;
+    complexity += nestedStacks * 2;
+    
+    // Count timing modifiers
+    const timingModifiers = (code.match(/[\*\~\/\[\]\<>]/g) || []).length;
+    complexity += timingModifiers;
+    
+    if (complexity > 50) {
+      warnings.push('Pattern may be too complex for real-time generation');
+    }
+    
+    if (nestedStacks > 3) {
+      warnings.push('Deep nesting detected - may cause performance issues');
+    }
+    
+    return {
+      isValid: complexity <= 100,
+      complexity,
+      warnings
+    };
+  } catch (error) {
+    console.error('Failed to validate pattern complexity:', error);
+    return {
+      isValid: false,
+      complexity: 0,
+      warnings: ['Failed to validate complexity']
+    };
+  }
+}
+
+export function cleanupStrudel() {
+    try {
+        stopStrudel();
+        audioInitialized = false;
+        currentPattern = null;
+        drawCb = null;
+    } catch (error) {
+        console.error('Failed to cleanup Strudel:', error);
+    }
 }
 
 /**

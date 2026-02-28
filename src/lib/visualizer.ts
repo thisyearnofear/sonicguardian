@@ -172,16 +172,20 @@ export class SonicVisualizer {
   }
 
   public updateDNASequence(dna: string) {
-    // Map Strudel functions to visual params
-    this.params.distortion = dna.includes('distort') ? 0.8 : 0.2;
-    this.params.speed = dna.includes('slow') ? 0.4 : (dna.includes('fast') ? 2.5 : 1.0);
-    this.params.complexity = dna.split('|').length / 5;
+    try {
+      // Map Strudel functions to visual params
+      this.params.distortion = dna.includes('distort') ? 0.8 : 0.2;
+      this.params.speed = dna.includes('slow') ? 0.4 : (dna.includes('fast') ? 2.5 : 1.0);
+      this.params.complexity = dna.split('|').length / 5;
 
-    if (dna.includes('hpf')) this.params.colorShift = 1.0;
-    else if (dna.includes('lpf')) this.params.colorShift = -1.0;
-    else this.params.colorShift = 0.0;
+      if (dna.includes('hpf')) this.params.colorShift = 1.0;
+      else if (dna.includes('lpf')) this.params.colorShift = -1.0;
+      else this.params.colorShift = 0.0;
 
-    this.formHelix();
+      this.formHelix();
+    } catch (error) {
+      console.error('Failed to update DNA sequence:', error);
+    }
   }
 
   private formHelix() {
@@ -217,16 +221,20 @@ export class SonicVisualizer {
   }
 
   public highlightParticles(indices: number[]) {
-    // If indices is empty, dim everything except core
-    // If all, ultra glow
-    const intensity = indices.length > 0 ? 2.5 : 0.2;
-    this.nodes.forEach(node => {
-      const mesh = node.children[0] as THREE.Mesh;
-      const material = mesh.material;
-      if (material instanceof THREE.MeshStandardMaterial) {
-        material.emissiveIntensity = intensity;
-      }
-    });
+    try {
+      // If indices is empty, dim everything except core
+      // If all, ultra glow
+      const intensity = indices.length > 0 ? 2.5 : 0.2;
+      this.nodes.forEach(node => {
+        const mesh = node.children[0] as THREE.Mesh;
+        const material = mesh.material;
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.emissiveIntensity = intensity;
+        }
+      });
+    } catch (error) {
+      console.error('Failed to highlight particles:', error);
+    }
   }
 
   public playGenerationAnimation() {
@@ -241,53 +249,66 @@ export class SonicVisualizer {
   }
 
   private animate() {
-    this.animationId = requestAnimationFrame(this.animate.bind(this));
-    const delta = this.clock.getDelta();
-    this.time += delta * this.params.speed;
+    try {
+      this.animationId = requestAnimationFrame(this.animate.bind(this));
+      const delta = this.clock.getDelta();
+      this.time += delta * this.params.speed;
 
-    // 1. Core Morphing
-    // We simulate a shader displacement by oscillating vertices (simple version)
-    // In a real premium app, we'd use a custom ShaderMaterial
-    const scale = 1 + Math.sin(this.time) * 0.1 * this.params.distortion;
-    this.core.scale.setScalar(scale);
-    this.core.rotation.y += delta * 0.2 * this.params.speed;
-    this.core.rotation.z += delta * 0.1;
+      // 1. Core Morphing
+      // We simulate a shader displacement by oscillating vertices (simple version)
+      // In a real premium app, we'd use a custom ShaderMaterial
+      const scale = 1 + Math.sin(this.time) * 0.1 * this.params.distortion;
+      this.core.scale.setScalar(scale);
+      this.core.rotation.y += delta * 0.2 * this.params.speed;
+      this.core.rotation.z += delta * 0.1;
 
-    // 2. Node Movement
-    this.nodes.forEach((node, i) => {
-      // Lerp to target position if set
-      if (node.userData.targetPos) {
-        node.position.lerp(node.userData.targetPos, 0.05);
-      } else {
-        // Brownian floating
-        node.position.x += Math.sin(this.time + i) * 0.01;
-        node.position.y += Math.cos(this.time * 0.8 + i) * 0.01;
+      // 2. Node Movement
+      this.nodes.forEach((node, i) => {
+        // Lerp to target position if set
+        if (node.userData.targetPos) {
+          node.position.lerp(node.userData.targetPos, 0.05);
+        } else {
+          // Brownian floating
+          node.position.x += Math.sin(this.time + i) * 0.01;
+          node.position.y += Math.cos(this.time * 0.8 + i) * 0.01;
+        }
+
+        // Individual node rotation
+        node.rotation.x += delta * 0.5 * this.params.speed;
+        node.rotation.y += delta * 0.3;
+
+        // Color shift based on HPF/LPF
+        const material = (node.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
+        if (this.params.colorShift > 0.5) material.emissive.setHex(0xffffff); // HPF - White
+        else if (this.params.colorShift < -0.5) material.emissive.setHex(0x4444ff); // LPF - Blue
+      });
+
+      this.controls.update();
+      this.renderer.render(this.scene, this.camera);
+    } catch (error) {
+      console.error('Animation error:', error);
+      // Stop animation loop on error
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
       }
-
-      // Individual node rotation
-      node.rotation.x += delta * 0.5 * this.params.speed;
-      node.rotation.y += delta * 0.3;
-
-      // Color shift based on HPF/LPF
-      const material = (node.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
-      if (this.params.colorShift > 0.5) material.emissive.setHex(0xffffff); // HPF - White
-      else if (this.params.colorShift < -0.5) material.emissive.setHex(0x4444ff); // LPF - Blue
-    });
-
-    this.controls.update();
-    this.renderer.render(this.scene, this.camera);
+    }
   }
 
   public dispose() {
-    if (this.animationId) cancelAnimationFrame(this.animationId);
-    this.renderer.dispose();
-    this.scene.traverse((obj: any) => {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) obj.material.dispose();
-    });
-    window.removeEventListener('resize', this.onResize.bind(this));
-    if (this.config.container.contains(this.renderer.domElement)) {
-      this.config.container.removeChild(this.renderer.domElement);
+    try {
+      if (this.animationId) cancelAnimationFrame(this.animationId);
+      this.renderer.dispose();
+      this.scene.traverse((obj: any) => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+      });
+      window.removeEventListener('resize', this.onResize.bind(this));
+      if (this.config.container.contains(this.renderer.domElement)) {
+        this.config.container.removeChild(this.renderer.domElement);
+      }
+    } catch (error) {
+      console.error('Failed to dispose visualizer:', error);
     }
   }
 }

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { GiftingService, GiftVault } from '../lib/gifting';
 import { playStrudelCode, stopStrudel } from '../lib/strudel';
-import { extractSonicDNA } from '../lib/dna';
+import { extractSonicDNA, detectAndReconstructCode } from '../lib/dna';
+import { isValidBtcAddress } from '../lib/crypto';
 import { 
   generateEntropy, 
   encodePattern, 
@@ -52,15 +53,12 @@ export default function GiftApp() {
   };
 
   const handleCreateGift = async () => {
-    if (!generatedCode) return;
+    if (!generatedCode || !recipientWallet) return;
     setIsProcessing(true);
     setStatus('Creating Bitcoin Gift Vault via Starkzap...');
     
-    // Mock sender address for demo
-    const senderAddress = "0x123...sender"; 
-    
     const vault = await giftingService.createGift(
-      senderAddress,
+      recipientWallet.address,
       btcAmount,
       generatedCode,
       musicalChunks.map(c => c.text)
@@ -93,21 +91,30 @@ export default function GiftApp() {
     setIsProcessing(true);
     setStatus('Verifying Vibe & Claiming Bitcoin...');
 
-    // In a real app, we'd reconstruct the code from chunks
-    // For demo, we'll assume the chunks are correctly entered
-    const success = await giftingService.claimGift(
-      claimVaultId,
-      recipientWallet.address,
-      generatedCode, // Reconstructed in reality
-      claimBlinding
-    );
+    try {
+      // 1. Reconstruct the Strudel code from musical chunks
+      const reconstructedCode = detectAndReconstructCode(claimChunks) || claimChunks;
+      
+      // 2. Claim via Gifting Service
+      const success = await giftingService.claimGift(
+        claimVaultId,
+        recipientWallet.address,
+        reconstructedCode,
+        claimBlinding
+      );
 
-    if (success) {
-      setStatus('Success! Bitcoin has been moved to your wallet.');
-    } else {
-      setStatus('Claim failed. Is the vibe correct?');
+      if (success) {
+        setStatus('Success! Bitcoin has been moved to your wallet.');
+        playStrudelCode(reconstructedCode);
+      } else {
+        setStatus('Claim failed. Is the vibe correct?');
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus('Claim error. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   return (
@@ -184,10 +191,10 @@ export default function GiftApp() {
 
           <button 
             onClick={handleCreateGift}
-            disabled={isProcessing || !generatedCode}
+            disabled={isProcessing || !generatedCode || !recipientWallet}
             className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {isProcessing ? 'Processing...' : '🎁 Create Gift Card'}
+            {isProcessing ? 'Processing...' : !recipientWallet ? 'Login to Create Gift' : '🎁 Create Gift Card'}
           </button>
           
           {status && <p className="text-center text-xs font-bold text-[color:var(--color-primary)] animate-pulse">{status}</p>}
@@ -200,13 +207,13 @@ export default function GiftApp() {
           </div>
 
           {!recipientWallet ? (
-            <button 
-              onClick={handleSocialLogin}
-              className="w-full py-5 rounded-2xl bg-white text-black font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-3 hover:scale-[1.02] transition-all"
-            >
-              <img src="https://www.google.com/favicon.ico" className="w-4 h-4" />
-              Continue with Google
-            </button>
+          <button 
+            onClick={handleSocialLogin}
+            className="w-full py-5 rounded-2xl bg-white text-black font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-3 hover:scale-[1.02] transition-all"
+          >
+            <img src="https://www.google.com/favicon.ico" className="w-4 h-4" />
+            Login to Claim Gift
+          </button>
           ) : (
             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
               <div className="p-4 rounded-xl bg-[color:var(--color-success)]/10 border border-[color:var(--color-success)]/20 text-center">

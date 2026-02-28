@@ -69,6 +69,7 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
               
               // Draw active events as bars
               active.forEach((hap: any) => {
+                if (!ctx) return;
                 const value = hap.value;
                 const note = value?.note || value?.n || 60;
                 const freq = typeof note === 'number' ? note : 60;
@@ -79,8 +80,10 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
                 
                 // Color based on event properties
                 const hue = (freq * 5) % 360;
-                ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.8)`;
-                ctx.fillRect(0, y - barHeight/2, w, barHeight);
+                if (ctx) {
+                  ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.8)`;
+                  ctx.fillRect(0, y - barHeight/2, w, barHeight);
+                }
               });
             }
           },
