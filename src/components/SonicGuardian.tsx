@@ -27,6 +27,7 @@ import {
   type EncodedPattern
 } from '../lib/entropy-encoder';
 import { StrudelEditor } from './StrudelEditor';
+import { PatternExplorer } from './PatternExplorer';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -58,6 +59,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [isMobile, setIsMobile] = useState(false);
   const [progressIndicator, setProgressIndicator] = useState<any>(null);
   const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
+  const [showPatternExplorer, setShowPatternExplorer] = useState(false);
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -547,6 +549,17 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <p className="text-[9px] text-[color:var(--color-muted)] mt-3 text-center italic">
                     This pattern demonstrates Strudel's live coding syntax • Hear how code becomes sound
                   </p>
+
+                  {/* Learn Strudel CTA */}
+                  <div className="mt-6 pt-6 border-t border-[color:var(--color-border)]">
+                    <button
+                      onClick={() => setShowPatternExplorer(true)}
+                      className="w-full py-4 rounded-xl bg-gradient-to-r from-[color:var(--color-primary)]/20 to-[color:var(--color-accent)]/20 border border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] font-bold text-xs uppercase tracking-widest hover:from-[color:var(--color-primary)]/30 hover:to-[color:var(--color-accent)]/30 transition-all flex items-center justify-center gap-3"
+                    >
+                      🎓 Explore 16+ Strudel Features
+                      <span className="px-2 py-0.5 rounded bg-[color:var(--color-primary)]/20 text-[9px]">Interactive</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1061,6 +1074,34 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           Evolved from the Sound of Data • © 2026 Sonic Guardian
         </p>
       </footer>
+
+      {/* Pattern Explorer Modal */}
+      {showPatternExplorer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+            onClick={() => setShowPatternExplorer(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-7xl max-h-[90vh] overflow-y-auto bg-[color:var(--background)] rounded-3xl border border-[color:var(--color-border)] shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPatternExplorer(false)}
+              className="absolute top-4 right-4 z-10 px-4 py-2 rounded-full bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold text-xs uppercase tracking-wider hover:scale-105 transition-all"
+            >
+              ✕ Close
+            </button>
+            
+            {/* Pattern Explorer Component */}
+            <PatternExplorer onPatternSelect={(code) => {
+              // Optionally handle pattern selection
+              console.log('Pattern selected from explorer:', code);
+            }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
