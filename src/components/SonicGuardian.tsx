@@ -18,6 +18,7 @@ import { WalletButton } from './WalletButton';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
 import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '../lib/strudel';
 import { generateBlinding, isValidBtcAddress } from '../lib/crypto';
+import { MobileUtils } from '../lib/mobile';
 import { 
   generateEntropy,
   encodePattern,
@@ -54,10 +55,14 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const [useSecureGeneration, setUseSecureGeneration] = useState(true);
   const [activeHaps, setActiveHaps] = useState<any[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [progressIndicator, setProgressIndicator] = useState<any>(null);
+  const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const formContainerRef = useRef<HTMLDivElement>(null);
 
   const { isConnected, registerGuardian, verifyRecovery, authorizeBtcRecovery } = useStarknetGuardian();
   const [isCommiting, setIsCommiting] = useState(false);
@@ -89,6 +94,47 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     setUseRealAI(prefs.useRealAI);
     setAudioState(prefs.audioEnabled);
   }, []);
+
+  useEffect(() => {
+    // Initialize mobile detection
+    const deviceInfo = MobileUtils.getDeviceInfo();
+    setIsMobile(deviceInfo.isMobile);
+
+    // Initialize mobile utilities if on mobile
+    if (deviceInfo.isMobile) {
+      // Optimize form inputs for mobile
+      if (formContainerRef.current) {
+        MobileUtils.optimizeFormInputs(formContainerRef.current);
+      }
+
+      // Set up progress indicator
+      const progress = MobileUtils.createProgressIndicator(document.body);
+      setProgressIndicator(progress);
+
+      // Add contextual help tooltips
+      const btcInput = document.querySelector('input[placeholder*="bc1q"]') as HTMLElement;
+      if (btcInput) {
+        const tooltip = MobileUtils.createTooltip(
+          btcInput,
+          'Enter your Bitcoin address to protect. This will be anchored to Starknet for secure recovery.',
+          'top'
+        );
+        setTooltips(prev => new Map(prev.set('btc-address', tooltip)));
+      }
+    }
+
+    // Fix mobile viewport issues
+    const cleanupViewport = MobileUtils.fixMobileViewport();
+
+    return () => {
+      visualizerRef.current?.dispose();
+      cleanupViewport();
+      if (progressIndicator) {
+        progressIndicator.destroy();
+      }
+      tooltips.forEach(tooltip => tooltip.destroy());
+    };
+  }, [currentTheme]);
 
   useEffect(() => {
     if (visualizerContainerRef.current) {
@@ -543,7 +589,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
                 {phase === 'registration' ? (
                   // Registration Flow - Secure First
-                  <div className="space-y-4">
+                  <div className="space-y-4" ref={formContainerRef}>
                     <div className="p-4 rounded-xl bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse" />

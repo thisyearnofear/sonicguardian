@@ -55,14 +55,52 @@ Our showcase application demonstrates how Sonic Guardian + **Starkzap** can revo
 
 ### Prerequisites
 - Node.js 18+
-- Scarb (for Cairo contracts)
+- pnpm (recommended)
 - A Starknet wallet (Argent X or Braavos)
 
 ### Setup
 1. Clone the repo: `git clone https://github.com/your-username/sonicguardian`
 2. Install dependencies: `pnpm install`
-3. Set up `.env` (see `.env.example`)
+3. Set up `.env.local` (see `.env.example`)
 4. Start the lab: `pnpm dev`
+
+### Agent API
+
+AI agents can interact with Sonic Guardian via the REST API:
+
+```bash
+# Register a guardian
+curl -X POST http://localhost:3000/api/agent/register \
+  -H "Content-Type: application/json" \
+  -d '{"btcAddress": "bc1q...", "musicalPattern": "sawtooth c2 ~ c2, sine c4*4"}'
+
+# Verify recovery
+curl -X POST http://localhost:3000/api/agent/verify \
+  -H "Content-Type: application/json" \
+  -d '{"btcAddress": "bc1q...", "musicalPattern": "sawtooth c2 ~ c2"}'
+
+# Trigger recovery
+curl -X POST http://localhost:3000/api/agent/trigger \
+  -H "Content-Type: application/json" \
+  -d '{"btcAddress": "bc1q...", "musicalPattern": "sawtooth c2 ~ c2"}'
+
+# Check status
+curl http://localhost:3000/api/agent/status/bc1q...
+```
+
+### MCP Server
+
+For MCP-compatible agents (Claude, Cursor, Snak), use the standalone MCP server:
+
+```bash
+# Install
+npm install @sonicguardian/mcp-server
+
+# Run
+npx @sonicguardian/mcp-server http 3001
+```
+
+See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for full MCP documentation.
 
 ### Deployment
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full guide to deploying the Sonic Guardian contract to Sepolia.
