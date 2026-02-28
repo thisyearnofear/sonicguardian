@@ -207,7 +207,7 @@ export const validators = {
 /**
  * CORS headers for API responses with security enhancements
  */
-export const getCORSHeaders = () => {
+export const getCORSHeaders = (): Record<string, string> => {
   try {
     const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     
@@ -233,7 +233,7 @@ export const getCORSHeaders = () => {
 /**
  * Security headers for API responses
  */
-export const getSecurityHeaders = () => {
+export const getSecurityHeaders = (): Record<string, string> => {
   try {
     return {
       'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
@@ -339,5 +339,73 @@ export const validateEnvironment = () => {
   } catch (error) {
     console.error('Environment validation failed:', error);
     throw error;
+  }
+};
+
+/**
+ * Enhanced fetch wrapper with comprehensive error handling
+ */
+export const secureFetch = async <T>(
+  url: string,
+  options: RequestInit = {},
+  identifier?: string
+): Promise<APIResponse<T>> => {
+  try {
+    // Validate inputs
+    if (!url || typeof url !== 'string') {
+      throw new BaseAPIError('Invalid URL provided', 'INVALID_URL', 400);
+    }
+
+    // Apply rate limiting if identifier provided
+    if (identifier && !rateLimiter.isAllowed(identifier)) {
+      throw new BaseAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
+    }
+
+    // Add security headers
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    // Add timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new BaseAPIError(
+        `HTTP error! status: ${response.status} - ${response.statusText}`,
+        'HTTP_ERROR',
+        response.status
+      );
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new BaseAPIError('Invalid response format: expected JSON', 'INVALID_RESPONSE_FORMAT', 500);
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    if (error instanceof BaseAPIError) {
+      return { success: false, error: error.message, code: error.code };
+    }
+
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Request timed out', code: 'TIMEOUT_ERROR' };
+      }
+      return { success: false, error: error.message, code: 'FETCH_ERROR' };
+    }
+
+    return { success: false, error: 'Unknown error occurred', code: 'UNKNOWN_ERROR' };
   }
 };

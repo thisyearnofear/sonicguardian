@@ -41,51 +41,66 @@ export class SonicVisualizer {
   }
 
   private init() {
-    this.scene = new THREE.Scene();
+    try {
+      // Validate container
+      if (!this.config.container || !(this.config.container instanceof HTMLElement)) {
+        throw new Error('Invalid container element');
+      }
 
-    this.camera = new THREE.PerspectiveCamera(
-      45,
-      this.config.container.clientWidth / this.config.container.clientHeight,
-      0.1,
-      1000
-    );
-    this.camera.position.set(0, 5, 15);
+      this.scene = new THREE.Scene();
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance'
-    });
-    this.renderer.setSize(this.config.container.clientWidth, this.config.container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.config.container.appendChild(this.renderer.domElement);
+      this.camera = new THREE.PerspectiveCamera(
+        45,
+        this.config.container.clientWidth / this.config.container.clientHeight,
+        0.1,
+        1000
+      );
+      this.camera.position.set(0, 5, 15);
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
-    this.controls.enableZoom = false;
-    this.controls.autoRotate = true;
-    this.controls.autoRotateSpeed = 0.5;
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance'
+      });
+      this.renderer.setSize(this.config.container.clientWidth, this.config.container.clientHeight);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      this.config.container.appendChild(this.renderer.domElement);
 
-    this.setupLights();
-    this.createCore();
-    this.createDNAStructure();
+      this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+      this.controls.enableDamping = true;
+      this.controls.dampingFactor = 0.05;
+      this.controls.enableZoom = false;
+      this.controls.autoRotate = true;
+      this.controls.autoRotateSpeed = 0.5;
 
-    window.addEventListener('resize', this.onResize.bind(this));
-    this.animate();
+      this.setupLights();
+      this.createCore();
+      this.createDNAStructure();
+
+      window.addEventListener('resize', this.onResize.bind(this));
+      this.animate();
+    } catch (error) {
+      console.error('Failed to initialize visualizer:', error);
+      throw error;
+    }
   }
 
   private setupLights() {
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-    this.scene.add(ambient);
+    try {
+      const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+      this.scene.add(ambient);
 
-    const p1 = new THREE.PointLight(this.getPrimaryColor(), 5, 20);
-    p1.position.set(5, 5, 5);
-    this.scene.add(p1);
+      const p1 = new THREE.PointLight(this.getPrimaryColor(), 5, 20);
+      p1.position.set(5, 5, 5);
+      this.scene.add(p1);
 
-    const p2 = new THREE.PointLight(this.getAccentColor(), 3, 20);
-    p2.position.set(-5, -5, 5);
-    this.scene.add(p2);
+      const p2 = new THREE.PointLight(this.getAccentColor(), 3, 20);
+      p2.position.set(-5, -5, 5);
+      this.scene.add(p2);
+    } catch (error) {
+      console.error('Failed to setup lights:', error);
+      throw error;
+    }
   }
 
   private getPrimaryColor() {
@@ -100,79 +115,94 @@ export class SonicVisualizer {
    * Create the central "Sonic Core" - a morphing geometric orb
    */
   private createCore() {
-    // We'll use a high-poly sphere and a custom material
-    const geometry = new THREE.IcosahedronGeometry(3, 32);
+    try {
+      // We'll use a high-poly sphere and a custom material
+      const geometry = new THREE.IcosahedronGeometry(3, 32);
 
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.0,
-      metalness: 0.9,
-      flatShading: false,
-      emissive: this.getPrimaryColor(),
-      emissiveIntensity: 0.2,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.3
-    });
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.0,
+        metalness: 0.9,
+        flatShading: false,
+        emissive: this.getPrimaryColor(),
+        emissiveIntensity: 0.2,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.3
+      });
 
-    this.core = new THREE.Mesh(geometry, material);
-    this.scene.add(this.core);
+      this.core = new THREE.Mesh(geometry, material);
+      this.scene.add(this.core);
 
-    // Add an inner solid glow core
-    const innerGeo = new THREE.IcosahedronGeometry(2.5, 4);
-    const innerMat = new THREE.MeshStandardMaterial({
-      color: this.getPrimaryColor(),
-      emissive: this.getPrimaryColor(),
-      emissiveIntensity: 1.0,
-      transparent: true,
-      opacity: 0.8
-    });
-    const innerCore = new THREE.Mesh(innerGeo, innerMat);
-    this.core.add(innerCore);
+      // Add an inner solid glow core
+      const innerGeo = new THREE.IcosahedronGeometry(2.5, 4);
+      const innerMat = new THREE.MeshStandardMaterial({
+        color: this.getPrimaryColor(),
+        emissive: this.getPrimaryColor(),
+        emissiveIntensity: 1.0,
+        transparent: true,
+        opacity: 0.8
+      });
+      const innerCore = new THREE.Mesh(innerGeo, innerMat);
+      this.core.add(innerCore);
+    } catch (error) {
+      console.error('Failed to create core:', error);
+      throw error;
+    }
   }
 
   /**
    * Create the "Genes" - distinct primitives that form the DNA structure
    */
   private createDNAStructure() {
-    // Instead of 100 particles, we use 12 high-quality resonance nodes
-    const nodeGeometries = [
-      new THREE.IcosahedronGeometry(0.5, 0),
-      new THREE.OctahedronGeometry(0.5, 0),
-      new THREE.TorusGeometry(0.4, 0.1, 8, 16)
-    ];
+    try {
+      // Instead of 100 particles, we use 12 high-quality resonance nodes
+      const nodeGeometries = [
+        new THREE.IcosahedronGeometry(0.5, 0),
+        new THREE.OctahedronGeometry(0.5, 0),
+        new THREE.TorusGeometry(0.4, 0.1, 8, 16)
+      ];
 
-    for (let i = 0; i < 12; i++) {
-      const group = new THREE.Group();
+      for (let i = 0; i < 12; i++) {
+        const group = new THREE.Group();
 
-      const geo = nodeGeometries[i % nodeGeometries.length];
-      const mat = new THREE.MeshStandardMaterial({
-        color: i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor(),
-        metalness: 1.0,
-        roughness: 0.0,
-        emissive: i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor(),
-        emissiveIntensity: 0.2
-      });
+        const geo = nodeGeometries[i % nodeGeometries.length];
+        const mat = new THREE.MeshStandardMaterial({
+          color: i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor(),
+          metalness: 1.0,
+          roughness: 0.0,
+          emissive: i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor(),
+          emissiveIntensity: 0.2
+        });
 
-      const mesh = new THREE.Mesh(geo, mat);
-      group.add(mesh);
+        const mesh = new THREE.Mesh(geo, mat);
+        group.add(mesh);
 
-      // Random initial scatter
-      const radius = 6 + Math.random() * 2;
-      const angle = (i / 12) * Math.PI * 2;
-      group.position.set(
-        Math.cos(angle) * radius,
-        (Math.random() - 0.5) * 4,
-        Math.sin(angle) * radius
-      );
+        // Random initial scatter
+        const radius = 6 + Math.random() * 2;
+        const angle = (i / 12) * Math.PI * 2;
+        group.position.set(
+          Math.cos(angle) * radius,
+          (Math.random() - 0.5) * 4,
+          Math.sin(angle) * radius
+        );
 
-      this.nodes.push(group);
-      this.scene.add(group);
+        this.nodes.push(group);
+        this.scene.add(group);
+      }
+    } catch (error) {
+      console.error('Failed to create DNA structure:', error);
+      throw error;
     }
   }
 
   public updateDNASequence(dna: string) {
     try {
+      // Validate input
+      if (!dna || typeof dna !== 'string') {
+        throw new Error('Invalid DNA sequence: must be a non-empty string');
+      }
+
       // Map Strudel functions to visual params
       this.params.distortion = dna.includes('distort') ? 0.8 : 0.2;
       this.params.speed = dna.includes('slow') ? 0.4 : (dna.includes('fast') ? 2.5 : 1.0);
@@ -185,6 +215,7 @@ export class SonicVisualizer {
       this.formHelix();
     } catch (error) {
       console.error('Failed to update DNA sequence:', error);
+      throw error;
     }
   }
 
@@ -222,6 +253,11 @@ export class SonicVisualizer {
 
   public highlightParticles(indices: number[]) {
     try {
+      // Validate input
+      if (!Array.isArray(indices)) {
+        throw new Error('Invalid indices: must be an array');
+      }
+
       // If indices is empty, dim everything except core
       // If all, ultra glow
       const intensity = indices.length > 0 ? 2.5 : 0.2;
@@ -234,6 +270,7 @@ export class SonicVisualizer {
       });
     } catch (error) {
       console.error('Failed to highlight particles:', error);
+      throw error;
     }
   }
 
@@ -264,23 +301,27 @@ export class SonicVisualizer {
 
       // 2. Node Movement
       this.nodes.forEach((node, i) => {
-        // Lerp to target position if set
-        if (node.userData.targetPos) {
-          node.position.lerp(node.userData.targetPos, 0.05);
-        } else {
-          // Brownian floating
-          node.position.x += Math.sin(this.time + i) * 0.01;
-          node.position.y += Math.cos(this.time * 0.8 + i) * 0.01;
+        try {
+          // Lerp to target position if set
+          if (node.userData.targetPos) {
+            node.position.lerp(node.userData.targetPos, 0.05);
+          } else {
+            // Brownian floating
+            node.position.x += Math.sin(this.time + i) * 0.01;
+            node.position.y += Math.cos(this.time * 0.8 + i) * 0.01;
+          }
+
+          // Individual node rotation
+          node.rotation.x += delta * 0.5 * this.params.speed;
+          node.rotation.y += delta * 0.3;
+
+          // Color shift based on HPF/LPF
+          const material = (node.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          if (this.params.colorShift > 0.5) material.emissive.setHex(0xffffff); // HPF - White
+          else if (this.params.colorShift < -0.5) material.emissive.setHex(0x4444ff); // LPF - Blue
+        } catch (nodeError) {
+          console.error('Error in node animation:', nodeError);
         }
-
-        // Individual node rotation
-        node.rotation.x += delta * 0.5 * this.params.speed;
-        node.rotation.y += delta * 0.3;
-
-        // Color shift based on HPF/LPF
-        const material = (node.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
-        if (this.params.colorShift > 0.5) material.emissive.setHex(0xffffff); // HPF - White
-        else if (this.params.colorShift < -0.5) material.emissive.setHex(0x4444ff); // LPF - Blue
       });
 
       this.controls.update();
@@ -309,6 +350,125 @@ export class SonicVisualizer {
       }
     } catch (error) {
       console.error('Failed to dispose visualizer:', error);
+    }
+  }
+
+  /**
+   * Pause the visualizer animation
+   */
+  public pause() {
+    try {
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+      }
+    } catch (error) {
+      console.error('Failed to pause visualizer:', error);
+    }
+  }
+
+  /**
+   * Resume the visualizer animation
+   */
+  public resume() {
+    try {
+      if (!this.animationId) {
+        this.animate();
+      }
+    } catch (error) {
+      console.error('Failed to resume visualizer:', error);
+    }
+  }
+
+  /**
+   * Update visualizer theme
+   */
+  public updateTheme(theme: 'light' | 'dark') {
+    try {
+      if (!['light', 'dark'].includes(theme)) {
+        throw new Error('Invalid theme: must be "light" or "dark"');
+      }
+
+      this.config.theme = theme;
+      
+      // Update core material colors
+      const coreObj = this.core.children[1] as THREE.Mesh;
+      const coreMaterial = coreObj.material as THREE.MeshStandardMaterial;
+      coreMaterial.color.setHex(this.getPrimaryColor());
+      coreMaterial.emissive.setHex(this.getPrimaryColor());
+
+      // Update node materials
+      this.nodes.forEach((node, i) => {
+        const meshNode = node.children[0] as THREE.Mesh;
+        const material = meshNode.material as THREE.MeshStandardMaterial;
+        material.color.setHex(i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor());
+        material.emissive.setHex(i % 2 === 0 ? this.getPrimaryColor() : this.getAccentColor());
+      });
+
+      // Update lights
+      this.setupLights();
+    } catch (error) {
+      console.error('Failed to update theme:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate visualizer configuration
+   */
+  public static validateConfig(config: VisualizerConfig): boolean {
+    try {
+      if (!config || typeof config !== 'object') {
+        return false;
+      }
+
+      if (!config.container || !(config.container instanceof HTMLElement)) {
+        return false;
+      }
+
+      if (!config.theme || !['light', 'dark'].includes(config.theme)) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to validate visualizer config:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if WebGL is supported
+   */
+  public static isWebGLSupported(): boolean {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      return !!gl;
+    } catch (error) {
+      console.error('Failed to check WebGL support:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get visualizer performance metrics
+   */
+  public getPerformanceMetrics(): { fps: number; nodeCount: number; memoryUsage?: number } {
+    try {
+      const fps = 60; // Could be calculated from clock
+      const nodeCount = this.nodes.length;
+      
+      return {
+        fps,
+        nodeCount
+      };
+    } catch (error) {
+      console.error('Failed to get performance metrics:', error);
+      return {
+        fps: 0,
+        nodeCount: 0
+      };
     }
   }
 }

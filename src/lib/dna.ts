@@ -4,7 +4,7 @@ import { validators } from './api';
 
 /**
  * Sonic DNA extraction with cryptographic security
- * Consolidates parsing, normalization, and hashing logic
+ * Captures rhythmic, harmonic, and temporal semantics from Strudel patterns
  */
 export interface SonicDNA {
   dna: string;
@@ -12,29 +12,37 @@ export interface SonicDNA {
   hash: string;
   salt: string;
   timestamp: number;
+  rhythmicFeatures?: string[];
+  harmonicFeatures?: string[];
+  temporalFeatures?: string[];
 }
 
 export interface DNAExtractionOptions {
   salt?: string;
   includeTimestamp?: boolean;
+  captureSemantics?: boolean;  // Capture rhythmic/temporal/harmonic features
 }
 
 /**
  * Extracts musical features from a Strudel pattern string
+ * Now captures rhythmic, harmonic, and temporal semantics
  */
 export async function extractSonicDNA(
   code: string,
   options: DNAExtractionOptions = {}
 ): Promise<SonicDNA | null> {
   try {
-    // Validate input
     const validatedCode = code.trim();
-    
+
     if (!validatedCode) {
       throw new Error('Empty code provided');
     }
 
     const features: Array<{ name: string; args: (string | number)[] }> = [];
+    const rhythmicFeatures: string[] = [];
+    const harmonicFeatures: string[] = [];
+    const temporalFeatures: string[] = [];
+
     const ast = parse(validatedCode, {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -59,21 +67,43 @@ export async function extractSonicDNA(
 
             // Normalize: Round to nearest integer for robustness, and lowercase strings
             const normalizedArgs = args.map(a => {
-              if (typeof a === 'number') return Math.round(a * 10) / 10; // 1 decimal place precision
+              if (typeof a === 'number') return Math.round(a * 10) / 10;
               if (typeof a === 'string') return a.toLowerCase().trim();
               return a;
             });
 
             features.push({ name, args: normalizedArgs });
+
+            // Categorize features by musical semantics
+            if (options.captureSemantics) {
+              // Rhythmic: drums, patterns, timing
+              if (['s', 'note', 'n', 'bd', 'sd', 'hh', 'oh', 'cp', 'rim'].includes(name)) {
+                rhythmicFeatures.push(`${name}(${normalizedArgs.join(',')})`);
+              }
+              
+              // Temporal: time modifiers
+              if (['slow', 'fast', 'sometimes', 'when', 'cpm', 'slowfast'].includes(name)) {
+                temporalFeatures.push(`${name}(${normalizedArgs.join(',')})`);
+              }
+              
+              // Harmonic: scales, chords, notes
+              if (['scale', 'chord', 'n', 'note'].includes(name)) {
+                harmonicFeatures.push(`${name}(${normalizedArgs.join(',')})`);
+              }
+
+              // Pattern transformations
+              if (['pattern', 'stack', 'seq', 'cat'].includes(name)) {
+                rhythmicFeatures.push(`${name}(${normalizedArgs.join(',')})`);
+              }
+            }
           }
         }
       }
     });
 
     // Normalize: Remove duplicates, sort by function name, and stringify
-    // This makes the hash invariant to the ORDER of chainable functions (like .lpf().bank() vs .bank().lpf())
     const uniqueFeatures = Array.from(new Set(features
-      .filter(f => !['m', 'evaluate', 's', 'stack'].includes(f.name)) // Ignore infrastructure functions
+      .filter(f => !['m', 'evaluate', 's', 'stack'].includes(f.name))
       .map(f => `${f.name}(${f.args.join(',')})`)
     )).sort();
 
@@ -86,10 +116,15 @@ export async function extractSonicDNA(
 
     return {
       dna: normalized,
-      features: features.map(f => f.name).filter((v, i, a) => a.indexOf(v) === i), // Uniques
+      features: features.map(f => f.name).filter((v, i, a) => a.indexOf(v) === i),
       hash: hash,
       salt: salt,
-      timestamp: timestamp
+      timestamp: timestamp,
+      ...(options.captureSemantics && {
+        rhythmicFeatures: Array.from(new Set(rhythmicFeatures)).sort(),
+        harmonicFeatures: Array.from(new Set(harmonicFeatures)).sort(),
+        temporalFeatures: Array.from(new Set(temporalFeatures)).sort(),
+      })
     };
   } catch (error) {
     console.error("Failed to extract Sonic DNA:", error);

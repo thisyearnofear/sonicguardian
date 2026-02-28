@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sonic-guardian": {
+      "command": "npx",
+      "args": ["@sonicguardian/mcp-server"]
+    }
+  }
+}

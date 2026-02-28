@@ -1,32 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GiftingService, GiftVault } from '../lib/gifting';
-import { playStrudelCode, stopStrudel } from '../lib/strudel';
+import { playStrudelCode, stopStrudel, setDrawCallback } from '../lib/strudel';
 import { extractSonicDNA, detectAndReconstructCode } from '../lib/dna';
 import { isValidBtcAddress } from '../lib/crypto';
-import { 
-  generateEntropy, 
-  encodePattern, 
+import {
+  generateEntropy,
+  encodePattern,
   chunksToSeedPhrase,
-  type MusicalChunk 
+  type MusicalChunk
 } from '../lib/entropy-encoder';
-
-const VibeVisualizer = ({ isActive }: { isActive: boolean }) => (
-  <div className="flex items-center gap-1 h-8">
-    {[1, 2, 3, 4, 5].map((i) => (
-      <div 
-        key={i} 
-        className={`w-1 bg-[color:var(--color-primary)] rounded-full transition-all duration-300 ${isActive ? 'animate-bounce' : 'h-2 opacity-30'}`}
-        style={{ 
-          height: isActive ? `${Math.random() * 100 + 20}%` : '8px',
-          animationDelay: `${i * 0.1}s`,
-          animationDuration: `${0.5 + Math.random()}s`
-        }}
-      />
-    ))}
-  </div>
-);
+import { StrudelVisualizer } from './StrudelVisualizer';
 
 export default function GiftApp() {
   const [mode, setMode] = useState<'send' | 'claim'>('send');
@@ -42,6 +27,17 @@ export default function GiftApp() {
   const [recipientWallet, setRecipientWallet] = useState<any>(null);
 
   const giftingService = new GiftingService(process.env.NEXT_PUBLIC_STARKZAP_API_KEY || 'demo_key');
+
+  // Setup draw callback for visualizer
+  const [activeHaps, setActiveHaps] = useState<any[]>([]);
+  
+  useEffect(() => {
+    setDrawCallback((haps: any[]) => {
+      setActiveHaps(haps.filter((h: any) => h.isActive?.(performance.now() / 1000)));
+    });
+    
+    return () => setDrawCallback(null);
+  }, []);
 
   const handleGenerateGiftVibe = () => {
     const entropy = generateEntropy();
@@ -152,13 +148,17 @@ export default function GiftApp() {
               />
               
               <div className="flex items-center justify-between">
-                <button 
+                <button
                   onClick={handleGenerateGiftVibe}
                   className="flex-1 py-4 rounded-xl border border-[color:var(--color-primary)] text-[color:var(--color-primary)] font-bold tracking-widest uppercase text-xs hover:bg-[color:var(--color-primary)]/10 transition-all flex items-center justify-center gap-2"
                 >
                   🎵 Generate Musical Vibe
                 </button>
-                {generatedCode && <div className="ml-4"><VibeVisualizer isActive={true} /></div>}
+                {generatedCode && (
+                  <div className="ml-4 w-32">
+                    <StrudelVisualizer isActive={activeHaps.length > 0} getActiveHaps={() => activeHaps} height={60} />
+                  </div>
+                )}
               </div>
             </div>
 
