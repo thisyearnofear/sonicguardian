@@ -59,7 +59,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [isMobile, setIsMobile] = useState(false);
   const [progressIndicator, setProgressIndicator] = useState<any>(null);
   const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
+  const [validationStates, setValidationStates] = useState<Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>>(new Map());
   const [showPatternExplorer, setShowPatternExplorer] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(4);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -137,6 +141,89 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       tooltips.forEach(tooltip => tooltip.destroy());
     };
   }, [currentTheme]);
+
+  // Real-time validation for Bitcoin address
+  useEffect(() => {
+    if (btcAddress.trim() === '') {
+      setValidationStates(prev => new Map(prev.set('btc-address', {
+        isValid: true,
+        message: 'Enter your Bitcoin address to protect your funds',
+        type: 'success'
+      })));
+      return;
+    }
+
+    if (!isValidBtcAddress(btcAddress)) {
+      setValidationStates(prev => new Map(prev.set('btc-address', {
+        isValid: false,
+        message: 'Invalid Bitcoin address format. Please enter a valid bc1q, 1, or 3 address.',
+        type: 'error'
+      })));
+    } else {
+      setValidationStates(prev => new Map(prev.set('btc-address', {
+        isValid: true,
+        message: 'Valid Bitcoin address format',
+        type: 'success'
+      })));
+    }
+  }, [btcAddress, phase]);
+
+  // Real-time validation for recovery phrase
+  useEffect(() => {
+    if (recoveryVibe.trim() === '') {
+      setValidationStates(prev => new Map(prev.set('recovery-phrase', {
+        isValid: true,
+        message: 'Enter your musical chunks or vibe to recover access',
+        type: 'success'
+      })));
+      return;
+    }
+
+    if (recoveryVibe.trim().length < 5) {
+      setValidationStates(prev => new Map(prev.set('recovery-phrase', {
+        isValid: false,
+        message: 'Recovery phrase should be at least 5 characters long',
+        type: 'warning'
+      })));
+    } else {
+      setValidationStates(prev => new Map(prev.set('recovery-phrase', {
+        isValid: true,
+        message: 'Valid recovery phrase format',
+        type: 'success'
+      })));
+    }
+  }, [recoveryVibe]);
+
+  // Real-time validation for custom vibe
+  useEffect(() => {
+    if (!useSecureGeneration && secretVibe.trim() !== '') {
+      if (secretVibe.trim().length < 10) {
+        setValidationStates(prev => new Map(prev.set('custom-vibe', {
+          isValid: false,
+          message: 'Custom vibe should be more descriptive (at least 10 characters)',
+          type: 'warning'
+        })));
+      } else if (secretVibe.trim().length > 200) {
+        setValidationStates(prev => new Map(prev.set('custom-vibe', {
+          isValid: false,
+          message: 'Custom vibe should be concise (under 200 characters)',
+          type: 'warning'
+        })));
+      } else {
+        setValidationStates(prev => new Map(prev.set('custom-vibe', {
+          isValid: true,
+          message: 'Good vibe description for AI synthesis',
+          type: 'success'
+        })));
+      }
+    } else {
+      setValidationStates(prev => new Map(prev.set('custom-vibe', {
+        isValid: true,
+        message: 'Using secure 256-bit entropy generation',
+        type: 'success'
+      })));
+    }
+  }, [secretVibe, useSecureGeneration]);
 
   useEffect(() => {
     if (visualizerContainerRef.current) {
@@ -454,12 +541,12 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             </div>
             
             {/* Pattern Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-              {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-6">
+              {STRUDEL_PATTERN_LIBRARY.slice(0, visibleCount).map((pattern) => (
                 <button
                   key={pattern.name}
                   onClick={() => setSelectedPatternId(pattern.name)}
-                  className={`group p-4 rounded-xl border transition-all text-left ${
+                  className={`group p-4 rounded-xl border transition-all text-left animate-in fade-in zoom-in-95 duration-300 ${
                     selectedPatternId === pattern.name
                       ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
                       : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
@@ -476,6 +563,25 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <p className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{pattern.vibe}</p>
                 </button>
               ))}
+            </div>
+
+            {/* Progressive Disclosure Controls */}
+            <div className="flex justify-center gap-4 mb-8">
+              {visibleCount < STRUDEL_PATTERN_LIBRARY.length ? (
+                <button
+                  onClick={() => setVisibleCount(prev => Math.min(prev + 4, STRUDEL_PATTERN_LIBRARY.length))}
+                  className="px-6 py-2 rounded-full border border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/10 transition-all flex items-center gap-2"
+                >
+                  <span>✨</span> Show More Patterns ({STRUDEL_PATTERN_LIBRARY.length - visibleCount} left)
+                </button>
+              ) : (
+                <button
+                  onClick={() => setVisibleCount(4)}
+                  className="px-6 py-2 rounded-full border border-[color:var(--color-muted)]/30 text-[color:var(--color-muted)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-muted)]/10 transition-all"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
 
             {/* Code Display Section - Shows when pattern selected */}
@@ -516,11 +622,16 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       : 'border-blue-500/20'
                   }`}>
                     <button
-                      onClick={() => navigator.clipboard.writeText(STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code)}
-                      className="absolute top-3 right-3 p-2 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 transition-all text-xs"
+                      onClick={() => {
+                        const code = STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code;
+                        navigator.clipboard.writeText(code);
+                        setCopiedId(selectedPatternId);
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }}
+                      className="absolute top-3 right-3 p-2 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 transition-all text-xs flex items-center gap-2"
                       title="Copy code"
                     >
-                      📋
+                      {copiedId === selectedPatternId ? '✅ Copied!' : '📋'}
                     </button>
                     
                     {/* Activity indicator */}
@@ -628,8 +739,19 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         disabled={isProcessing}
                       />
                       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
-                      {btcAddress && !isValidBtcAddress(btcAddress) && (
-                        <p className="text-[9px] text-[color:var(--color-error)] mt-1">Invalid Bitcoin address format</p>
+                      {validationStates.get('btc-address') && (
+                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${
+                          validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                          validationStates.get('btc-address')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+                          'text-[color:var(--color-success)]'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${
+                            validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                            validationStates.get('btc-address')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+                            'bg-[color:var(--color-success)]'
+                          }`} />
+                          {validationStates.get('btc-address')?.message}
+                        </div>
                       )}
                     </div>
 
@@ -648,6 +770,20 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                           disabled={isProcessing}
                         />
                         <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
+                        {validationStates.get('custom-vibe') && (
+                          <div className={`mt-1 text-[9px] flex items-center gap-2 ${
+                            validationStates.get('custom-vibe')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                            validationStates.get('custom-vibe')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+                            'text-[color:var(--color-success)]'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${
+                              validationStates.get('custom-vibe')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                              validationStates.get('custom-vibe')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+                              'bg-[color:var(--color-success)]'
+                            }`} />
+                            {validationStates.get('custom-vibe')?.message}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -703,6 +839,20 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         disabled={isProcessing}
                       />
                       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
+                      {validationStates.get('recovery-phrase') && (
+                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${
+                          validationStates.get('recovery-phrase')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                          validationStates.get('recovery-phrase')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+                          'text-[color:var(--color-success)]'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${
+                            validationStates.get('recovery-phrase')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                            validationStates.get('recovery-phrase')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+                            'bg-[color:var(--color-success)]'
+                          }`} />
+                          {validationStates.get('recovery-phrase')?.message}
+                        </div>
+                      )}
                     </div>
 
                     <div className="relative group">
@@ -718,8 +868,19 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         disabled={isProcessing}
                       />
                       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
-                      {btcAddress && !isValidBtcAddress(btcAddress) && (
-                        <p className="text-[9px] text-[color:var(--color-error)] mt-1">Invalid Bitcoin address format</p>
+                      {validationStates.get('btc-address') && (
+                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${
+                          validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                          validationStates.get('btc-address')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+                          'text-[color:var(--color-success)]'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${
+                            validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                            validationStates.get('btc-address')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+                            'bg-[color:var(--color-success)]'
+                          }`} />
+                          {validationStates.get('btc-address')?.message}
+                        </div>
                       )}
                     </div>
                   </div>
