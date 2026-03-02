@@ -35,7 +35,8 @@ pnpm dev
 ## Features
 
 - 🎵 **Musical seed phrases** - 256-bit entropy in 5-7 chunks (with decoder for recovery)
-- 🔐 **Privacy-first** - All crypto client-side
+- 🔐 **Privacy-first** - All crypto client-side (AES-GCM)
+- 💾 **Decentralized Backup** - Encrypted persistence via IPFS (Protocol Labs Track)
 - 🔑 **Social login** - Web3Auth OAuth (Google/Apple) with MPC key derivation
 - 🤖 **Agent-ready** - REST API + MCP server
 - 🎁 **Bitcoin gifting** - Frontend-only gifting with ZK privacy

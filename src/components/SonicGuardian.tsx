@@ -17,7 +17,9 @@ import { SonicVisualizer } from '../lib/visualizer';
 import { WalletButton } from './WalletButton';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
 import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '../lib/strudel';
-import { generateBlinding, isValidBtcAddress } from '../lib/crypto';
+import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, decryptData } from '../lib/crypto';
+import { uploadToIPFS, downloadFromIPFS } from '../lib/ipfs';
+import { useAccount } from '@starknet-react/core';
 import { MobileUtils } from '../lib/mobile';
 import {
   generateEntropy,
@@ -77,6 +79,12 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  
+  // Decentralized Backup State
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupCid, setBackupCid] = useState<string | null>(null);
+
+  const { account } = useAccount();
 
   useEffect(() => {
     // Show welcome modal for first-time visitors
@@ -351,6 +359,71 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     }
   };
 
+  const handleDecentralizedBackup = async () => {
+    if (!generatedCode || !blinding || !btcAddress) {
+      setStatus('⚠️ Please generate a guardian first.');
+      return;
+    }
+
+    if (!isConnected || !account) {
+      setStatus('⚠️ Please connect your wallet to derive an encryption key.');
+      return;
+    }
+
+    setIsBackingUp(true);
+    setStatus('🔐 Deriving encryption key from your wallet...');
+
+    try {
+      // 1. Derive key from signature
+      const signatureResult = await account.signMessage({
+        message: "SonicGuardian Decentralized Backup - Signature used to derive your private encryption key. Never share this signature.",
+      } as any);
+      
+      // Starknet signatures can be an array of felts
+      const signatureStr = Array.isArray(signatureResult) 
+        ? signatureResult.join('') 
+        : typeof signatureResult === 'string' 
+          ? signatureResult 
+          : JSON.stringify(signatureResult);
+
+      const encryptionKey = await deriveKeyFromSignature(signatureStr);
+
+      setStatus('📦 Encrypting acoustic signature & blinding factor...');
+      
+      // 2. Encrypt sensitive data
+      const sensitiveData = JSON.stringify({
+        code: generatedCode,
+        blinding: blinding,
+        btcAddress: btcAddress,
+        dnaHash: dnaHash,
+        timestamp: Date.now()
+      });
+
+      const encrypted = await encryptData(sensitiveData, encryptionKey);
+
+      setStatus('🌐 Uploading to IPFS (Protocol Labs Track)...');
+
+      // 3. Upload to IPFS
+      const response = await uploadToIPFS(encrypted, {
+        btcAddress: btcAddress.substring(0, 10) + '...', // Store only partial BTC address as hint
+        type: 'acoustic_backup'
+      });
+
+      if (response) {
+        setBackupCid(response.cid);
+        setStatus(`✅ Securely backed up to IPFS! CID: ${response.cid.substring(0, 10)}...`);
+        if (audioEnabled) playAudio('success');
+      } else {
+        throw new Error('IPFS upload failed');
+      }
+    } catch (error) {
+      console.error('Backup failed:', error);
+      setStatus('❌ Backup failed. Signature was either rejected or network error.');
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
   const handlePlayback = async () => {
     if (!generatedCode) return;
 
@@ -404,35 +477,82 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
   const handleRecovery = async () => {
     if (!recoveryVibe.trim() || !btcAddress) {
-      setStatus('Please provide your vibe and Bitcoin address.');
+      setStatus('Please provide your vibe (or CID) and Bitcoin address.');
       return;
     }
 
     setIsProcessing(true);
-    setStatus('Extracting DNA & Verifying Against Starknet State...');
+    setStatus('Analysis phase: determining recovery route...');
 
     try {
-      // 1. Extract DNA from recalled vibe
-      const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
-      const dna = await extractSonicDNA(agentResponse.code);
+      let finalDnaHash = '';
+      let finalBlinding = '';
+      let finalCode = '';
 
-      if (dna) {
+      // 1. Check if input is an IPFS CID
+      if (recoveryVibe.startsWith('Qm')) {
+        setStatus('🌐 Fetching encrypted backup from IPFS...');
+        const encryptedData = await downloadFromIPFS(recoveryVibe);
+        
+        if (!encryptedData) throw new Error('Could not find backup on IPFS');
+
+        if (!account) throw new Error('Wallet not connected');
+
+        setStatus('🔐 Deriving decryption key from your wallet...');
+        const signatureResult = await account.signMessage({
+          message: "SonicGuardian Decentralized Backup - Signature used to derive your private encryption key. Never share this signature.",
+        } as any);
+        const signatureStr = Array.isArray(signatureResult) 
+          ? signatureResult.join('') 
+          : typeof signatureResult === 'string' 
+            ? signatureResult 
+            : JSON.stringify(signatureResult);
+            
+        const decryptionKey = await deriveKeyFromSignature(signatureStr);
+        
+        setStatus('🔓 Decrypting acoustic signature...');
+        const decryptedData = await decryptData(encryptedData, decryptionKey);
+        const backup = JSON.parse(decryptedData);
+        
+        finalDnaHash = backup.dnaHash;
+        finalBlinding = backup.blinding;
+        finalCode = backup.code;
+        
+        setStatus('✅ IPFS backup decrypted successfully!');
+      } else {
+        // Standard Vibe Recovery
+        setStatus('Extracting DNA from musical pattern...');
+        const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
+        const dna = await extractSonicDNA(agentResponse.code);
+        
+        if (!dna) throw new Error('DNA extraction failed');
+        
         const session = sessionManager.getCurrentSession();
-        setStatus('Generating ZK-Acoustic Proof on Starknet...');
-
-        await authorizeBtcRecovery(btcAddress, dna.hash, session?.blinding || '');
-
-        setStatus('✅ Access Granted! Identity verified by Acoustic DNA.');
-        setDna(dna);
-        visualizerRef.current?.updateDNASequence(dna.dna);
-        visualizerRef.current?.highlightParticles(Array.from({ length: 12 }, (_, i) => i));
-
-        sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dna.hash);
-        onRecovery?.(dna.hash);
+        finalDnaHash = dna.hash;
+        finalBlinding = session?.blinding || '';
+        finalCode = agentResponse.code;
       }
+
+      // 2. Verify and Authorize
+      setStatus('Generating ZK-Acoustic Proof on Starknet...');
+      await authorizeBtcRecovery(btcAddress, finalDnaHash, finalBlinding);
+
+      setStatus('✅ Access Granted! Identity verified by Acoustic DNA.');
+      
+      // Update visualizer and state
+      const recoveryDna = await extractSonicDNA(finalCode);
+      if (recoveryDna) {
+        setDna(recoveryDna);
+        setGeneratedCode(finalCode);
+        visualizerRef.current?.updateDNASequence(recoveryDna.dna);
+        visualizerRef.current?.highlightParticles(Array.from({ length: 12 }, (_, i) => i));
+      }
+
+      sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, finalDnaHash);
+      onRecovery?.(finalDnaHash);
     } catch (error) {
       console.error(error);
-      setStatus('❌ Access Denied. Musical patterns do not match on-chain record.');
+      setStatus('❌ Access Denied. Musical patterns or CID decryption failed.');
       onFailure?.();
     } finally {
       setIsProcessing(false);
@@ -776,6 +896,39 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                             🔍 Verify On-Chain
                           </button>
                         )}
+
+                        {onChainStatus === 'success' && (
+                          <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-1000">
+                            <button
+                              onClick={handleDecentralizedBackup}
+                              disabled={isBackingUp || !isConnected}
+                              className={`w-full py-4 rounded-xl border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] hover:bg-[color:var(--color-accent)]/5 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${backupCid ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5' : ''}`}
+                            >
+                              {backupCid ? (
+                                <>🌐 Backed up to IPFS</>
+                              ) : (
+                                <>
+                                  💾 Decentralized Backup (PL Genesis)
+                                  {isBackingUp && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                                </>
+                              )}
+                            </button>
+                            {backupCid && (
+                              <div className="mt-2 p-2 rounded-lg bg-black/40 border border-white/5 flex items-center justify-between">
+                                <span className="text-[8px] font-mono opacity-50 truncate mr-2">CID: {backupCid}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(backupCid);
+                                    setStatus('CID copied to clipboard!');
+                                  }}
+                                  className="text-[8px] font-bold uppercase tracking-tighter hover:text-[color:var(--color-primary)] transition-colors"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -784,19 +937,22 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20">
                       <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-                        Enter your musical chunks or vibe to recover access to your Bitcoin guardian.
+                        Enter your musical chunks, vibe, or an IPFS CID to recover access to your Bitcoin guardian.
                       </p>
                     </div>
 
                     <div className="relative group">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-                        Recovery Phrase
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center justify-between">
+                        <span>Recovery Input (Vibe or IPFS CID)</span>
+                        {recoveryVibe.startsWith('Qm') && (
+                          <span className="text-[8px] text-[color:var(--color-success)] font-bold animate-pulse">IPFS CID Detected</span>
+                        )}
                       </label>
                       <input
                         type="text"
                         value={recoveryVibe}
                         onChange={(e) => setRecoveryVibe(e.target.value)}
-                        placeholder="Enter your musical chunks..."
+                        placeholder="Chunks, Vibe or Qm..."
                         className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm"
                         disabled={isProcessing}
                       />

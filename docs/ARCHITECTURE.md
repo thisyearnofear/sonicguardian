@@ -20,6 +20,7 @@ User Input (vibe)
 |-------|------|----------|
 | DNA Extraction | Musical pattern → hash | ❌ |
 | Commitment | Pedersen(hash, blinding) | ✅ Encrypted |
+| Backup | AES-GCM (Wallet-derived key) | 🌐 IPFS (Encrypted) |
 | Recovery | Pattern verified locally | ❌ |
 
 ## Tech Stack

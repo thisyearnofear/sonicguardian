@@ -15,7 +15,9 @@ import {
 import { StrudelVisualizer } from './StrudelVisualizer';
 import { initWeb3Auth, socialLogin } from '../lib/web3auth';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
-import { generateBlinding, pedersen } from '../lib/crypto';
+import { generateBlinding, pedersen, encryptData, deriveKeyFromSignature, decryptData } from '../lib/crypto';
+import { uploadToIPFS, downloadFromIPFS } from '../lib/ipfs';
+import { useAccount } from '@starknet-react/core';
 import { WalletButton } from './WalletButton';
 import { Tooltip } from './Tooltip';
 
@@ -32,6 +34,9 @@ export default function GiftApp() {
   const [claimBlinding, setClaimBlinding] = useState('');
   const [recipientWallet, setRecipientWallet] = useState<any>(null);
   const [senderWallet, setSenderWallet] = useState<any>(null);
+  const [giftCid, setGiftCid] = useState<string | null>(null);
+
+  const { account } = useAccount();
 
   const giftingService = new GiftingService();
 
@@ -68,7 +73,7 @@ export default function GiftApp() {
   } = useStarknetGuardian();
 
   const handleCreateGift = async () => {
-    if (!generatedCode || !address) return;
+    if (!generatedCode || !address || !account) return;
     setIsProcessing(true);
     setStatus('Creating On-Chain Bitcoin Gift Vault...');
 
@@ -86,6 +91,31 @@ export default function GiftApp() {
 
       await createOnChainGift(vaultId, commitment, amount, tokenAddress);
 
+      // 2. Upload Encrypted Metadata to IPFS for the recipient
+      setStatus('🔐 Encrypting Gift Card for IPFS Backup...');
+      const sig = await account.signMessage({
+        message: "SonicGuardian Gift Authorization - This signature encrypts your gift metadata so only you or your recipient can read it from IPFS.",
+      } as any);
+      const sigStr = Array.isArray(sig) ? sig.join('') : JSON.stringify(sig);
+      const encKey = await deriveKeyFromSignature(sigStr);
+      
+      const payload = JSON.stringify({
+        vaultId,
+        amount: btcAmount,
+        musicalChunks: musicalChunks.map(c => c.text),
+        blinding,
+        dnaHash: dna.hash,
+        code: generatedCode
+      });
+
+      const encrypted = await encryptData(payload, encKey);
+      setStatus('🌐 Pinning Gift to the Decentralized Web...');
+      const ipfsResult = await uploadToIPFS(encrypted, { vaultId, type: 'gift' });
+      
+      if (ipfsResult) {
+        setGiftCid(ipfsResult.cid);
+      }
+
       const vault: GiftVault = {
         id: vaultId,
         sender: address,
@@ -94,7 +124,8 @@ export default function GiftApp() {
         blinding,
         status: 'locked',
         musicalChunks: musicalChunks.map(c => c.text),
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        cid: ipfsResult?.cid
       };
 
       setGiftVault(vault);
@@ -122,25 +153,62 @@ export default function GiftApp() {
   const handleClaimGift = async () => {
     if (!address || !claimChunks) return;
     setIsProcessing(true);
-    setStatus('Verifying Musical Signature on Starknet...');
+    setStatus('Analysis phase: determining recovery route...');
 
     try {
-      const reconstructedCode = detectAndReconstructCode(claimChunks) || claimChunks;
-      const dna = await extractSonicDNA(reconstructedCode);
-      if (!dna) throw new Error("DNA extraction failed");
+      let finalDnaHash = '';
+      let finalBlinding = claimBlinding;
+      let finalVaultId = claimVaultId;
+      let finalCode = '';
+
+      // 1. Check if input is an IPFS CID
+      if (claimChunks.startsWith('Qm')) {
+        setStatus('🌐 Fetching encrypted gift from IPFS...');
+        const encryptedData = await downloadFromIPFS(claimChunks);
+        if (!encryptedData) throw new Error('Could not find gift on IPFS');
+
+        if (!account) throw new Error('Wallet not connected');
+
+        setStatus('🔐 Deriving decryption key from your wallet...');
+        const sig = await account.signMessage({
+          message: "SonicGuardian Gift Authorization - This signature encrypts your gift metadata so only you or your recipient can read it from IPFS.",
+        } as any);
+        const sigStr = Array.isArray(sig) ? sig.join('') : JSON.stringify(sig);
+        const decKey = await deriveKeyFromSignature(sigStr);
+        
+        setStatus('🔓 Decrypting gift metadata...');
+        const decryptedData = await decryptData(encryptedData, decKey);
+        const backup = JSON.parse(decryptedData);
+        
+        finalDnaHash = backup.dnaHash;
+        finalBlinding = backup.blinding;
+        finalVaultId = backup.vaultId;
+        finalCode = backup.code;
+        
+        setStatus('✅ Gift metadata decrypted! Playing signature...');
+        playStrudelCode(finalCode);
+      } else {
+        setStatus('Verifying Musical Signature on Starknet...');
+        const reconstructedCode = detectAndReconstructCode(claimChunks) || claimChunks;
+        const dna = await extractSonicDNA(reconstructedCode);
+        if (!dna) throw new Error("DNA extraction failed");
+        
+        finalDnaHash = dna.hash;
+        finalCode = reconstructedCode;
+      }
 
       await claimOnChainGift(
-        claimVaultId,
-        dna.hash,
-        claimBlinding,
+        finalVaultId,
+        finalDnaHash,
+        finalBlinding,
         address
       );
 
       setStatus('Success! The Bitcoin gift has been transferred to your wallet.');
-      playStrudelCode(reconstructedCode);
+      playStrudelCode(finalCode);
     } catch (error) {
       console.error(error);
-      setStatus('Claim failed. The blockchain rejected the signature.');
+      setStatus('Claim failed. The blockchain or decryption rejected the signature.');
     } finally {
       setIsProcessing(false);
     }
@@ -232,10 +300,32 @@ export default function GiftApp() {
           </button>
 
           {giftVault && (
-            <div className="glass rounded-xl p-4 border border-[color:var(--color-success)]/20">
-              <p className="text-xs font-bold text-[color:var(--color-success)] mb-2">Gift Created Successfully!</p>
-              <p className="text-xs text-[color:var(--color-muted)]">Vault ID: <span className="font-mono">{giftVault.id}</span></p>
-              <p className="text-xs text-[color:var(--color-muted)]">Share this ID with your friend to claim the gift.</p>
+            <div className="glass rounded-xl p-6 border border-[color:var(--color-success)]/40 bg-[color:var(--color-success)]/5 space-y-3 animate-in fade-in duration-500">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse" />
+                <p className="text-xs font-bold text-[color:var(--color-success)] uppercase tracking-widest">Gift Created Successfully!</p>
+              </div>
+              <p className="text-[10px] text-[color:var(--color-muted)]">Vault ID: <span className="font-mono text-[color:var(--color-foreground)]">{giftVault.id}</span></p>
+              {giftVault.cid && (
+                <div className="p-3 rounded-lg bg-black/40 border border-white/5 space-y-2">
+                  <p className="text-[9px] font-bold text-[color:var(--color-primary)] uppercase tracking-tight">Decentralized Share Link (IPFS)</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] font-mono opacity-60 truncate">ipfs://{giftVault.cid}</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://sonicguardian.vercel.app/gift/${giftVault.cid}`);
+                        setStatus('Gift Link copied!');
+                      }}
+                      className="text-[9px] font-bold uppercase text-[color:var(--color-primary)] hover:underline"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                </div>
+              )}
+              <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed italic">
+                Share this link or the Vault ID + Chunks with your friend. They'll need to "sing" the pattern back to claim the BTC.
+              </p>
             </div>
           )}
 
@@ -279,11 +369,16 @@ export default function GiftApp() {
                 </div>
 
                 <div className="relative group">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">Musical Vibe Chunks</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex justify-between">
+                    <span>Musical Vibe Chunks or IPFS CID</span>
+                    {claimChunks.startsWith('Qm') && (
+                      <span className="text-[8px] text-[color:var(--color-success)] font-bold animate-pulse">IPFS Mode Active</span>
+                    )}
+                  </label>
                   <textarea
                     value={claimChunks}
                     onChange={(e) => setClaimChunks(e.target.value)}
-                    placeholder="Type the chunks exactly as they appear on the card..."
+                    placeholder="Type the chunks OR paste the Qm... CID from your friend"
                     className="w-full bg-transparent border-2 border-[color:var(--color-border)] rounded-xl p-4 focus:border-[color:var(--color-primary)] focus:outline-none font-mono text-sm h-32"
                   />
                 </div>

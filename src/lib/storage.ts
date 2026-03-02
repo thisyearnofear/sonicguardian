@@ -27,6 +27,7 @@ export interface GiftVault {
   claimedAt?: number;
   recipient?: string;
   txHash?: string; // Optional transaction hash for on-chain verification
+  cid?: string; // IPFS Content Identifier for decentralized sharing
 }
 
 
@@ -37,6 +38,7 @@ export interface VaultMetadata {
   status: 'locked' | 'claimed' | 'refunded';
   createdAt: number;
   musicalChunks: string[];
+  cid?: string;
 }
 
 export interface RecoveryAttempt {
