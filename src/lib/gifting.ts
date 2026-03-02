@@ -102,24 +102,16 @@ export class GiftingService {
   }
 
   /**
-   * Onboard a user via wallet connection
-   * Frontend-only implementation using wallet connection
+   * Onboard a user via social login (Web3Auth)
+   * Client-side OAuth with no backend required
    */
   async socialLogin(provider: 'google' | 'apple'): Promise<any> {
     try {
-      // For frontend-only implementation, we'll simulate wallet connection
-      // In a real implementation, this would connect to a wallet provider
-      const mockAddress = `0x${Math.random().toString(16).slice(2, 18)}`;
-      
-      return {
-        address: mockAddress,
-        provider,
-        status: 'connected',
-        email: `${mockAddress.substring(2, 8)}@example.com`
-      };
+      const { socialLogin } = await import('./web3auth');
+      return await socialLogin(provider);
     } catch (error) {
-      console.error('Wallet connection error:', error);
-      throw new Error('Failed to connect wallet');
+      console.error('Social login error:', error);
+      throw new Error('Failed to authenticate with social provider');
     }
   }
 

@@ -34,8 +34,9 @@ pnpm dev
 
 ## Features
 
-- 🎵 **Musical seed phrases** - 256-bit entropy in 5-7 chunks
+- 🎵 **Musical seed phrases** - 256-bit entropy in 5-7 chunks (with decoder for recovery)
 - 🔐 **Privacy-first** - All crypto client-side
+- 🔑 **Social login** - Web3Auth OAuth (Google/Apple) with MPC key derivation
 - 🤖 **Agent-ready** - REST API + MCP server
 - 🎁 **Bitcoin gifting** - Frontend-only gifting with ZK privacy
 - 🎼 **Strudel Showcase** - 16+ interactive pattern demos
@@ -62,6 +63,7 @@ pnpm dev
 | AI | Venice AI |
 | Audio | Strudel |
 | Chain | Starknet (Cairo) |
+| Auth | Web3Auth (OAuth + MPC) |
 | Wallet | WalletConnect |
 
 ## Contract Status

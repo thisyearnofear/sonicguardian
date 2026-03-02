@@ -13,6 +13,7 @@ import {
   type MusicalChunk
 } from '../lib/entropy-encoder';
 import { StrudelVisualizer } from './StrudelVisualizer';
+import { initWeb3Auth } from '../lib/web3auth';
 
 export default function GiftApp() {
   const [mode, setMode] = useState<'send' | 'claim'>('send');
@@ -29,6 +30,11 @@ export default function GiftApp() {
   const [senderWallet, setSenderWallet] = useState<any>(null);
 
   const giftingService = new GiftingService();
+
+  // Initialize Web3Auth on mount
+  useEffect(() => {
+    initWeb3Auth().catch(console.error);
+  }, []);
 
   // Setup draw callback for visualizer
   const [activeHaps, setActiveHaps] = useState<any[]>([]);

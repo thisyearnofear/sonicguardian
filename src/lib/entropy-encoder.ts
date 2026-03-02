@@ -293,16 +293,162 @@ export function encodePattern(entropy: Uint8Array): EncodedPattern {
 
 /**
  * Decode chunks back to entropy (for recovery)
+ * Reverses the encoding process to reconstruct 256-bit entropy
  */
 export function decodeChunks(chunks: MusicalChunk[]): Uint8Array {
   try {
-    // This would reverse the encoding process
-    // For MVP, we store the entropy alongside chunks
-    throw new Error('Decoding not yet implemented - store entropy with chunks');
+    const entropy = new Uint8Array(32);
+    let bitOffset = 0;
+
+    // Parse chunks in order
+    for (const chunk of chunks) {
+      switch (chunk.category) {
+        case 'drum': {
+          // Extract rhythm pattern
+          const rhythmMatch = chunk.text.match(/(sawtooth|sine|square|triangle) rhythm (.*)/);
+          if (rhythmMatch) {
+            const [, synth, pattern] = rhythmMatch;
+            
+            // Reverse pattern lookup
+            const patternMap: Record<string, number> = {
+              'four on the floor': 0,
+              'half-time kick': 1,
+              'kick on 1 and 3': 2,
+              'kick on 2 and 4': 3,
+              'syncopated kick': 4
+            };
+            const patternIndex = patternMap[pattern] || 0;
+            writeBits(entropy, bitOffset, 3, patternIndex);
+            bitOffset += 3;
+            
+            // Reverse synth lookup
+            const synthIndex = SYNTHS.indexOf(synth as any);
+            writeBits(entropy, bitOffset, 2, synthIndex);
+            bitOffset += 2;
+          }
+          break;
+        }
+        
+        case 'melody': {
+          // Extract melody notes
+          const melodyMatch = chunk.text.match(/(sawtooth|sine|square|triangle) melody (.*)/);
+          if (melodyMatch) {
+            const [, synth, noteStr] = melodyMatch;
+            const notes = noteStr.split(' ');
+            
+            // Note count (2 bits)
+            const noteCount = notes.length;
+            writeBits(entropy, bitOffset, 2, noteCount - 2);
+            bitOffset += 2;
+            
+            // Each note
+            for (const noteDesc of notes) {
+              const match = noteDesc.match(/([A-G])(sharp|flat)?(\d)/);
+              if (match) {
+                const [, note, acc, oct] = match;
+                
+                // Note (3 bits)
+                const noteIndex = NOTES.indexOf(note.toLowerCase() as any);
+                writeBits(entropy, bitOffset, 3, noteIndex);
+                bitOffset += 3;
+                
+                // Accidental (2 bits)
+                const accidental = acc === 'sharp' ? '#' : acc === 'flat' ? 'b' : '';
+                const accIndex = ACCIDENTALS.indexOf(accidental as any);
+                writeBits(entropy, bitOffset, 2, accIndex);
+                bitOffset += 2;
+                
+                // Octave (3 bits)
+                const octIndex = OCTAVES.indexOf(parseInt(oct) as any);
+                writeBits(entropy, bitOffset, 3, octIndex);
+                bitOffset += 3;
+              }
+            }
+            
+            // Synth (2 bits)
+            const synthIndex = SYNTHS.indexOf(synth as any);
+            writeBits(entropy, bitOffset, 2, synthIndex);
+            bitOffset += 2;
+          }
+          break;
+        }
+        
+        case 'effect': {
+          // Extract effect parameters
+          const distortMatch = chunk.text.match(/distort ([\d.]+) gain ([\d.]+)/);
+          if (distortMatch) {
+            const [, distort, gain] = distortMatch;
+            
+            // Distortion (4 bits)
+            const distortSteps = Math.floor((DISTORT_RANGE.max - DISTORT_RANGE.min) / DISTORT_RANGE.step);
+            const distortIndex = Math.round((parseFloat(distort) - DISTORT_RANGE.min) / DISTORT_RANGE.step);
+            writeBits(entropy, bitOffset, 4, distortIndex);
+            bitOffset += 4;
+            
+            // Gain (3 bits for rhythm, 4 bits for melody)
+            const gainValue = parseFloat(gain);
+            if (gainValue >= 0.8) {
+              // Rhythm gain (3 bits)
+              const gainIndex = Math.round((gainValue - 0.8) / 0.1);
+              writeBits(entropy, bitOffset, 3, gainIndex);
+              bitOffset += 3;
+            }
+          }
+          
+          const filterMatch = chunk.text.match(/lowpass (\d+)Hz gain ([\d.]+)/);
+          if (filterMatch) {
+            const [, filter, gain] = filterMatch;
+            
+            // Filter (5 bits)
+            const filterSteps = Math.floor((FILTER_RANGE.max - FILTER_RANGE.min) / FILTER_RANGE.step);
+            const filterIndex = Math.round((parseInt(filter) - FILTER_RANGE.min) / FILTER_RANGE.step);
+            writeBits(entropy, bitOffset, 5, filterIndex);
+            bitOffset += 5;
+            
+            // Gain (4 bits)
+            const gainSteps = Math.floor((GAIN_RANGE.max - GAIN_RANGE.min) / GAIN_RANGE.step);
+            const gainIndex = Math.round((parseFloat(gain) - GAIN_RANGE.min) / GAIN_RANGE.step);
+            writeBits(entropy, bitOffset, 4, gainIndex);
+            bitOffset += 4;
+          }
+          break;
+        }
+        
+        case 'structure': {
+          // Extract tempo
+          const tempoMatch = chunk.text.match(/tempo (\d+)/);
+          if (tempoMatch) {
+            const tempo = parseInt(tempoMatch[1]);
+            const tempoIndex = tempo - 80;
+            writeBits(entropy, bitOffset, 8, tempoIndex);
+            bitOffset += 8;
+          }
+          break;
+        }
+      }
+    }
+
+    return entropy;
   } catch (error) {
     console.error('Failed to decode chunks:', error);
-    // Return empty entropy array
     return new Uint8Array(32);
+  }
+}
+
+/**
+ * Write bits to entropy array
+ */
+function writeBits(entropy: Uint8Array, offset: number, length: number, value: number): void {
+  for (let i = 0; i < length; i++) {
+    const bitIndex = offset + i;
+    const byteIndex = Math.floor(bitIndex / 8);
+    const bitPosition = 7 - (bitIndex % 8);
+    
+    if ((value >> (length - 1 - i)) & 1) {
+      entropy[byteIndex] |= (1 << bitPosition);
+    } else {
+      entropy[byteIndex] &= ~(1 << bitPosition);
+    }
   }
 }
 
