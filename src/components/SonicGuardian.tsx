@@ -67,7 +67,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const audioContextRef = useRef<AudioContext | null>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
 
-  const { isConnected, registerGuardian, verifyRecovery, authorizeBtcRecovery } = useStarknetGuardian();
+  const { isConnected, registerGuardian, verifyRecovery, authorizeBtcRecovery, getCommitment } = useStarknetGuardian();
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -768,7 +768,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     </button>
 
                     {dnaHash && (
-                      <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
+                      <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700 space-y-3">
                         <button
                           onClick={handleCommitToStarknet}
                           disabled={isCommiting || !isConnected || !btcAddress || !isValidBtcAddress(btcAddress)}
@@ -787,6 +787,23 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                             </>
                           )}
                         </button>
+
+                        {onChainStatus === 'success' && btcAddress && (
+                          <button
+                            onClick={async () => {
+                              setStatus('Reading commitment from contract...');
+                              const commitment = await getCommitment(btcAddress);
+                              if (commitment && commitment !== '0') {
+                                setStatus(`✅ On-chain verified! Commitment: ${commitment.slice(0, 10)}...`);
+                              } else {
+                                setStatus('⚠️ No commitment found on-chain');
+                              }
+                            }}
+                            className="w-full py-3 rounded-xl border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] transition-all text-xs font-medium tracking-wide"
+                          >
+                            🔍 Verify On-Chain
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

@@ -48,6 +48,7 @@ next-env.d.ts
 *.swp
 *.swo
 *~
+.junie
 
 # Cairo / Starknet
 contracts/target/
