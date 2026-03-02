@@ -15,6 +15,28 @@ export interface UserSession {
   recoveryAttempts: RecoveryAttempt[];
 }
 
+export interface GiftVault {
+  id: string;
+  sender: string;
+  amount: string; // in BTC
+  commitment: string;
+  blinding: string; // Stored client-side for the sender (or passed to recipient)
+  status: 'locked' | 'claimed' | 'refunded';
+  musicalChunks: string[];
+  createdAt: number;
+  claimedAt?: number;
+  recipient?: string;
+}
+
+export interface VaultMetadata {
+  vaultId: string;
+  sender: string;
+  amount: string;
+  status: 'locked' | 'claimed' | 'refunded';
+  createdAt: number;
+  musicalChunks: string[];
+}
+
 export interface RecoveryAttempt {
   id: string;
   timestamp: number;
@@ -153,6 +175,194 @@ export const preferencesManager = {
       storage.set('prefs', { ...current, ...updates });
     } catch (error) {
       console.error('Failed to update preferences:', error);
+    }
+  }
+};
+
+// Vault Management Functions
+export const vaultManager = {
+  /**
+   * Generate deterministic vault ID from commitment
+   */
+  generateVaultId: (commitment: string): string => {
+    return `vault_${commitment.substring(0, 16)}`;
+  },
+
+  /**
+   * Encrypt blinding factor with user's wallet address
+   */
+  encryptBlinding: (blinding: string, walletAddress: string): string => {
+    try {
+      // Simple XOR encryption for demo purposes
+      // In production, use proper encryption like AES-GCM
+      const key = walletAddress.substring(2); // Remove 0x prefix
+      let encrypted = '';
+      for (let i = 0; i < blinding.length; i++) {
+        const charCode = blinding.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        encrypted += String.fromCharCode(charCode);
+      }
+      return btoa(encrypted); // Base64 encode for storage
+    } catch (error) {
+      console.error('Failed to encrypt blinding factor:', error);
+      return blinding; // Fallback to plain text
+    }
+  },
+
+  /**
+   * Decrypt blinding factor with user's wallet address
+   */
+  decryptBlinding: (encryptedBlinding: string, walletAddress: string): string => {
+    try {
+      const key = walletAddress.substring(2); // Remove 0x prefix
+      const encrypted = atob(encryptedBlinding);
+      let decrypted = '';
+      for (let i = 0; i < encrypted.length; i++) {
+        const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        decrypted += String.fromCharCode(charCode);
+      }
+      return decrypted;
+    } catch (error) {
+      console.error('Failed to decrypt blinding factor:', error);
+      return encryptedBlinding; // Fallback to encrypted text
+    }
+  },
+
+  /**
+   * Store a gift vault locally
+   */
+  createVault: (vault: GiftVault): boolean => {
+    try {
+      const vaultId = vault.id;
+      storage.set(`vault_${vaultId}`, vault);
+      
+      // Also store metadata for quick listing
+      const metadata: VaultMetadata = {
+        vaultId: vault.id,
+        sender: vault.sender,
+        amount: vault.amount,
+        status: vault.status,
+        createdAt: vault.createdAt,
+        musicalChunks: vault.musicalChunks
+      };
+      storage.set(`vault_meta_${vaultId}`, metadata);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to create vault:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Retrieve a gift vault by ID
+   */
+  getVault: (vaultId: string): GiftVault | null => {
+    try {
+      return storage.get<GiftVault | null>(`vault_${vaultId}`, null);
+    } catch (error) {
+      console.error('Failed to get vault:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Update vault status (locked -> claimed)
+   */
+  updateVault: (vaultId: string, updates: Partial<GiftVault>): boolean => {
+    try {
+      const vault = vaultManager.getVault(vaultId);
+      if (!vault) return false;
+      
+      const updated = { ...vault, ...updates };
+      storage.set(`vault_${vaultId}`, updated);
+      
+      // Update metadata if status changed
+      if (updates.status) {
+        const metadata = vaultManager.getVaultMetadata(vaultId);
+        if (metadata) {
+          metadata.status = updates.status;
+          storage.set(`vault_meta_${vaultId}`, metadata);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to update vault:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Get vault metadata for quick listing
+   */
+  getVaultMetadata: (vaultId: string): VaultMetadata | null => {
+    try {
+      return storage.get<VaultMetadata | null>(`vault_meta_${vaultId}`, null);
+    } catch (error) {
+      console.error('Failed to get vault metadata:', error);
+      return null;
+    }
+  },
+
+  /**
+   * List all vaults for a recipient
+   */
+  listUserVaults: (recipientAddress: string): VaultMetadata[] => {
+    try {
+      const vaults: VaultMetadata[] = [];
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX + 'vault_meta_'));
+      
+      for (const key of keys) {
+        const metadata = storage.get<VaultMetadata | null>(key, null);
+        if (metadata) {
+          // Check if this vault is claimable by the recipient
+          const vault = vaultManager.getVault(metadata.vaultId);
+          if (vault && vault.status === 'locked') {
+            vaults.push(metadata);
+          }
+        }
+      }
+      
+      return vaults.sort((a, b) => b.createdAt - a.createdAt);
+    } catch (error) {
+      console.error('Failed to list user vaults:', error);
+      return [];
+    }
+  },
+
+  /**
+   * List vaults created by a sender
+   */
+  listSenderVaults: (senderAddress: string): VaultMetadata[] => {
+    try {
+      const vaults: VaultMetadata[] = [];
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX + 'vault_meta_'));
+      
+      for (const key of keys) {
+        const metadata = storage.get<VaultMetadata | null>(key, null);
+        if (metadata && metadata.sender === senderAddress) {
+          vaults.push(metadata);
+        }
+      }
+      
+      return vaults.sort((a, b) => b.createdAt - a.createdAt);
+    } catch (error) {
+      console.error('Failed to list sender vaults:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Remove a vault (for cleanup)
+   */
+  removeVault: (vaultId: string): boolean => {
+    try {
+      storage.remove(`vault_${vaultId}`);
+      storage.remove(`vault_meta_${vaultId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to remove vault:', error);
+      return false;
     }
   }
 };

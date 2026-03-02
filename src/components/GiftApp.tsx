@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { GiftingService, GiftVault } from '../lib/gifting';
+import { GiftingService } from '../lib/gifting';
+import { GiftVault } from '../lib/storage';
 import { playStrudelCode, stopStrudel, setDrawCallback } from '../lib/strudel';
 import { extractSonicDNA, detectAndReconstructCode } from '../lib/dna';
 import { isValidBtcAddress } from '../lib/crypto';
@@ -25,8 +26,9 @@ export default function GiftApp() {
   const [claimChunks, setClaimChunks] = useState('');
   const [claimBlinding, setClaimBlinding] = useState('');
   const [recipientWallet, setRecipientWallet] = useState<any>(null);
+  const [senderWallet, setSenderWallet] = useState<any>(null);
 
-  const giftingService = new GiftingService(process.env.NEXT_PUBLIC_STARKZAP_API_KEY || 'demo_key');
+  const giftingService = new GiftingService();
 
   // Setup draw callback for visualizer
   const [activeHaps, setActiveHaps] = useState<any[]>([]);
@@ -196,6 +198,14 @@ export default function GiftApp() {
           >
             {isProcessing ? 'Processing...' : !recipientWallet ? 'Login to Create Gift' : '🎁 Create Gift Card'}
           </button>
+          
+          {giftVault && (
+            <div className="glass rounded-xl p-4 border border-[color:var(--color-success)]/20">
+              <p className="text-xs font-bold text-[color:var(--color-success)] mb-2">Gift Created Successfully!</p>
+              <p className="text-xs text-[color:var(--color-muted)]">Vault ID: <span className="font-mono">{giftVault.id}</span></p>
+              <p className="text-xs text-[color:var(--color-muted)]">Share this ID with your friend to claim the gift.</p>
+            </div>
+          )}
           
           {status && <p className="text-center text-xs font-bold text-[color:var(--color-primary)] animate-pulse">{status}</p>}
         </div>
