@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sonic Guardian - Complete Deployment Script
-# Deploys: 1) Account, 2) Contract
+# Deploys: 1) Account (if needed), 2) Contract
 
 set -e
 
@@ -16,37 +16,54 @@ echo -e "${BLUE}║   🎵 Sonic Guardian - Starknet Sepolia Deployment   ║${N
 echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Configuration
-ACCOUNT_CONFIG="$HOME/.starkli-wallets/sonicguardian/account.json"
-KEYSTORE="$HOME/.starkli-wallets/sonicguardian/keystore.json"
-KEYSTORE_PASSWORD=""
-RPC="https://free-rpc.pathfinder.dev/sepolia"
-
-# Check prerequisites
-echo -e "${YELLOW}Checking prerequisites...${NC}"
-
-if [ ! -f "$ACCOUNT_CONFIG" ]; then
-    echo -e "${RED}✗ Account config not found: $ACCOUNT_CONFIG${NC}"
-    echo -e "${YELLOW}Creating new account...${NC}"
-    starkli account argent init "$ACCOUNT_CONFIG" --keystore "$KEYSTORE" --keystore-password "$KEYSTORE_PASSWORD"
+# Load environment variables
+if [ -f .env.local ]; then
+    source .env.local
+elif [ -f .env ]; then
+    source .env
 fi
 
+# Configuration
+ACCOUNT_CONFIG="${STARKNET_ACCOUNT_CONFIG:-~/.starkli-wallets/sonicguardian/account.json}"
+KEYSTORE="${STARKNET_KEYSTORE:-~/.starkli-wallets/sonicguardian/keystore.json}"
+KEYSTORE_PASSWORD="${STARKNET_KEYSTORE_PASSWORD:-}"
+PRIVATE_KEY="${STARKNET_PRIVATE_KEY:-}"
+RPC="${STARKNET_RPC_URL:-https://free-rpc.pathfinder.dev/sepolia}"
+
+# Check prerequisites
+echo -e "${YELLOW}Checking environment...${NC}"
+
+if [ -z "$PRIVATE_KEY" ]; then
+    echo -e "${RED}✗ STARKNET_PRIVATE_KEY not set${NC}"
+    echo -e "${YELLOW}  Please add it to your .env.local file${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Private key loaded${NC}"
+
+if [ ! -f "$ACCOUNT_CONFIG" ]; then
+    echo -e "${YELLOW}⚠ Account config not found, creating...${NC}"
+    starkli account argent init "$ACCOUNT_CONFIG" --private-key "$PRIVATE_KEY"
+fi
 echo -e "${GREEN}✓ Account config ready${NC}"
+
 echo -e "${BLUE}  Address: 0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df${NC}"
 echo ""
 
-# Step 1: Deploy Account
-echo -e "${YELLOW}Step 1: Deploying Account Contract...${NC}"
-echo -e "${BLUE}This will create your Starknet account on-chain${NC}"
-echo ""
+# Step 1: Deploy Account (if not already deployed)
+echo -e "${YELLOW}Step 1: Checking account deployment...${NC}"
 
-starkli account deploy \
-    "$ACCOUNT_CONFIG" \
-    --keystore "$KEYSTORE" \
-    --keystore-password "$KEYSTORE_PASSWORD" \
-    --rpc "$RPC"
+ACCOUNT_DEPLOYED=$(starkli class-hash-at 0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df --rpc "$RPC" 2>&1 || echo "not_deployed")
 
-echo -e "${GREEN}✓ Account deployed!${NC}"
+if [[ "$ACCOUNT_DEPLOYED" == *"not_deployed"* ]] || [[ "$ACCOUNT_DEPLOYED" == *"error"* ]] || [[ "$ACCOUNT_DEPLOYED" == *"0x0"* ]]; then
+    echo -e "${YELLOW}Account not deployed, deploying now...${NC}"
+    starkli account deploy \
+        "$ACCOUNT_CONFIG" \
+        --private-key "$PRIVATE_KEY" \
+        --rpc "$RPC"
+    echo -e "${GREEN}✓ Account deployed!${NC}"
+else
+    echo -e "${GREEN}✓ Account already deployed${NC}"
+fi
 echo ""
 
 # Step 2: Build Contract
@@ -58,18 +75,18 @@ echo ""
 
 # Step 3: Declare Contract
 echo -e "${YELLOW}Step 3: Declaring contract class...${NC}"
-echo -e "${BLUE}This may take 30-60 seconds...${NC}"
+echo -e "${BLUE}This may take 1-2 minutes...${NC}"
 
 CLASS_HASH=$(starkli declare \
     target/dev/sonic_guardian_SonicGuardian.contract_class.json \
-    --account "$ACCOUNT_CONFIG" \
-    --keystore "$KEYSTORE" \
-    --keystore-password "$KEYSTORE_PASSWORD" \
+    --private-key "$PRIVATE_KEY" \
     --rpc "$RPC" \
-    2>&1 | grep -o '0x[a-fA-F0-9]\+' | tail -1)
+    2>&1 | grep -o '0x[a-fA-F0-9]\+' | tail -1 || echo "")
 
 if [ -z "$CLASS_HASH" ]; then
     echo -e "${RED}✗ Declaration failed${NC}"
+    echo -e "${YELLOW}This might be due to Cairo compiler version mismatch.${NC}"
+    echo -e "${YELLOW}See contracts/DEPLOYMENT_STATUS.md for details.${NC}"
     exit 1
 fi
 
@@ -82,11 +99,9 @@ echo -e "${YELLOW}Step 4: Deploying contract instance...${NC}"
 
 CONTRACT_ADDRESS=$(starkli deploy \
     "$CLASS_HASH" \
-    --account "$ACCOUNT_CONFIG" \
-    --keystore "$KEYSTORE" \
-    --keystore-password "$KEYSTORE_PASSWORD" \
+    --private-key "$PRIVATE_KEY" \
     --rpc "$RPC" \
-    2>&1 | grep -o '0x[a-fA-F0-9]\+' | tail -1)
+    2>&1 | grep -o '0x[a-fA-F0-9]\+' | tail -1 || echo "")
 
 if [ -z "$CONTRACT_ADDRESS" ]; then
     echo -e "${RED}✗ Deployment failed${NC}"
