@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Tooltip } from './Tooltip';
 
 interface StrudelEditorProps {
   initialCode: string;
@@ -184,9 +185,11 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">
-            Strudel Live Code
-          </span>
+          <Tooltip text="Strudel is a live coding environment for music. Write code to create generative patterns that can be used as your Sonic Guardian." position="bottom">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)] cursor-help">
+              Strudel Live Code
+            </span>
+          </Tooltip>
           {isPlaying && (
             <span className="flex items-center gap-1.5 text-[8px] text-[color:var(--color-success)]">
               <span className="w-1.5 h-1.5 bg-[color:var(--color-success)] rounded-full animate-pulse" />

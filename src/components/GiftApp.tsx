@@ -13,7 +13,11 @@ import {
   type MusicalChunk
 } from '../lib/entropy-encoder';
 import { StrudelVisualizer } from './StrudelVisualizer';
-import { initWeb3Auth } from '../lib/web3auth';
+import { initWeb3Auth, socialLogin } from '../lib/web3auth';
+import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
+import { generateBlinding, pedersen } from '../lib/crypto';
+import { WalletButton } from './WalletButton';
+import { Tooltip } from './Tooltip';
 
 export default function GiftApp() {
   const [mode, setMode] = useState<'send' | 'claim'>('send');
@@ -38,12 +42,12 @@ export default function GiftApp() {
 
   // Setup draw callback for visualizer
   const [activeHaps, setActiveHaps] = useState<any[]>([]);
-  
+
   useEffect(() => {
     setDrawCallback((haps: any[]) => {
       setActiveHaps(haps.filter((h: any) => h.isActive?.(performance.now() / 1000)));
     });
-    
+
     return () => setDrawCallback(null);
   }, []);
 
@@ -56,33 +60,58 @@ export default function GiftApp() {
     playStrudelCode(encoded.code);
   };
 
-  const handleCreateGift = async () => {
-    if (!generatedCode || !recipientWallet) return;
-    setIsProcessing(true);
-    setStatus('Creating Bitcoin Gift Vault via Starkzap...');
-    
-    const vault = await giftingService.createGift(
-      recipientWallet.address,
-      btcAmount,
-      generatedCode,
-      musicalChunks.map(c => c.text)
-    );
+  const {
+    isConnected,
+    address,
+    createOnChainGift,
+    claimOnChainGift
+  } = useStarknetGuardian();
 
-    if (vault) {
+  const handleCreateGift = async () => {
+    if (!generatedCode || !address) return;
+    setIsProcessing(true);
+    setStatus('Creating On-Chain Bitcoin Gift Vault...');
+
+    try {
+      const dna = await extractSonicDNA(generatedCode);
+      if (!dna) throw new Error("DNA extraction failed");
+
+      const blinding = generateBlinding();
+      const commitment = await pedersen(dna.hash, blinding);
+      const vaultId = `0x${commitment.substring(0, 16)}`;
+
+      // 1 ETH = 10^18. For BTC usually 8 decimals but most bridged are 18.
+      const amount = BigInt(Math.floor(parseFloat(btcAmount) * 10 ** 18));
+      const tokenAddress = "0x03fe2b97c1fd33ed324546411f97df48074902b794ba2422f2f7fc8b48f98d02";
+
+      await createOnChainGift(vaultId, commitment, amount, tokenAddress);
+
+      const vault: GiftVault = {
+        id: vaultId,
+        sender: address,
+        amount: btcAmount,
+        commitment,
+        blinding,
+        status: 'locked',
+        musicalChunks: musicalChunks.map(c => c.text),
+        createdAt: Date.now()
+      };
+
       setGiftVault(vault);
-      setStatus('Gift Vault Created! Give the card to your friend.');
-    } else {
-      setStatus('Failed to create gift vault.');
+      setStatus('Success! Your Bitcoin is now locked in a Musical Vault.');
+    } catch (error) {
+      console.error(error);
+      setStatus('Failed to create on-chain gift.');
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   const handleSocialLogin = async () => {
     setIsProcessing(true);
-    setStatus('Onboarding via Starkzap Social Login...');
+    setStatus('Onboarding via Social Login...');
     try {
-      const result = await giftingService.socialLogin('google');
-      setRecipientWallet(result);
+      const result = await socialLogin('google');
       setStatus(`Welcome! Wallet created: ${result.address.substring(0, 10)}...`);
     } catch (error) {
       setStatus('Social login failed.');
@@ -91,46 +120,43 @@ export default function GiftApp() {
   };
 
   const handleClaimGift = async () => {
-    if (!recipientWallet || !claimChunks) return;
+    if (!address || !claimChunks) return;
     setIsProcessing(true);
-    setStatus('Verifying Vibe & Claiming Bitcoin...');
+    setStatus('Verifying Musical Signature on Starknet...');
 
     try {
-      // 1. Reconstruct the Strudel code from musical chunks
       const reconstructedCode = detectAndReconstructCode(claimChunks) || claimChunks;
-      
-      // 2. Claim via Gifting Service
-      const success = await giftingService.claimGift(
+      const dna = await extractSonicDNA(reconstructedCode);
+      if (!dna) throw new Error("DNA extraction failed");
+
+      await claimOnChainGift(
         claimVaultId,
-        recipientWallet.address,
-        reconstructedCode,
-        claimBlinding
+        dna.hash,
+        claimBlinding,
+        address
       );
 
-      if (success) {
-        setStatus('Success! Bitcoin has been moved to your wallet.');
-        playStrudelCode(reconstructedCode);
-      } else {
-        setStatus('Claim failed. Is the vibe correct?');
-      }
+      setStatus('Success! The Bitcoin gift has been transferred to your wallet.');
+      playStrudelCode(reconstructedCode);
     } catch (error) {
       console.error(error);
-      setStatus('Claim error. Please try again.');
+      setStatus('Claim failed. The blockchain rejected the signature.');
     } finally {
       setIsProcessing(false);
     }
   };
 
+
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-center gap-4 mb-8">
-        <button 
+        <button
           onClick={() => setMode('send')}
           className={`px-6 py-2 rounded-full font-bold text-xs tracking-widest uppercase transition-all ${mode === 'send' ? 'bg-[color:var(--color-primary)] text-white' : 'glass text-[color:var(--color-muted)]'}`}
         >
           🎁 Send a Gift
         </button>
-        <button 
+        <button
           onClick={() => setMode('claim')}
           className={`px-6 py-2 rounded-full font-bold text-xs tracking-widest uppercase transition-all ${mode === 'claim' ? 'bg-[color:var(--color-primary)] text-white' : 'glass text-[color:var(--color-muted)]'}`}
         >
@@ -148,13 +174,13 @@ export default function GiftApp() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] block">Gift Amount (BTC)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={btcAmount}
                 onChange={(e) => setBtcAmount(e.target.value)}
                 className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none font-mono text-xl"
               />
-              
+
               <div className="flex items-center justify-between">
                 <button
                   onClick={handleGenerateGiftVibe}
@@ -178,7 +204,7 @@ export default function GiftApp() {
                   <p className="text-xs font-bold uppercase tracking-widest opacity-50">Happy Birthday!</p>
                   <p className="text-lg font-medium leading-tight">Your Bitcoin gift is waiting inside this vibe...</p>
                 </div>
-                
+
                 <div className="space-y-2 relative z-10">
                   {musicalChunks.length > 0 ? (
                     musicalChunks.map((c, i) => (
@@ -188,7 +214,7 @@ export default function GiftApp() {
                     <div className="text-[10px] font-mono opacity-30 italic">Chunks will appear here</div>
                   )}
                 </div>
-                
+
                 <div className="flex justify-between items-end relative z-10">
                   <div className="text-[10px] font-bold tracking-tighter uppercase opacity-40">Sonic Guardian x Starkzap</div>
                   <div className="text-xl font-bold text-[color:var(--color-primary)]">{btcAmount} BTC</div>
@@ -197,14 +223,14 @@ export default function GiftApp() {
             </div>
           </div>
 
-          <button 
+          <button
             onClick={handleCreateGift}
-            disabled={isProcessing || !generatedCode || !recipientWallet}
+            disabled={isProcessing || !generatedCode || !address}
             className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {isProcessing ? 'Processing...' : !recipientWallet ? 'Login to Create Gift' : '🎁 Create Gift Card'}
+            {isProcessing ? 'Processing...' : !address ? 'Connect Wallet to Create Gift' : '🎁 Create Gift Card'}
           </button>
-          
+
           {giftVault && (
             <div className="glass rounded-xl p-4 border border-[color:var(--color-success)]/20">
               <p className="text-xs font-bold text-[color:var(--color-success)] mb-2">Gift Created Successfully!</p>
@@ -212,7 +238,7 @@ export default function GiftApp() {
               <p className="text-xs text-[color:var(--color-muted)]">Share this ID with your friend to claim the gift.</p>
             </div>
           )}
-          
+
           {status && <p className="text-center text-xs font-bold text-[color:var(--color-primary)] animate-pulse">{status}</p>}
         </div>
       ) : (
@@ -222,25 +248,29 @@ export default function GiftApp() {
             <p className="text-sm text-[color:var(--color-muted)]">Login with Google to unlock your musical Bitcoin gift.</p>
           </div>
 
-          {!recipientWallet ? (
-          <button 
-            onClick={handleSocialLogin}
-            className="w-full py-5 rounded-2xl bg-white text-black font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-3 hover:scale-[1.02] transition-all"
-          >
-            <img src="https://www.google.com/favicon.ico" className="w-4 h-4" />
-            Login to Claim Gift
-          </button>
+          {!address ? (
+            <div className="space-y-4">
+              <button
+                onClick={handleSocialLogin}
+                className="w-full py-5 rounded-2xl bg-white text-black font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-3 hover:scale-[1.02] transition-all"
+              >
+                <img src="https://www.google.com/favicon.ico" className="w-4 h-4" />
+                Login with Google
+              </button>
+              <div className="text-center text-[10px] text-[color:var(--color-muted)] font-bold uppercase tracking-widest">or</div>
+              <WalletButton />
+            </div>
           ) : (
             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
               <div className="p-4 rounded-xl bg-[color:var(--color-success)]/10 border border-[color:var(--color-success)]/20 text-center">
-                <p className="text-xs font-bold text-[color:var(--color-success)]">Wallet Ready: {recipientWallet.address.substring(0, 16)}...</p>
+                <p className="text-xs font-bold text-[color:var(--color-success)]">Wallet Ready: {address.substring(0, 16)}...</p>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="relative group">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">Gift Vault ID</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={claimVaultId}
                     onChange={(e) => setClaimVaultId(e.target.value)}
                     placeholder="Enter the ID from your card..."
@@ -250,7 +280,7 @@ export default function GiftApp() {
 
                 <div className="relative group">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">Musical Vibe Chunks</label>
-                  <textarea 
+                  <textarea
                     value={claimChunks}
                     onChange={(e) => setClaimChunks(e.target.value)}
                     placeholder="Type the chunks exactly as they appear on the card..."
@@ -259,7 +289,7 @@ export default function GiftApp() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={handleClaimGift}
                 disabled={isProcessing || !claimChunks}
                 className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] transition-all disabled:opacity-50"
@@ -268,7 +298,7 @@ export default function GiftApp() {
               </button>
             </div>
           )}
-          
+
           {status && <p className="text-center text-xs font-bold text-[color:var(--color-primary)] animate-pulse">{status}</p>}
         </div>
       )}

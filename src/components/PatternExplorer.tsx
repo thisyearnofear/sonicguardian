@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '../lib/strudel';
 import { StrudelVisualizer } from './StrudelVisualizer';
 import { generateSecurePattern, mutatePattern } from '../lib/pattern-generator';
+import { Tooltip } from './Tooltip';
 
 interface PatternExplorerProps {
   onPatternSelect?: (code: string) => void;

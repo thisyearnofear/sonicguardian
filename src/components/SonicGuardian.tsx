@@ -19,7 +19,7 @@ import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
 import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '../lib/strudel';
 import { generateBlinding, isValidBtcAddress } from '../lib/crypto';
 import { MobileUtils } from '../lib/mobile';
-import { 
+import {
   generateEntropy,
   encodePattern,
   chunksToSeedPhrase,
@@ -31,6 +31,7 @@ import { PatternExplorer } from './PatternExplorer';
 import { HelpModal } from './HelpModal';
 import { WelcomeModal } from './WelcomeModal';
 import { Tooltip } from './Tooltip';
+import { InteractiveTutorial, TutorialTrigger } from './InteractiveTutorial';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -97,7 +98,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       const active = haps.filter((h: any) => h.isActive(time));
       setActiveHaps(active);
     });
-    
+
     return () => {
       setDrawCallback(null);
     };
@@ -254,21 +255,21 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       let code: string;
       let chunks: MusicalChunk[];
       let entropy: number;
-      
+
       if (useSecureGeneration) {
         // Generate 256-bit entropy and encode to musical pattern
         const entropyBytes = generateEntropy();
         const encoded: EncodedPattern = encodePattern(entropyBytes);
-        
+
         code = encoded.code;
         chunks = encoded.chunks;
         entropy = 256; // Full 256-bit entropy
-        
+
         // Generate human-readable seed phrase
         const phrase = chunksToSeedPhrase(chunks);
         setSeedPhrase(phrase);
         setMusicalChunks(chunks);
-        
+
         setStatus(`Secure Pattern Generated (256 bits entropy, ${chunks.length} chunks)`);
       } else {
         // Use AI generation (less secure, but user-friendly)
@@ -277,13 +278,13 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           setIsProcessing(false);
           return;
         }
-        
+
         const agentResponse = await generateStrudelCode(secretVibe, { useRealAI });
         code = agentResponse.code;
         chunks = [];
         entropy = 0;
       }
-      
+
       setGeneratedCode(code);
 
       const dna = await extractSonicDNA(code, { includeTimestamp: true });
@@ -291,11 +292,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       if (dna) {
         setDna(dna);
         setDnaHash(dna.hash);
-        
+
         // Generate blinding factor for Pedersen commitment
         const blindingFactor = generateBlinding();
         setBlinding(blindingFactor);
-        
+
         // Store session with pattern code (not just description!)
         sessionManager.createSession(
           code, // ✅ Store actual pattern code
@@ -304,7 +305,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           btcAddress || undefined,
           blindingFactor
         );
-        
+
         setStatus('Musical Guardian Ready. Hit ▶ to hear your key.');
         setShowOnboarding(false);
         visualizerRef.current?.updateDNASequence(dna.dna);
@@ -321,34 +322,30 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
   const handleCommitToStarknet = async () => {
     if (!dnaHash || !isConnected) return;
-    
+
     if (!btcAddress) {
       setStatus('⚠️ Please enter a Bitcoin address to guard.');
       return;
     }
-    
+
     if (!isValidBtcAddress(btcAddress)) {
-      setStatus('❌ Invalid Bitcoin address format. Use bc1..., 1..., or 3... format.');
+      setStatus('❌ Invalid Bitcoin address format.');
       return;
     }
 
     setIsCommiting(true);
     setOnChainStatus('pending');
-    setStatus('🔒 Creating Pedersen commitment and anchoring to Starknet...');
+    setStatus('🔒 Anchoring Acoustic DNA to Starknet (Pedersen Commitment)...');
 
     try {
-      // Register guardian with Pedersen commitment
       await registerGuardian(btcAddress, dnaHash, blinding);
-      
-      // Update session with BTC address
       sessionManager.updateSession({ btcAddress });
-      
       setOnChainStatus('success');
-      setStatus('✅ Guardian anchored! Your Bitcoin is now protected by your musical pattern.');
+      setStatus('✅ Identity Anchored! Your Bitcoin is now guarded by this musical vibe.');
     } catch (error) {
       console.error(error);
       setOnChainStatus('failed');
-      setStatus('❌ Transaction failed. Check your wallet has enough ETH for gas fees.');
+      setStatus('❌ Transaction failed. Ensure your wallet has gas funds.');
     } finally {
       setIsCommiting(false);
     }
@@ -406,82 +403,37 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   };
 
   const handleRecovery = async () => {
-    if (!recoveryVibe.trim()) {
-      setStatus('Please recall your sonic signature...');
-      return;
-    }
-    
-    if (!btcAddress) {
-      setStatus('Please enter the Bitcoin address to recover.');
+    if (!recoveryVibe.trim() || !btcAddress) {
+      setStatus('Please provide your vibe and Bitcoin address.');
       return;
     }
 
     setIsProcessing(true);
-    setStatus('Verifying Acoustic Proof...');
+    setStatus('Extracting DNA & Verifying Against Starknet State...');
 
     try {
+      // 1. Extract DNA from recalled vibe
       const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
-      const dna = await extractSonicDNA(agentResponse.code, { includeTimestamp: true });
+      const dna = await extractSonicDNA(agentResponse.code);
 
       if (dna) {
         const session = sessionManager.getCurrentSession();
-        
-        // Local verification first
-        const localMatch = dna.hash === session?.storedHash;
-        
-        if (!localMatch) {
-          setStatus('Acoustic Signature Mismatch. Access Denied.');
-          visualizerRef.current?.updateDNASequence(dna.dna);
-          visualizerRef.current?.highlightParticles([]);
-          sessionManager.addRecoveryAttempt(recoveryVibe.trim(), false, dna.hash);
-          onFailure?.();
-          if (audioEnabled) playAudio('error');
-          setIsProcessing(false);
-          return;
-        }
-        
-        // On-chain verification if connected
-        if (isConnected && session?.blinding) {
-          setStatus('Verifying Zero-Knowledge Proof on Starknet...');
-          const onChainMatch = await verifyRecovery(btcAddress, dna.hash, session.blinding);
-          
-          if (!onChainMatch) {
-            setStatus('On-Chain Verification Failed.');
-            if (audioEnabled) playAudio('error');
-            setIsProcessing(false);
-            return;
-          }
-          
-          // Authorize recovery
-          setStatus('Authorizing Bitcoin Recovery...');
-          try {
-            await authorizeBtcRecovery(btcAddress, dna.hash, session.blinding);
-            setStatus('Recovery Authorized! You can now access your Bitcoin.');
-            setDna(dna);
-            visualizerRef.current?.updateDNASequence(dna.dna);
-            visualizerRef.current?.highlightParticles(Array.from({ length: 12 }, (_, i) => i));
-            sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dna.hash);
-            onRecovery?.(dna.hash);
-            if (audioEnabled) playAudio('success');
-          } catch (error) {
-            console.error('Recovery authorization failed:', error);
-            setStatus('Recovery Authorization Failed. Check wallet.');
-            if (audioEnabled) playAudio('error');
-          }
-        } else {
-          // Offline verification only
-          setStatus('Acoustic Proof Verified (Offline Mode).');
-          setDna(dna);
-          visualizerRef.current?.updateDNASequence(dna.dna);
-          visualizerRef.current?.highlightParticles(Array.from({ length: 12 }, (_, i) => i));
-          sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dna.hash);
-          onRecovery?.(dna.hash);
-          if (audioEnabled) playAudio('success');
-        }
+        setStatus('Generating ZK-Acoustic Proof on Starknet...');
+
+        await authorizeBtcRecovery(btcAddress, dna.hash, session?.blinding || '');
+
+        setStatus('✅ Access Granted! Identity verified by Acoustic DNA.');
+        setDna(dna);
+        visualizerRef.current?.updateDNASequence(dna.dna);
+        visualizerRef.current?.highlightParticles(Array.from({ length: 12 }, (_, i) => i));
+
+        sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dna.hash);
+        onRecovery?.(dna.hash);
       }
     } catch (error) {
       console.error(error);
-      setStatus('Verification Aborted.');
+      setStatus('❌ Access Denied. Musical patterns do not match on-chain record.');
+      onFailure?.();
     } finally {
       setIsProcessing(false);
     }
@@ -493,6 +445,8 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     }
     generateAudio(audioContextRef.current, type);
   };
+
+
 
   return (
     <div className="relative min-h-screen bg-[color:var(--background)] selection:bg-[color:var(--color-primary)] selection:text-white">
@@ -508,7 +462,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-gradient leading-[1.05]">
             Sonic Guardian
           </h1>
-          
+
           {/* Help Button */}
           <button
             onClick={() => setShowHelp(true)}
@@ -559,24 +513,22 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 Click to select • Then hit ▶ to hear
               </p>
             </div>
-            
+
             {/* Pattern Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
               {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
                 <button
                   key={pattern.name}
                   onClick={() => setSelectedPatternId(pattern.name)}
-                  className={`group p-4 rounded-xl border transition-all text-left ${
-                    selectedPatternId === pattern.name
-                      ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
-                      : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
-                  }`}
+                  className={`group p-4 rounded-xl border transition-all text-left ${selectedPatternId === pattern.name
+                    ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
+                    : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
+                    }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-all ${
-                    selectedPatternId === pattern.name
-                      ? 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)]'
-                      : 'bg-[color:var(--color-foreground)]/5 text-[color:var(--color-muted)]'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-all ${selectedPatternId === pattern.name
+                    ? 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)]'
+                    : 'bg-[color:var(--color-foreground)]/5 text-[color:var(--color-muted)]'
+                    }`}>
                     {selectedPatternId === pattern.name ? '✓' : '♪'}
                   </div>
                   <p className="text-[10px] font-bold mb-1">{pattern.name}</p>
@@ -603,11 +555,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code,
                         selectedPatternId
                       )}
-                      className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${
-                        previewPlayingId === selectedPatternId
-                          ? 'bg-[color:var(--color-primary)]/20 border-[color:var(--color-primary)] text-[color:var(--color-primary)]'
-                          : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/30'
-                      }`}
+                      className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${previewPlayingId === selectedPatternId
+                        ? 'bg-[color:var(--color-primary)]/20 border-[color:var(--color-primary)] text-[color:var(--color-primary)]'
+                        : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                        }`}
                     >
                       {previewPlayingId === selectedPatternId ? (
                         <><span className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" /> Stop</>
@@ -616,12 +567,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       )}
                     </button>
                   </div>
-                  
-                  <div className={`bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border shadow-2xl relative group transition-all duration-150 ${
-                    previewPlayingId === selectedPatternId && activeHaps.length > 0
-                      ? 'border-[color:var(--color-primary)] shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)] scale-[1.01]'
-                      : 'border-blue-500/20'
-                  }`}>
+
+                  <div className={`bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border shadow-2xl relative group transition-all duration-150 ${previewPlayingId === selectedPatternId && activeHaps.length > 0
+                    ? 'border-[color:var(--color-primary)] shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)] scale-[1.01]'
+                    : 'border-blue-500/20'
+                    }`}>
                     <button
                       onClick={() => navigator.clipboard.writeText(STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code)}
                       className="absolute top-3 right-3 p-2 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 transition-all text-xs"
@@ -629,7 +579,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     >
                       📋
                     </button>
-                    
+
                     {/* Activity indicator */}
                     {previewPlayingId === selectedPatternId && activeHaps.length > 0 && (
                       <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -639,10 +589,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         </span>
                       </div>
                     )}
-                    
-                    <code className={`whitespace-pre-wrap break-all leading-relaxed tracking-wider block ${
-                      previewPlayingId === selectedPatternId && activeHaps.length > 0 ? 'mt-6' : ''
-                    }`}>
+
+                    <code className={`whitespace-pre-wrap break-all leading-relaxed tracking-wider block ${previewPlayingId === selectedPatternId && activeHaps.length > 0 ? 'mt-6' : ''
+                      }`}>
                       {STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)?.code.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
                         if (['(', ')', '.'].includes(part)) return <span key={i} className="opacity-40">{part}</span>;
                         if (part === '"' || part === "'") return <span key={i} className="text-pink-400">{part}</span>;
@@ -652,7 +601,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       })}
                     </code>
                   </div>
-                  
+
                   <p className="text-[9px] text-[color:var(--color-muted)] mt-3 text-center italic">
                     This pattern demonstrates Strudel's live coding syntax • Hear how code becomes sound
                   </p>
@@ -725,7 +674,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     <div className="relative group">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center gap-2">
                         Bitcoin Address to Guard
-                        <Tooltip text="The Bitcoin address you want to protect. Only you can recover it with your musical pattern.">
+                        <Tooltip id="bitcoin-address-validation" position="top">
                           <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
                         </Tooltip>
                       </label>
@@ -739,17 +688,17 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       />
                       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
                       {validationStates.get('btc-address') && (
-                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${
-                          validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
                           validationStates.get('btc-address')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                          'text-[color:var(--color-success)]'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${
-                            validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                            'text-[color:var(--color-success)]'
+                          }`}>
+                          <span className={`w-2 h-2 rounded-full ${validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
                             validationStates.get('btc-address')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                            'bg-[color:var(--color-success)]'
-                          }`} />
-                          {validationStates.get('btc-address')?.message}
+                              'bg-[color:var(--color-success)]'
+                            }`} />
+                          <Tooltip id="btc-address-validation" position="top">
+                            <span>{validationStates.get('btc-address')?.message}</span>
+                          </Tooltip>
                         </div>
                       )}
                     </div>
@@ -770,16 +719,14 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         />
                         <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
                         {validationStates.get('custom-vibe') && (
-                          <div className={`mt-1 text-[9px] flex items-center gap-2 ${
-                            validationStates.get('custom-vibe')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                          <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('custom-vibe')?.type === 'error' ? 'text-[color:var(--color-error)]' :
                             validationStates.get('custom-vibe')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                            'text-[color:var(--color-success)]'
-                          }`}>
-                            <span className={`w-2 h-2 rounded-full ${
-                              validationStates.get('custom-vibe')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                              'text-[color:var(--color-success)]'
+                            }`}>
+                            <span className={`w-2 h-2 rounded-full ${validationStates.get('custom-vibe')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
                               validationStates.get('custom-vibe')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                              'bg-[color:var(--color-success)]'
-                            }`} />
+                                'bg-[color:var(--color-success)]'
+                              }`} />
                             {validationStates.get('custom-vibe')?.message}
                           </div>
                         )}
@@ -798,11 +745,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         <button
                           onClick={handleCommitToStarknet}
                           disabled={isCommiting || !isConnected || !btcAddress || !isValidBtcAddress(btcAddress)}
-                          className={`w-full py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${
-                            onChainStatus === 'success'
-                              ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5'
-                              : 'border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed'
-                          }`}
+                          className={`w-full py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${onChainStatus === 'success'
+                            ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5'
+                            : 'border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
                         >
                           {onChainStatus === 'success' ? (
                             <>✨ Guardian Anchored</>
@@ -856,16 +802,14 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       />
                       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
                       {validationStates.get('recovery-phrase') && (
-                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${
-                          validationStates.get('recovery-phrase')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('recovery-phrase')?.type === 'error' ? 'text-[color:var(--color-error)]' :
                           validationStates.get('recovery-phrase')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                          'text-[color:var(--color-success)]'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${
-                            validationStates.get('recovery-phrase')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                            'text-[color:var(--color-success)]'
+                          }`}>
+                          <span className={`w-2 h-2 rounded-full ${validationStates.get('recovery-phrase')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
                             validationStates.get('recovery-phrase')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                            'bg-[color:var(--color-success)]'
-                          }`} />
+                              'bg-[color:var(--color-success)]'
+                            }`} />
                           {validationStates.get('recovery-phrase')?.message}
                         </div>
                       )}
@@ -885,16 +829,14 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       />
                       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
                       {validationStates.get('btc-address') && (
-                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${
-                          validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
+                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
                           validationStates.get('btc-address')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                          'text-[color:var(--color-success)]'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${
-                            validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                            'text-[color:var(--color-success)]'
+                          }`}>
+                          <span className={`w-2 h-2 rounded-full ${validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
                             validationStates.get('btc-address')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                            'bg-[color:var(--color-success)]'
-                          }`} />
+                              'bg-[color:var(--color-success)]'
+                            }`} />
                           {validationStates.get('btc-address')?.message}
                         </div>
                       )}
@@ -912,7 +854,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--color-primary)] to-[color:var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative z-10">
                     {isProcessing ? 'Processing...' : (
-                      phase === 'registration' 
+                      phase === 'registration'
                         ? 'Generate Guardian'
                         : 'Verify & Recover'
                     )}
@@ -1013,9 +955,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                           <span className="px-1.5 py-0.5 rounded bg-[color:var(--color-primary)]/10 border border-[color:var(--color-primary)]/20 text-[8px] font-bold text-[color:var(--color-primary)] uppercase tracking-tighter">Live Code</span>
                         </div>
                       </div>
-                      
+
                       {/* Strudel Editor - Full REPL Experience */}
-                      <StrudelEditor 
+                      <StrudelEditor
                         initialCode={generatedCode}
                         onCodeChange={(newCode) => {
                           setGeneratedCode(newCode);
@@ -1029,7 +971,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         }}
                         readOnly={false}
                       />
-                      
+
                       <p className="text-[9px] text-[color:var(--color-muted)] mt-3 italic">
                         Edit the code above to customize your pattern. Changes update your guardian's DNA hash.
                       </p>
@@ -1223,6 +1165,12 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           </button>
         </div>
 
+        {/* Interactive Tutorial Trigger */}
+        <TutorialTrigger onTrigger={() => {
+          // Logic to trigger tutorial can be added here
+          console.log('Tutorial triggered');
+        }} />
+
         {/* Protocol Analysis Section */}
         <section className="mt-24 w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
@@ -1256,11 +1204,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       {showPatternExplorer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/90 backdrop-blur-sm"
             onClick={() => setShowPatternExplorer(false)}
           />
-          
+
           {/* Modal Content */}
           <div className="relative w-full max-w-7xl max-h-[90vh] overflow-y-auto bg-[color:var(--background)] rounded-3xl border border-[color:var(--color-border)] shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             {/* Close Button */}
@@ -1270,7 +1218,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             >
               ✕ Close
             </button>
-            
+
             {/* Pattern Explorer Component */}
             <PatternExplorer onPatternSelect={(code) => {
               // Optionally handle pattern selection

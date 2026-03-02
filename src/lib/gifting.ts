@@ -8,14 +8,14 @@ import { abi } from './abi';
 // tBTC (Threshold Network) or similar. For demo/hackathon we can use a custom one 
 // or the canonical tBTC if we have it.
 export const BTC_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_BTC_TOKEN_ADDRESS || "0x03fe2b97c1fd33ed324546411f97df48074902b794ba2422f2f7fc8b48f98d02";
-export const GUARDIAN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de";
+export const GUARDIAN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de";
 
 export class GiftingService {
   private provider: RpcProvider;
 
   constructor() {
     this.provider = new RpcProvider({
-      nodeUrl: process.env.STARKNET_RPC_URL || "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
+      nodeUrl: process.env.STARKNET_RPC_URL || process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC || "https://starknet-sepolia.drpc.org",
     });
   }
 
@@ -40,8 +40,8 @@ export class GiftingService {
       const vaultId = `0x${commitment.substring(0, 16)}`;
 
       // 3. Prepare Contract Instances
-      const guardian = new Contract(abi, GUARDIAN_CONTRACT_ADDRESS, account);
-      const btcToken = new Contract(abi, BTC_TOKEN_ADDRESS, account);
+      const guardian = new Contract({ abi, address: GUARDIAN_CONTRACT_ADDRESS, providerOrAccount: account });
+      const btcToken = new Contract({ abi, address: BTC_TOKEN_ADDRESS, providerOrAccount: account });
 
       // 4. Convert amount to value
       // Note: Real BTC uses 8, but bridged often uses 18. Adjust as needed.
@@ -50,16 +50,17 @@ export class GiftingService {
       console.log(`Executing on-chain gift creation for ${amountBtc} BTC...`);
 
       // 5. Multi-call: Approve + Create Vault (Atomic)
+      const amountU256 = uint256.bnToUint256(amount);
       const { transaction_hash } = await account.execute([
         {
           contractAddress: BTC_TOKEN_ADDRESS,
           entrypoint: 'approve',
-          calldata: [GUARDIAN_CONTRACT_ADDRESS, amount]
+          calldata: [GUARDIAN_CONTRACT_ADDRESS, amountU256.low.toString(), amountU256.high.toString()]
         },
         {
           contractAddress: GUARDIAN_CONTRACT_ADDRESS,
           entrypoint: 'create_onchain_gift',
-          calldata: [vaultId, commitment, amount, BTC_TOKEN_ADDRESS]
+          calldata: [vaultId, commitment, amountU256.low.toString(), amountU256.high.toString(), BTC_TOKEN_ADDRESS]
         }
       ]);
 
@@ -104,16 +105,18 @@ export class GiftingService {
       if (!dna) throw new Error("Failed to extract DNA");
 
       // 2. Initial on-chain claim via SonicGuardian contract
-      const guardian = new Contract(abi, GUARDIAN_CONTRACT_ADDRESS, account);
+      const guardian = new Contract({ abi, address: GUARDIAN_CONTRACT_ADDRESS, providerOrAccount: this.provider });
+      guardian.connect(account);
 
       console.log(`Verifying Musical DNA and claiming vault ${vaultId} on-chain...`);
 
-      const { transaction_hash } = await guardian.claim_onchain_gift(
-        vaultId,
-        dna.hash,
-        blinding,
-        recipientAddress
-      );
+      const { transaction_hash } = await account.execute([
+        {
+          contractAddress: GUARDIAN_CONTRACT_ADDRESS,
+          entrypoint: 'claim_onchain_gift',
+          calldata: [vaultId, dna.hash, blinding, recipientAddress]
+        }
+      ]);
 
       console.log(`Claim transaction: ${transaction_hash}`);
 
@@ -139,7 +142,7 @@ export class GiftingService {
    */
   async getOnChainStatus(vaultId: string): Promise<string> {
     try {
-      const guardian = new Contract(abi, GUARDIAN_CONTRACT_ADDRESS, this.provider);
+      const guardian = new Contract({ abi, address: GUARDIAN_CONTRACT_ADDRESS, providerOrAccount: this.provider });
       // We check if it exists and what the commitment is
       const commitment = await guardian.get_vault_commitment(vaultId);
       return commitment === 0n ? 'not_found' : 'locked';

@@ -5,7 +5,7 @@ import { abi } from '../lib/abi';
 import { pedersen, isValidBtcAddress, isValidHex } from '../lib/crypto';
 import { BaseAPIError } from '../lib/api';
 
-const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x0') as `0x${string}`;
+const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de') as `0x${string}`;
 
 export function useStarknetGuardian() {
     const { address, status } = useAccount();
@@ -51,7 +51,7 @@ export function useStarknetGuardian() {
         blinding: string
     ) => {
         validateInputs(btcAddress, dnaHash, blinding);
-        
+
         if (!contract) {
             throw new Error('Contract not initialized');
         }
@@ -95,7 +95,7 @@ export function useStarknetGuardian() {
     ): Promise<boolean> => {
         try {
             validateInputs(btcAddress, dnaHash, blinding);
-            
+
             if (!contract) {
                 throw new Error('Contract not initialized');
             }
@@ -195,15 +195,83 @@ export function useStarknetGuardian() {
         }
     };
 
+    /**
+     * Create an on-chain Bitcoin gift vault
+     */
+    const createOnChainGift = async (
+        vaultId: string,
+        commitment: string,
+        amount: bigint,
+        tokenAddress: string
+    ) => {
+        if (!address || !contract) {
+            throw new Error('Wallet not connected');
+        }
+
+        try {
+            // Multi-call: Approve + Create Vault
+            const result = await sendAsync([
+                {
+                    contractAddress: tokenAddress,
+                    entrypoint: 'approve',
+                    calldata: [CONTRACT_ADDRESS, amount.toString(), '0'] // u256 low, high
+                },
+                {
+                    contractAddress: CONTRACT_ADDRESS,
+                    entrypoint: 'create_onchain_gift',
+                    calldata: [vaultId, commitment, amount.toString(), '0', tokenAddress]
+                }
+            ]);
+
+            return result;
+        } catch (error) {
+            console.error('Failed to create on-chain gift:', error);
+            throw error;
+        }
+    };
+
+    /**
+     * Claim an on-chain Bitcoin gift
+     */
+    const claimOnChainGift = async (
+        vaultId: string,
+        dnaHash: string,
+        blinding: string,
+        recipient: string
+    ) => {
+        if (!address || !contract) {
+            throw new Error('Wallet not connected');
+        }
+
+        try {
+            const result = await sendAsync([
+                contract.populate('claim_onchain_gift', [
+                    vaultId,
+                    dnaHash,
+                    blinding,
+                    recipient
+                ]),
+            ]);
+
+            return result;
+        } catch (error) {
+            console.error('Failed to claim on-chain gift:', error);
+            throw error;
+        }
+    };
+
     return {
         address,
         status,
         registerGuardian,
         verifyRecovery,
         authorizeBtcRecovery,
+        createOnChainGift,
+        claimOnChainGift,
         getCommitment,
         getGuardianCount,
         isConnected: status === 'connected',
     };
 }
+
 

@@ -4,6 +4,7 @@ import React from 'react';
 import { WalletButton } from './WalletButton';
 import { MusicalChunk } from '../lib/entropy-encoder';
 import { isValidBtcAddress } from '../lib/crypto';
+import { Tooltip } from './Tooltip';
 
 interface ProtocolFormProps {
   phase: 'registration' | 'recovery';
