@@ -26,16 +26,26 @@ export interface PatternValidation {
 let audioInitialized = false;
 let currentPattern: any = null;
 let drawCb: ((haps: any[], time: number) => void) | null = null;
+let engineStarted = false;
 
 /**
- * Initialize Strudel audio context
+ * Initialize Strudel audio context and engine
  */
-async function initStrudelAudio() {
+export async function initStrudelAudio() {
   if (audioInitialized) return;
 
   try {
+    // initAudioOnFirstClick handles the user interaction requirement
     initAudioOnFirstClick();
+    
+    // Explicitly resume the context if it exists
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+    
     audioInitialized = true;
+    console.log('Strudel audio initialized');
   } catch (error) {
     console.error('Failed to initialize Strudel audio:', error);
   }
@@ -53,19 +63,46 @@ export function setDrawCallback(callback: ((haps: any[], time: number) => void) 
  */
 export async function playStrudelCode(code: string): Promise<boolean> {
   try {
+    // 1. Ensure audio is initialized
     await initStrudelAudio();
-
-    if (currentPattern) {
-      currentPattern.stop();
+    
+    // 2. Resume context specifically before play attempt
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      await ctx.resume();
     }
 
+    // 3. Stop previous pattern if any
+    if (currentPattern) {
+      try {
+        currentPattern.stop();
+      } catch (e) {
+        console.warn('Error stopping previous pattern:', e);
+      }
+      currentPattern = null;
+    }
+
+    // 4. Evaluate and Start
+    // transpiler(code) -> evaluate(..., webaudioOutput)
     const transpiled = transpiler(code);
+    
+    // Use a small delay if engine was just started to avoid race conditions
+    if (!engineStarted) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      engineStarted = true;
+    }
+
     const pattern = evaluate(transpiled, webaudioOutput);
     
-    pattern.start();
-    currentPattern = pattern;
-
-    return true;
+    // Critical: check if pattern and start method exist
+    if (pattern && typeof pattern.start === 'function') {
+      pattern.start();
+      currentPattern = pattern;
+      return true;
+    } else {
+      console.error('Evaluated pattern is invalid or lacks start method:', pattern);
+      return false;
+    }
   } catch (error) {
     console.error('Failed to play Strudel code:', error);
     return false;

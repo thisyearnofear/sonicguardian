@@ -67,6 +67,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
   const [validationStates, setValidationStates] = useState<Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>>(new Map());
   const [showPatternExplorer, setShowPatternExplorer] = useState(false);
+  const [showAllPatterns, setShowAllPatterns] = useState(false);
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -431,9 +432,15 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       await stopStrudel();
       setIsAudioPlaying(false);
     } else {
+      setStatus('Initializing audio engine...');
       setIsAudioPlaying(true);
       const ok = await playStrudelCode(generatedCode);
-      if (!ok) setIsAudioPlaying(false);
+      if (!ok) {
+        setIsAudioPlaying(false);
+        setStatus('❌ Failed to start audio. Please try again.');
+      } else {
+        setStatus('Playing your guardian signature...');
+      }
     }
   };
 
@@ -444,15 +451,20 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       setActiveHaps([]);
       return;
     }
+    
     if (previewPlayingId) {
       await stopStrudel();
     }
+    
     setActiveHaps([]);
     setPreviewPlayingId(id);
+    setStatus(`Playing preview: ${id}...`);
+    
     const ok = await playStrudelCode(patternCode);
     if (!ok) {
       setPreviewPlayingId(null);
       setActiveHaps([]);
+      setStatus('❌ Audio engine busy or initialization failed. Try clicking again.');
     }
   };
 
@@ -636,7 +648,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
             {/* Pattern Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-              {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
+              {(showAllPatterns ? STRUDEL_PATTERN_LIBRARY : STRUDEL_PATTERN_LIBRARY.slice(0, 6)).map((pattern) => (
                 <button
                   key={pattern.name}
                   onClick={() => setSelectedPatternId(pattern.name)}
@@ -655,6 +667,16 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <p className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{pattern.vibe}</p>
                 </button>
               ))}
+            </div>
+
+            {/* Progressive Disclosure Toggle */}
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={() => setShowAllPatterns(!showAllPatterns)}
+                className="px-6 py-2 rounded-full border border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/10 transition-all flex items-center gap-2"
+              >
+                {showAllPatterns ? '↑ Show Less' : `↓ Show All (${STRUDEL_PATTERN_LIBRARY.length})`}
+              </button>
             </div>
 
             {/* Code Display Section - Shows when pattern selected */}
