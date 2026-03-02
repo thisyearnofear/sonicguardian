@@ -61,9 +61,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
   const [validationStates, setValidationStates] = useState<Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>>(new Map());
   const [showPatternExplorer, setShowPatternExplorer] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(4);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -99,7 +96,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     const prefs = preferencesManager.get();
     setUseRealAI(prefs.useRealAI);
     setAudioState(prefs.audioEnabled);
-  }, []);
+  }, [phase]);
 
   useEffect(() => {
     // Initialize mobile detection
@@ -140,7 +137,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       }
       tooltips.forEach(tooltip => tooltip.destroy());
     };
-  }, [currentTheme]);
+  }, [currentTheme, phase]);
 
   // Real-time validation for Bitcoin address
   useEffect(() => {
@@ -192,7 +189,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         type: 'success'
       })));
     }
-  }, [recoveryVibe]);
+  }, [recoveryVibe, phase]);
 
   // Real-time validation for custom vibe
   useEffect(() => {
@@ -223,7 +220,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         type: 'success'
       })));
     }
-  }, [secretVibe, useSecureGeneration]);
+  }, [secretVibe, useSecureGeneration, phase]);
 
   useEffect(() => {
     if (visualizerContainerRef.current) {
@@ -233,7 +230,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       });
     }
     return () => visualizerRef.current?.dispose();
-  }, [currentTheme]);
+  }, [currentTheme, phase]);
 
   const handleGenerate = async () => {
     setIsProcessing(true);
@@ -541,12 +538,12 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             </div>
             
             {/* Pattern Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-6">
-              {STRUDEL_PATTERN_LIBRARY.slice(0, visibleCount).map((pattern) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              {STRUDEL_PATTERN_LIBRARY.map((pattern) => (
                 <button
                   key={pattern.name}
                   onClick={() => setSelectedPatternId(pattern.name)}
-                  className={`group p-4 rounded-xl border transition-all text-left animate-in fade-in zoom-in-95 duration-300 ${
+                  className={`group p-4 rounded-xl border transition-all text-left ${
                     selectedPatternId === pattern.name
                       ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
                       : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
@@ -563,25 +560,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                   <p className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{pattern.vibe}</p>
                 </button>
               ))}
-            </div>
-
-            {/* Progressive Disclosure Controls */}
-            <div className="flex justify-center gap-4 mb-8">
-              {visibleCount < STRUDEL_PATTERN_LIBRARY.length ? (
-                <button
-                  onClick={() => setVisibleCount(prev => Math.min(prev + 4, STRUDEL_PATTERN_LIBRARY.length))}
-                  className="px-6 py-2 rounded-full border border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/10 transition-all flex items-center gap-2"
-                >
-                  <span>✨</span> Show More Patterns ({STRUDEL_PATTERN_LIBRARY.length - visibleCount} left)
-                </button>
-              ) : (
-                <button
-                  onClick={() => setVisibleCount(4)}
-                  className="px-6 py-2 rounded-full border border-[color:var(--color-muted)]/30 text-[color:var(--color-muted)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-muted)]/10 transition-all"
-                >
-                  Show Less
-                </button>
-              )}
             </div>
 
             {/* Code Display Section - Shows when pattern selected */}
@@ -622,16 +600,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       : 'border-blue-500/20'
                   }`}>
                     <button
-                      onClick={() => {
-                        const code = STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code;
-                        navigator.clipboard.writeText(code);
-                        setCopiedId(selectedPatternId);
-                        setTimeout(() => setCopiedId(null), 2000);
-                      }}
-                      className="absolute top-3 right-3 p-2 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 transition-all text-xs flex items-center gap-2"
+                      onClick={() => navigator.clipboard.writeText(STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)!.code)}
+                      className="absolute top-3 right-3 p-2 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 transition-all text-xs"
                       title="Copy code"
                     >
-                      {copiedId === selectedPatternId ? '✅ Copied!' : '📋'}
+                      📋
                     </button>
                     
                     {/* Activity indicator */}
