@@ -180,6 +180,15 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeHaps, setActiveHaps] = useState<any[]>([]);
   const [showCode, setShowCode] = useState<string | null>(null);
+  const [currentLibraryPage, setCurrentLibraryPage] = useState(0);
+  
+  // Calculate current patterns to show based on page
+  const currentLibraryPatterns = React.useMemo(() => {
+    return STRUDEL_PATTERN_LIBRARY.slice(
+      currentLibraryPage * 4,
+      currentLibraryPage * 4 + 4
+    );
+  }, [currentLibraryPage]);
 
   // Setup visualizer callback
   useEffect(() => {
@@ -363,11 +372,40 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
           </p>
         </div>
 
+        {/* Progressive Disclosure Controls */}
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => setCurrentLibraryPage(prev => Math.max(0, prev - 1))}
+            disabled={currentLibraryPage === 0}
+            className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
+              currentLibraryPage === 0
+                ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
+                : 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] hover:bg-[color:var(--color-primary)]/30'
+            }`}
+          >
+            ◀ Previous
+          </button>
+          <span className="px-4 py-2 rounded-xl bg-white/10 text-[color:var(--color-muted)] font-bold text-xs uppercase tracking-wider">
+            Page {currentLibraryPage + 1} of {Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4)}
+          </span>
+          <button
+            onClick={() => setCurrentLibraryPage(prev => Math.min(Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4) - 1, prev + 1))}
+            disabled={currentLibraryPage >= Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4) - 1}
+            className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
+              currentLibraryPage >= Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4) - 1
+                ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
+                : 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] hover:bg-[color:var(--color-primary)]/30'
+            }`}
+          >
+            Next ▶
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {STRUDEL_PATTERN_LIBRARY.slice(0, 8).map((pattern, index) => (
+          {currentLibraryPatterns.map((pattern, index) => (
             <div
               key={index}
-              className="glass rounded-2xl p-5 border border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/50 transition-all"
+              className="glass rounded-2xl p-5 border border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/50 transition-all animate-in slide-in-from-left-4 duration-500"
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -417,6 +455,15 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
             </div>
           ))}
         </div>
+
+        {/* Empty State */}
+        {currentLibraryPatterns.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-xs text-[color:var(--color-muted)]">
+              No more patterns to show. Use the navigation buttons above to explore all patterns.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Educational Footer */}

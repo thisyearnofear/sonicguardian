@@ -37,9 +37,11 @@ pnpm dev
 - 🎵 **Musical seed phrases** - 256-bit entropy in 5-7 chunks
 - 🔐 **Privacy-first** - All crypto client-side
 - 🤖 **Agent-ready** - REST API + MCP server
-- 🎁 **Bitcoin gifting** - Starkzap integration
+- 🎁 **Bitcoin gifting** - Frontend-only gifting with ZK privacy
 - 🎼 **Strudel Showcase** - 16+ interactive pattern demos
 - 💰 **Xverse Support** - Bitcoin wallet integration for BTC Track
+- 📱 **Offline capable** - Works without network connectivity
+- 🔒 **Secure storage** - Encrypted blinding factors tied to wallet addresses
 
 ## Documentation
 
