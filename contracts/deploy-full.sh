@@ -19,8 +19,12 @@ echo ""
 # Load environment variables
 if [ -f .env.local ]; then
     source .env.local
+elif [ -f ../.env.local ]; then
+    source ../.env.local
 elif [ -f .env ]; then
     source .env
+elif [ -f ../.env ]; then
+    source ../.env
 fi
 
 # Configuration
@@ -79,6 +83,7 @@ echo -e "${BLUE}This may take 1-2 minutes...${NC}"
 
 CLASS_HASH=$(starkli declare \
     target/dev/sonic_guardian_SonicGuardian.contract_class.json \
+    --casm-file target/dev/sonic_guardian_SonicGuardian.compiled_contract_class.json \
     --private-key "$PRIVATE_KEY" \
     --rpc "$RPC" \
     2>&1 | grep -o '0x[a-fA-F0-9]\+' | tail -1 || echo "")

@@ -55,6 +55,7 @@ echo -e "${BLUE}This may take 1-2 minutes...${NC}"
 
 CLASS_HASH=$(starkli declare \
     target/dev/sonic_guardian_SonicGuardian.contract_class.json \
+    --casm-file target/dev/sonic_guardian_SonicGuardian.compiled_contract_class.json \
     --account "${STARKNET_ACCOUNT_ADDRESS}" \
     --keystore "${STARKNET_ACCOUNT_PRIVATE_KEY}" \
     --rpc "${RPC_URL}" \

@@ -20,6 +20,7 @@ trait ISonicGuardian<TContractState> {
     ) -> felt252;
     fn get_commitment(self: @TContractState, btc_address: felt252) -> felt252;
     fn get_guardian_count(self: @TContractState) -> u256;
+    fn get_version(self: @TContractState) -> felt252;
 }
 
 #[starknet::contract]
@@ -164,6 +165,10 @@ mod SonicGuardian {
 
         fn get_guardian_count(self: @ContractState) -> u256 {
             self.guardian_count.read()
+        }
+
+        fn get_version(self: @ContractState) -> felt252 {
+            'v1.0.0-hackathon-2026'
         }
     }
 }

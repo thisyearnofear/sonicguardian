@@ -65,7 +65,9 @@ pnpm dev
 
 **Account:** `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` ✅ Deployed
 
-**Contract:** ⏸️ Pending (Cairo compiler version mismatch - Scarb 2.16 vs Starkli 2.11)
+**Contract:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` ✅ Deployed
+
+**Explorer:** [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) | [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
 
 See **[Contract Deployment Status](./contracts/DEPLOYMENT_STATUS.md)** for details.
 
