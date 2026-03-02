@@ -28,6 +28,9 @@ import {
 } from '../lib/entropy-encoder';
 import { StrudelEditor } from './StrudelEditor';
 import { PatternExplorer } from './PatternExplorer';
+import { HelpModal } from './HelpModal';
+import { WelcomeModal } from './WelcomeModal';
+import { Tooltip } from './Tooltip';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -71,6 +74,17 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    // Show welcome modal for first-time visitors
+    const hasVisited = localStorage.getItem('sonic_guardian_visited');
+    if (!hasVisited) {
+      setShowWelcome(true);
+      localStorage.setItem('sonic_guardian_visited', 'true');
+    }
+  }, []);
 
   useEffect(() => {
     return () => { stopStrudel(); };
@@ -309,18 +323,18 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (!dnaHash || !isConnected) return;
     
     if (!btcAddress) {
-      setStatus('Please enter a Bitcoin address to guard.');
+      setStatus('⚠️ Please enter a Bitcoin address to guard.');
       return;
     }
     
     if (!isValidBtcAddress(btcAddress)) {
-      setStatus('Invalid Bitcoin address format.');
+      setStatus('❌ Invalid Bitcoin address format. Use bc1..., 1..., or 3... format.');
       return;
     }
 
     setIsCommiting(true);
     setOnChainStatus('pending');
-    setStatus('Anchoring Bitcoin Guardian to Starknet...');
+    setStatus('🔒 Creating Pedersen commitment and anchoring to Starknet...');
 
     try {
       // Register guardian with Pedersen commitment
@@ -330,11 +344,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       sessionManager.updateSession({ btcAddress });
       
       setOnChainStatus('success');
-      setStatus('Bitcoin Guardian Anchored. Your funds are protected.');
+      setStatus('✅ Guardian anchored! Your Bitcoin is now protected by your musical pattern.');
     } catch (error) {
       console.error(error);
       setOnChainStatus('failed');
-      setStatus('On-Chain Commitment Failed. Check wallet.');
+      setStatus('❌ Transaction failed. Check your wallet has enough ETH for gas fees.');
     } finally {
       setIsCommiting(false);
     }
@@ -487,13 +501,22 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
       <main className="relative z-10 container mx-auto px-4 py-12 flex flex-col items-center">
         {/* Header — tight, just the badge + title */}
-        <header className="text-center mb-6 space-y-3 max-w-2xl">
+        <header className="text-center mb-6 space-y-3 max-w-2xl relative">
           <div className="inline-block px-3 py-1 rounded-full border border-[color:var(--color-primary)]/40 text-[color:var(--color-primary)] text-[10px] font-bold tracking-widest uppercase animate-pulse-soft">
             Starknet Privacy Track ✦ ZK-Acoustic Protocol
           </div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-gradient leading-[1.05]">
             Sonic Guardian
           </h1>
+          
+          {/* Help Button */}
+          <button
+            onClick={() => setShowHelp(true)}
+            className="absolute top-0 right-0 w-8 h-8 rounded-full border border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] hover:bg-[color:var(--color-primary)]/10 transition-all flex items-center justify-center text-sm font-bold"
+            aria-label="Help"
+          >
+            ?
+          </button>
         </header>
 
         {/* Core Protocol Container */}
@@ -700,8 +723,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     </div>
 
                     <div className="relative group">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center gap-2">
                         Bitcoin Address to Guard
+                        <Tooltip text="The Bitcoin address you want to protect. Only you can recover it with your musical pattern.">
+                          <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
+                        </Tooltip>
                       </label>
                       <input
                         type="text"
@@ -1253,6 +1279,12 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           </div>
         </div>
       )}
+
+      {/* Help Modal */}
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+
+      {/* Welcome Modal */}
+      {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
     </div>
   );
 }

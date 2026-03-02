@@ -26,7 +26,9 @@ export interface GiftVault {
   createdAt: number;
   claimedAt?: number;
   recipient?: string;
+  txHash?: string; // Optional transaction hash for on-chain verification
 }
+
 
 export interface VaultMetadata {
   vaultId: string;
@@ -76,7 +78,7 @@ const storage = {
 
 export const sessionManager = {
   getCurrentSession: () => storage.get<UserSession | null>('session', null),
-  
+
   createSession: (
     secretPrompt: string,
     storedHash: string,
@@ -103,7 +105,7 @@ export const sessionManager = {
       return null;
     }
   },
-  
+
   updateSession: (updates: Partial<UserSession>) => {
     const session = sessionManager.getCurrentSession();
     if (!session) return null;
@@ -116,7 +118,7 @@ export const sessionManager = {
       return null;
     }
   },
-  
+
   addRecoveryAttempt: (prompt: string, success: boolean, hash?: string) => {
     const session = sessionManager.getCurrentSession();
     if (!session) return;
@@ -128,19 +130,19 @@ export const sessionManager = {
         success,
         hash
       });
-      
+
       // Keep only last 10 attempts
       if (session.recoveryAttempts.length > 10) {
         session.recoveryAttempts.splice(0, session.recoveryAttempts.length - 10);
       }
-      
+
       session.lastUsed = Date.now();
       storage.set('session', session);
     } catch (error) {
       console.error('Failed to add recovery attempt:', error);
     }
   },
-  
+
   clearSession: () => {
     try {
       storage.remove('session');
@@ -234,7 +236,7 @@ export const vaultManager = {
     try {
       const vaultId = vault.id;
       storage.set(`vault_${vaultId}`, vault);
-      
+
       // Also store metadata for quick listing
       const metadata: VaultMetadata = {
         vaultId: vault.id,
@@ -245,7 +247,7 @@ export const vaultManager = {
         musicalChunks: vault.musicalChunks
       };
       storage.set(`vault_meta_${vaultId}`, metadata);
-      
+
       return true;
     } catch (error) {
       console.error('Failed to create vault:', error);
@@ -272,10 +274,10 @@ export const vaultManager = {
     try {
       const vault = vaultManager.getVault(vaultId);
       if (!vault) return false;
-      
+
       const updated = { ...vault, ...updates };
       storage.set(`vault_${vaultId}`, updated);
-      
+
       // Update metadata if status changed
       if (updates.status) {
         const metadata = vaultManager.getVaultMetadata(vaultId);
@@ -284,7 +286,7 @@ export const vaultManager = {
           storage.set(`vault_meta_${vaultId}`, metadata);
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error('Failed to update vault:', error);
@@ -311,7 +313,7 @@ export const vaultManager = {
     try {
       const vaults: VaultMetadata[] = [];
       const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX + 'vault_meta_'));
-      
+
       for (const key of keys) {
         const metadata = storage.get<VaultMetadata | null>(key, null);
         if (metadata) {
@@ -322,7 +324,7 @@ export const vaultManager = {
           }
         }
       }
-      
+
       return vaults.sort((a, b) => b.createdAt - a.createdAt);
     } catch (error) {
       console.error('Failed to list user vaults:', error);
@@ -337,14 +339,14 @@ export const vaultManager = {
     try {
       const vaults: VaultMetadata[] = [];
       const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX + 'vault_meta_'));
-      
+
       for (const key of keys) {
         const metadata = storage.get<VaultMetadata | null>(key, null);
         if (metadata && metadata.sender === senderAddress) {
           vaults.push(metadata);
         }
       }
-      
+
       return vaults.sort((a, b) => b.createdAt - a.createdAt);
     } catch (error) {
       console.error('Failed to list sender vaults:', error);

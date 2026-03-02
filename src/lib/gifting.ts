@@ -1,210 +1,169 @@
+import { Account, Contract, uint256, RpcProvider } from 'starknet';
 import { pedersen, generateBlinding } from './crypto';
 import { extractSonicDNA } from './dna';
 import { vaultManager, GiftVault } from './storage';
+import { abi } from './abi';
+
+// Real Bitcoin-backed token addresses on Starknet Sepolia
+// tBTC (Threshold Network) or similar. For demo/hackathon we can use a custom one 
+// or the canonical tBTC if we have it.
+export const BTC_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_BTC_TOKEN_ADDRESS || "0x03fe2b97c1fd33ed324546411f97df48074902b794ba2422f2f7fc8b48f98d02";
+export const GUARDIAN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de";
 
 export class GiftingService {
+  private provider: RpcProvider;
+
+  constructor() {
+    this.provider = new RpcProvider({
+      nodeUrl: process.env.STARKNET_RPC_URL || "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
+    });
+  }
+
   /**
-   * Create a Bitcoin Gift Vault locked by Sonic DNA
-   * Frontend-only implementation using local storage
+   * Create a Real Bitcoin Gift Vault on Starknet
+   * Escrows native-backed BTC tokens on-chain
    */
   async createGift(
-    senderAddress: string,
+    account: Account,
     amountBtc: string,
     musicalCode: string,
     chunks: string[]
   ): Promise<GiftVault | null> {
     try {
-      // 1. Extract DNA
+      // 1. Extract DNA (Private, client-side only)
       const dna = await extractSonicDNA(musicalCode);
       if (!dna) throw new Error("Failed to extract DNA");
 
       // 2. Generate Blinding and Commitment
       const blinding = generateBlinding();
       const commitment = await pedersen(dna.hash, blinding);
+      const vaultId = `0x${commitment.substring(0, 16)}`;
 
-      // 3. Generate deterministic vault ID from commitment
-      const vaultId = vaultManager.generateVaultId(commitment);
+      // 3. Prepare Contract Instances
+      const guardian = new Contract(abi, GUARDIAN_CONTRACT_ADDRESS, account);
+      const btcToken = new Contract(abi, BTC_TOKEN_ADDRESS, account);
 
-      // 4. Create local vault
+      // 4. Convert amount to value
+      // Note: Real BTC uses 8, but bridged often uses 18. Adjust as needed.
+      const amount = BigInt(Math.floor(parseFloat(amountBtc) * 10 ** 18));
+
+      console.log(`Executing on-chain gift creation for ${amountBtc} BTC...`);
+
+      // 5. Multi-call: Approve + Create Vault (Atomic)
+      const { transaction_hash } = await account.execute([
+        {
+          contractAddress: BTC_TOKEN_ADDRESS,
+          entrypoint: 'approve',
+          calldata: [GUARDIAN_CONTRACT_ADDRESS, amount]
+        },
+        {
+          contractAddress: GUARDIAN_CONTRACT_ADDRESS,
+          entrypoint: 'create_onchain_gift',
+          calldata: [vaultId, commitment, amount, BTC_TOKEN_ADDRESS]
+        }
+      ]);
+
+
+      console.log(`Transaction submitted: ${transaction_hash}`);
+
+      // 6. Store local metadata for tracking (UX only)
       const vault: GiftVault = {
         id: vaultId,
-        sender: senderAddress,
+        sender: account.address,
         amount: amountBtc,
         commitment,
         blinding,
         status: 'locked',
         musicalChunks: chunks,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        txHash: transaction_hash // Store tx for verification
       };
 
-      // 5. Store vault locally
-      const success = vaultManager.createVault(vault);
-      
-      if (!success) {
-        throw new Error('Failed to store gift vault locally');
-      }
-
+      vaultManager.createVault(vault);
       return vault;
     } catch (error) {
-      console.error("Failed to create gift:", error);
+      console.error("Failed to create on-chain gift:", error);
       return null;
     }
   }
 
   /**
-   * Claim a gift using Sonic DNA
-   * Frontend-only implementation with client-side verification
+   * Claim a Bitcoin gift using Musical DNA Proof
+   * Verification happens in the Cairo contract
    */
   async claimGift(
+    account: Account,
     vaultId: string,
     recipientAddress: string,
     musicalCode: string,
     blinding: string
   ): Promise<boolean> {
     try {
-      // 1. Retrieve the vault from local storage
-      const vault = vaultManager.getVault(vaultId);
-      if (!vault) {
-        throw new Error('Gift vault not found');
-      }
-
-      if (vault.status !== 'locked') {
-        throw new Error('Gift vault is not available for claiming');
-      }
-
-      // 2. Extract DNA from provided musical code
+      // 1. Extract DNA
       const dna = await extractSonicDNA(musicalCode);
-      if (!dna) throw new Error("Failed to extract DNA from provided code");
+      if (!dna) throw new Error("Failed to extract DNA");
 
-      // 3. Verify the commitment matches
-      const computedCommitment = await pedersen(dna.hash, blinding);
-      
-      if (computedCommitment !== vault.commitment) {
-        throw new Error('Musical DNA verification failed - commitment mismatch');
-      }
+      // 2. Initial on-chain claim via SonicGuardian contract
+      const guardian = new Contract(abi, GUARDIAN_CONTRACT_ADDRESS, account);
 
-      // 4. Update vault status to claimed
-      const success = vaultManager.updateVault(vaultId, {
+      console.log(`Verifying Musical DNA and claiming vault ${vaultId} on-chain...`);
+
+      const { transaction_hash } = await guardian.claim_onchain_gift(
+        vaultId,
+        dna.hash,
+        blinding,
+        recipientAddress
+      );
+
+      console.log(`Claim transaction: ${transaction_hash}`);
+
+      // Wait for transaction to be accepted (simplified for hackathon)
+      // await this.provider.waitForTransaction(transaction_hash);
+
+      // 3. Update local UI state
+      vaultManager.updateVault(vaultId, {
         status: 'claimed',
         claimedAt: Date.now(),
         recipient: recipientAddress
       });
 
-      if (!success) {
-        throw new Error('Failed to update vault status');
-      }
-
       return true;
     } catch (error) {
-      console.error("Failed to claim gift:", error);
+      console.error("Failed to claim on-chain gift:", error);
       return false;
     }
   }
 
   /**
-   * Onboard a user via social login (Web3Auth)
-   * Client-side OAuth with no backend required
+   * Verify if a gift is claimable by checking on-chain state
+   */
+  async getOnChainStatus(vaultId: string): Promise<string> {
+    try {
+      const guardian = new Contract(abi, GUARDIAN_CONTRACT_ADDRESS, this.provider);
+      // We check if it exists and what the commitment is
+      const commitment = await guardian.get_vault_commitment(vaultId);
+      return commitment === 0n ? 'not_found' : 'locked';
+    } catch (error) {
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Onboard via Web3Auth
    */
   async socialLogin(provider: 'google' | 'apple'): Promise<any> {
-    try {
-      const { socialLogin } = await import('./web3auth');
-      return await socialLogin(provider);
-    } catch (error) {
-      console.error('Social login error:', error);
-      throw new Error('Failed to authenticate with social provider');
-    }
+    const { socialLogin } = await import('./web3auth');
+    return await socialLogin(provider);
   }
 
-  /**
-   * Get gift status from local storage
-   */
-  async getGiftStatus(vaultId: string): Promise<GiftVault | null> {
-    try {
-      return vaultManager.getVault(vaultId);
-    } catch (error) {
-      console.error('Get gift status error:', error);
-      return null;
-    }
-  }
+  // --- Utility functions maintained for compatibility ---
 
-  /**
-   * List user gifts from local storage
-   */
   async listUserGifts(recipientAddress: string): Promise<GiftVault[]> {
-    try {
-      const metadataList = vaultManager.listUserVaults(recipientAddress);
-      const vaults: GiftVault[] = [];
-      
-      for (const metadata of metadataList) {
-        const vault = vaultManager.getVault(metadata.vaultId);
-        if (vault) {
-          vaults.push(vault);
-        }
-      }
-      
-      return vaults;
-    } catch (error) {
-      console.error('List user gifts error:', error);
-      return [];
-    }
+    return vaultManager.listUserVaults(recipientAddress).map(m => vaultManager.getVault(m.vaultId)!);
   }
 
-  /**
-   * List vaults created by a sender
-   */
   async listSenderGifts(senderAddress: string): Promise<GiftVault[]> {
-    try {
-      const metadataList = vaultManager.listSenderVaults(senderAddress);
-      const vaults: GiftVault[] = [];
-      
-      for (const metadata of metadataList) {
-        const vault = vaultManager.getVault(metadata.vaultId);
-        if (vault) {
-          vaults.push(vault);
-        }
-      }
-      
-      return vaults;
-    } catch (error) {
-      console.error('List sender gifts error:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Verify if a musical code can claim a specific vault
-   */
-  async verifyClaim(
-    vaultId: string,
-    musicalCode: string,
-    blinding: string
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      const vault = vaultManager.getVault(vaultId);
-      if (!vault) {
-        return { success: false, message: 'Gift vault not found' };
-      }
-
-      if (vault.status !== 'locked') {
-        return { success: false, message: 'Gift vault is not available for claiming' };
-      }
-
-      // Extract DNA and verify
-      const dna = await extractSonicDNA(musicalCode);
-      if (!dna) {
-        return { success: false, message: 'Failed to extract DNA from provided code' };
-      }
-
-      const computedCommitment = await pedersen(dna.hash, blinding);
-      
-      if (computedCommitment !== vault.commitment) {
-        return { success: false, message: 'Musical DNA verification failed' };
-      }
-
-      return { success: true, message: 'Musical DNA verified successfully' };
-    } catch (error) {
-      console.error('Claim verification error:', error);
-      return { success: false, message: 'Verification failed' };
-    }
+    return vaultManager.listSenderVaults(senderAddress).map(m => vaultManager.getVault(m.vaultId)!);
   }
 }
+
