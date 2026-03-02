@@ -1,6 +1,6 @@
 'use client';
 
-import { evaluate, repl } from '@strudel/core';
+import { repl, evalScope } from '@strudel/core';
 import { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } from '@strudel/webaudio';
 import { transpiler } from '@strudel/transpiler';
 
@@ -21,6 +21,7 @@ let audioInitialized = false;
 let scheduler: any = null;
 let drawCb: ((haps: any[], time: number) => void) | null = null;
 let animationFrameId: number | null = null;
+let lastPattern: any = null;
 
 /**
  * Initialize Strudel audio context and engine
@@ -35,7 +36,16 @@ export async function initStrudelAudio() {
     // 2. Register standard sounds (samples + synths)
     await registerSynthSounds();
     
-    // 3. Initialize the REPL scheduler
+    // 3. Setup evaluation scope
+    // This makes Strudel functions (s, note, stack, etc) available to eval()
+    evalScope(
+      import('@strudel/core'),
+      import('@strudel/mini'),
+      import('@strudel/tonal'),
+      import('@strudel/webaudio')
+    );
+
+    // 4. Initialize the REPL scheduler
     const replInstance = repl({
       defaultOutput: webaudioOutput,
       getTime: () => getAudioContext().currentTime,
@@ -43,7 +53,7 @@ export async function initStrudelAudio() {
     
     scheduler = replInstance.scheduler;
     
-    // 4. Ensure context is running
+    // 5. Ensure context is running
     const ctx = getAudioContext();
     if (ctx && ctx.state === 'suspended') {
       await ctx.resume();
@@ -52,7 +62,7 @@ export async function initStrudelAudio() {
     audioInitialized = true;
     console.log('🌀 Strudel Engine Ready');
     
-    // 5. Start visualizer sync loop
+    // 6. Start visualizer sync loop
     startVisualizerLoop();
   } catch (error) {
     console.error('Failed to initialize Strudel audio:', error);
@@ -68,8 +78,6 @@ function startVisualizerLoop() {
   const loop = () => {
     if (drawCb && scheduler) {
       const time = getAudioContext().currentTime;
-      // Query haps in a window around current time
-      // scheduler.getHaps is the way to get currently active events
       const haps = scheduler.getHaps ? scheduler.getHaps(time - 0.1, time + 0.2) : [];
       drawCb(haps, time);
     }
@@ -91,32 +99,39 @@ export function setDrawCallback(callback: ((haps: any[], time: number) => void) 
  */
 export async function playStrudelCode(code: string): Promise<boolean> {
   try {
-    // Ensure engine is ready
     if (!audioInitialized) {
       await initStrudelAudio();
     }
 
-    // Resume context if needed (must be from user gesture)
     const ctx = getAudioContext();
     if (ctx && ctx.state === 'suspended') {
       await ctx.resume();
     }
 
     if (!scheduler) {
-      console.warn('Scheduler not ready, retrying init...');
       await initStrudelAudio();
       if (!scheduler) throw new Error('Could not initialize Strudel scheduler');
     }
 
-    // Transpile and evaluate to get a pattern
-    const transpiled = transpiler(code);
-    const pattern = evaluate(transpiled);
-    
-    // Check if pattern is valid before setting
-    if (!pattern) throw new Error('Evaluation resulted in empty pattern');
+    // Stop previous to be safe
+    if (lastPattern) {
+      try { lastPattern.stop(); } catch(e) {}
+    }
 
-    // scheduler.setPattern is the robust way to update
+    // 1. Transpile string to JS code
+    const transpiled = transpiler(code);
+    
+    // 2. Evaluate string to get a Pattern object
+    // Note: eval() works here because evalScope has populated the environment
+    const pattern = await eval(transpiled);
+    
+    if (!pattern || typeof pattern.queryArc !== 'function') {
+      throw new Error('Evaluation did not return a valid Pattern object');
+    }
+
+    // 3. Set and start
     scheduler.setPattern(pattern);
+    lastPattern = pattern;
     
     if (scheduler.status !== 'started') {
       scheduler.start();
@@ -136,6 +151,10 @@ export function stopStrudel() {
   try {
     if (scheduler) {
       scheduler.stop();
+    }
+    if (lastPattern) {
+      lastPattern.stop();
+      lastPattern = null;
     }
   } catch (error) {
     console.error('Failed to stop Strudel:', error);
