@@ -1,6 +1,14 @@
 # Sonic Guardian Documentation
 
-Welcome to the Sonic Guardian documentation hub.
+**Deployed on Starknet Sepolia** 🎉
+
+## ✅ Deployment Status
+
+| Component | Status | Link |
+|-----------|--------|------|
+| **Account** | ✅ Deployed | [Voyager](https://sepolia.voyager.online/contract/0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df) |
+| **Contract** | ✅ Deployed | [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) |
+| **Frontend** | ✅ Production-Ready | All features functional |
 
 ---
 

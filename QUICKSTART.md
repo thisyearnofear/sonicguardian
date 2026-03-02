@@ -8,13 +8,14 @@
 
 ## 🏆 Hackathon Submission
 
-**Tracks:** Privacy + Bitcoin  
-**Status:** ✅ Account Deployed | ⏸️ Contract Pending (tooling issue)
+**Tracks:** Privacy + Bitcoin
+**Status:** ✅ Account Deployed | ✅ Contract Deployed
 
 ### Quick Links
 - **Pattern Explorer:** Click "🎓 Explore 16+ Strudel Features" in-app
-- **Contract Status:** [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md)
+- **Contract:** [0x02b680ba... on Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
 - **Account TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)
+- **Deployment Docs:** [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md)
 
 ---
 
@@ -128,10 +129,6 @@ pnpm dev
 **Explorer:** [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) | [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
 
 See [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md) for deployment details.
-
----
-
-## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
