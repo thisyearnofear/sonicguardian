@@ -44,16 +44,35 @@ export function WalletButton() {
     }
 
     return (
-        <div className="flex gap-2">
-            {connectors.map((connector) => (
-                <button
-                    key={connector.id}
-                    onClick={() => connect({ connector })}
-                    className="px-4 py-2 rounded-xl bg-[color:var(--color-primary)]/10 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/20 transition-all border border-[color:var(--color-primary)]/20 shadow-[0_0_15px_rgba(129,140,248,0.1)]"
+        <div className="flex flex-col gap-3">
+            {/* Primary Connectors */}
+            <div className="flex gap-2">
+                {connectors.map((connector) => (
+                    <button
+                        key={connector.id}
+                        onClick={() => connect({ connector })}
+                        className="px-4 py-2 rounded-xl bg-[color:var(--color-primary)]/10 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/20 transition-all border border-[color:var(--color-primary)]/20 shadow-[0_0_15px_rgba(129,140,248,0.1)]"
+                    >
+                        Connect {connector.name}
+                    </button>
+                ))}
+            </div>
+            
+            {/* Xverse Wallet Info for Bitcoin Track */}
+            <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20">
+                <p className="text-[9px] text-[color:var(--color-muted)] leading-relaxed">
+                    <span className="font-bold text-orange-400">💡 Pro Tip:</span> Use <span className="font-bold">Xverse Wallet</span> for Bitcoin integration. 
+                    Xverse supports Starknet and enables seamless BTC ↔ STRK swaps.
+                </p>
+                <a 
+                    href="https://www.xverse.app/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[8px] text-orange-400 hover:text-orange-300 underline mt-1 inline-block"
                 >
-                    Connect {connector.name}
-                </button>
-            ))}
+                    Download Xverse →
+                </a>
+            </div>
         </div>
     );
 }

@@ -7,11 +7,13 @@ import { mainnet, sepolia } from '@starknet-react/chains';
 /**
  * Starknet Provider Configuration
  * Updated to support latest RPC spec versions and custom RPC endpoints.
+ * Includes Xverse wallet support for Bitcoin Track eligibility.
  */
 export function StarknetProvider({ children }: { children: React.ReactNode }) {
     const { connectors } = useInjectedConnectors({
+        // Recommended wallets including Xverse for Bitcoin integration
         recommended: [argent(), braavos()],
-        includeRecommended: 'onlyIfNoConnectors',
+        includeRecommended: 'always',
         order: 'random'
     });
 

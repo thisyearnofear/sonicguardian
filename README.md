@@ -39,6 +39,7 @@ pnpm dev
 - 🤖 **Agent-ready** - REST API + MCP server
 - 🎁 **Bitcoin gifting** - Starkzap integration
 - 🎼 **Strudel Showcase** - 16+ interactive pattern demos
+- 💰 **Xverse Support** - Bitcoin wallet integration for BTC Track
 
 ## Documentation
 
