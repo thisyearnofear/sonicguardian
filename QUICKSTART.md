@@ -2,15 +2,27 @@
 
 > "Your vibe is now your signature."
 
-Sonic Guardian enables Bitcoin recovery using musical patterns as seed phrases, with ZK proofs on Starknet.
+**Private Bitcoin recovery using musical patterns on Starknet.**
+
+---
+
+## 🏆 Hackathon Submission
+
+**Tracks:** Privacy + Bitcoin  
+**Status:** ✅ Account Deployed | ⏸️ Contract Pending (tooling issue)
+
+### Quick Links
+- **Pattern Explorer:** Click "🎓 Explore 16+ Strudel Features" in-app
+- **Contract Status:** [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md)
+- **Account TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)
 
 ---
 
 ## TL;DR
 
 1. **User enters a musical vibe** (e.g., "dark industrial techno")
-2. **AI translates it to Strudel code** (Venice AI)
-3. **DNA is extracted and committed** to Starknet
+2. **AI translates to Strudel code** (Venice AI)
+3. **DNA extracted & committed** to Starknet (Pedersen hash)
 4. **Recovery = replay the pattern** - no seed words needed
 
 ---
@@ -20,8 +32,8 @@ Sonic Guardian enables Bitcoin recovery using musical patterns as seed phrases, 
 ### 1. Registration
 1. Enter a Bitcoin address to protect
 2. Either:
-   - Use **Secure Mode** (256-bit entropy, musical chunks)
-   - Or enter a **Custom Vibe** ("fast dark techno")
+   - **Secure Mode** (256-bit entropy, musical chunks)
+   - **Custom Vibe** ("fast dark techno")
 3. Click **Generate Guardian**
 4. Hear your acoustic signature
 5. Optionally anchor to Starknet
@@ -32,6 +44,19 @@ Sonic Guardian enables Bitcoin recovery using musical patterns as seed phrases, 
 3. Enter your musical pattern/chunks
 4. Click **Verify & Recover**
 5. If matched → funds unlocked
+
+---
+
+## 🎼 Pattern Explorer (NEW!)
+
+Click **"🎓 Explore 16+ Strudel Features"** in the app to explore:
+
+- **Rhythm Patterns**: Basic rhythms, syncopation, polyrhythms, Euclidean
+- **Harmony**: Scales, chord progressions (I-V-vi-IV, ii-V-I), arpeggios
+- **Transformations**: `slow()`, `fast()`, rotation, probability
+- **Effects**: Filter automation, distortion, reverb, bitcrush
+
+Each demo is **interactive** - click play to hear it!
 
 ---
 
@@ -49,50 +74,73 @@ Sonic Guardian enables Bitcoin recovery using musical patterns as seed phrases, 
 
 ## API Endpoints
 
+### Generate Pattern
 ```bash
-# Register
-POST /api/agent/register
-{ "btcAddress": "bc1q...", "musicalPattern": "sawtooth c2 ~ c2" }
+curl -X POST http://localhost:3000/api/agent/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "dark industrial techno"}'
+```
 
-# Verify
-POST /api/agent/verify
-{ "btcAddress": "bc1q...", "musicalPattern": "sawtooth c2 ~ c2" }
-
-# Trigger
-POST /api/agent/trigger
-{ "btcAddress": "bc1q...", "musicalPattern": "sawtooth c2 ~ c2" }
+### Extract DNA
+```bash
+curl -X POST http://localhost:3000/api/dna/extract \
+  -H "Content-Type: application/json" \
+  -d '{"code": "s(\"bd*4\").distort(2)"}'
 ```
 
 ---
 
-## Running Locally
+## Quick Setup
 
 ```bash
+# 1. Install
 pnpm install
+
+# 2. Configure
+cp .env.example .env.local
+# Edit .env.local with your keys
+
+# 3. Run
 pnpm dev
 # Open http://localhost:3000
 ```
 
 ---
 
-## What's Built
+## Documentation
 
-- [x] Next.js 14 app with Three.js visualizer
-- [x] Venice AI integration for vibe→code
-- [x] Musical pattern DNA extraction
-- [x] Pedersen commitment logic
-- [x] Agent REST API
-- [x] MCP server package (standalone)
-- [x] Cairo contracts (contracts/)
-- [x] Starknet wallet integration
+| Doc | Purpose |
+|-----|---------|
+| [`README.md`](./README.md) | Overview & hackathon info |
+| [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md) | Contract deployment status |
+| [`contracts/DEPLOYMENT.md`](./contracts/DEPLOYMENT.md) | Full deployment guide |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Technical architecture |
+| [`docs/AGENTS.md`](./docs/AGENTS.md) | Agent API documentation |
 
 ---
 
-## Key Files
+## Contract Status
 
-- `src/components/SonicGuardian.tsx` - Main UI
-- `src/lib/ai-agent.ts` - AI synthesis
-- `src/lib/dna.ts` - DNA extraction
-- `src/lib/crypto.ts` - Pedersen commitments
-- `contracts/src/lib.cairo` - Starknet contract
-- `packages/mcp-server/` - Agent integration
+**Account:** `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` ✅ Deployed
+
+**Contract:** ⏸️ Pending (Cairo compiler version mismatch)
+
+See [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md) for details.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| UI | Next.js 14, Three.js |
+| AI | Venice AI |
+| Audio | Strudel |
+| Chain | Starknet (Cairo) |
+| Wallet | WalletConnect |
+
+---
+
+## License
+
+MIT

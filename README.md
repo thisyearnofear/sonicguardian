@@ -11,9 +11,10 @@
 **Status:** ✅ Account Deployed | ⏸️ Contract Deployment (tooling issue)
 
 ### Quick Links for Judges
-- **Pattern Explorer:** Click "🎓 Explore 16+ Strudel Features" in the app
-- **Deployment Status:** [contracts/DEPLOYMENT_STATUS.md](./contracts/DEPLOYMENT_STATUS.md)
-- **Account TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)
+- **[Quick Start](./QUICKSTART.md)** - Project overview & demo flow
+- **[Pattern Explorer](./docs/STRUDEL.md)** - 16+ interactive Strudel demos
+- **[Contract Status](./contracts/DEPLOYMENT_STATUS.md)** - Deployment info
+- **[Account TX](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)** - On-chain proof
 
 ## Quick Start
 
@@ -41,10 +42,14 @@ pnpm dev
 
 ## Documentation
 
-- [Quick Start](./QUICKSTART.md) - TL;DR for judges
-- [Architecture](./docs/ARCHITECTURE.md) - Privacy & tech stack
-- [Agent API](./docs/AGENTS.md) - REST & MCP integration
-- [Deployment](./contracts/DEPLOYMENT_STATUS.md) - Contract status
+| Doc | Purpose |
+|-----|---------|
+| **[Quick Start](./QUICKSTART.md)** | TL;DR for judges |
+| **[Docs Hub](./docs/)** | Complete documentation |
+| **[Architecture](./docs/ARCHITECTURE.md)** | Privacy & tech stack |
+| **[Agent API](./docs/AGENTS.md)** | REST & MCP integration |
+| **[Strudel](./docs/STRUDEL.md)** | Pattern generation |
+| **[Deployment](./contracts/DEPLOYMENT_STATUS.md)** | Contract status |
 
 ## Tech Stack
 
@@ -62,7 +67,7 @@ pnpm dev
 
 **Contract:** ⏸️ Pending (Cairo compiler version mismatch - Scarb 2.16 vs Starkli 2.11)
 
-See [contracts/DEPLOYMENT_STATUS.md](./contracts/DEPLOYMENT_STATUS.md) for details.
+See **[Contract Deployment Status](./contracts/DEPLOYMENT_STATUS.md)** for details.
 
 ## License
 
