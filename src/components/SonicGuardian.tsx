@@ -34,6 +34,7 @@ import { HelpModal } from './HelpModal';
 import { WelcomeModal } from './WelcomeModal';
 import { Tooltip } from './Tooltip';
 import { ProtocolForm } from './ProtocolForm';
+import { TutorialTrigger } from './InteractiveTutorial';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;

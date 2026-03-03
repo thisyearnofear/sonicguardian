@@ -8,6 +8,7 @@ import { extractSonicDNA, detectAndReconstructCode } from '@/lib/dna';
 import { isValidBtcAddress } from '@/lib/crypto';
 import {
   generateEntropy,
+  encodePattern,
   chunksToSeedPhrase,
   type MusicalChunk
 } from '@/lib/entropy-encoder';
