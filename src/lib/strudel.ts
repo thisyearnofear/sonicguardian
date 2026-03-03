@@ -32,13 +32,12 @@ export async function initStrudelAudio() {
     // 1. Prepare Web Audio resume on interaction
     initAudioOnFirstClick();
     
-    // 2. Register synth sounds + load drum machine samples from CDN
-    const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main/';
+    // 2. Register synth sounds + load drum machine samples using github: format
     await Promise.all([
       registerSynthSounds(),
-      samples(`${ds}/tidal-drum-machines.json`),
-      samples(`${ds}/Dirt-Samples.json`),
-      samples(`${ds}/piano.json`),
+      samples('github:tidalcycles/dirt-samples'),
+      samples('github:felixroos/dough-drum-machines.json'),
+      samples('github:felixroos/dough-samples/piano.json'),
     ]);
     // Alias bank names (e.g. "RolandTR909" -> actual sample paths)
     await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);

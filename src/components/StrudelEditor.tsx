@@ -101,7 +101,6 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
           },
           prebake: async () => {
             initAudioOnFirstClick();
-            const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main/';
             const loadModules = evalScope(
               import('@strudel/core'),
               import('@strudel/mini'),
@@ -111,9 +110,9 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
             await Promise.all([
               loadModules,
               registerSynthSounds(),
-              samples(`${ds}/tidal-drum-machines.json`),
-              samples(`${ds}/Dirt-Samples.json`),
-              samples(`${ds}/piano.json`),
+              samples('github:tidalcycles/dirt-samples'),
+              samples('github:felixroos/dough-drum-machines.json'),
+              samples('github:felixroos/dough-samples/piano.json'),
             ]);
             await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
           },
