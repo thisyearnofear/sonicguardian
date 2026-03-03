@@ -36,8 +36,8 @@ export async function initStrudelAudio() {
     await Promise.all([
       registerSynthSounds(),
       samples('github:tidalcycles/dirt-samples'),
-      samples('github:felixroos/dough-samples/tidal-drum-machines.json'),
-      samples('github:felixroos/dough-samples/piano.json'),
+      samples('github:felixroos/dough-samples/tidal-drum-machines'),
+      samples('github:felixroos/dough-samples/piano'),
     ]);
     // Alias bank names (e.g. "RolandTR909" -> actual sample paths)
     await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
