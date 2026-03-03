@@ -110,11 +110,8 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
             await Promise.all([
               loadModules,
               registerSynthSounds(),
-              samples('github:tidalcycles/dirt-samples'),
-              samples('github:felixroos/dough-samples/tidal-drum-machines'),
-              samples('github:felixroos/dough-samples/piano'),
+              samples('github:tidalcycles/Dirt-Samples'),
             ]);
-            await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
           },
         });
 

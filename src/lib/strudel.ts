@@ -32,15 +32,11 @@ export async function initStrudelAudio() {
     // 1. Prepare Web Audio resume on interaction
     initAudioOnFirstClick();
     
-    // 2. Register synth sounds + load drum machine samples using github: format
+    // 2. Register synth sounds + load samples using github: format
     await Promise.all([
       registerSynthSounds(),
-      samples('github:tidalcycles/dirt-samples'),
-      samples('github:felixroos/dough-samples/tidal-drum-machines'),
-      samples('github:felixroos/dough-samples/piano'),
+      samples('github:tidalcycles/Dirt-Samples'),
     ]);
-    // Alias bank names (e.g. "RolandTR909" -> actual sample paths)
-    await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
     
     // 3. Setup evaluation scope — makes Strudel functions (s, note, stack, etc.) available
     await evalScope(
