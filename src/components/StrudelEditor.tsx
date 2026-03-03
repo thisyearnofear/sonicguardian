@@ -111,7 +111,7 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
               loadModules,
               registerSynthSounds(),
               samples('github:tidalcycles/dirt-samples'),
-              samples('github:felixroos/dough-drum-machines.json'),
+              samples('github:felixroos/dough-samples/tidal-drum-machines.json'),
               samples('github:felixroos/dough-samples/piano.json'),
             ]);
             await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
