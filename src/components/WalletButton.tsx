@@ -44,33 +44,38 @@ export function WalletButton() {
     }
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
             {/* Primary Connectors */}
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
                 {connectors.map((connector) => (
                     <button
                         key={connector.id}
                         onClick={() => connect({ connector })}
-                        className="px-4 py-2 rounded-xl bg-[color:var(--color-primary)]/10 text-[color:var(--color-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/20 transition-all border border-[color:var(--color-primary)]/20 shadow-[0_0_15px_rgba(129,140,248,0.1)]"
+                        className="w-full px-5 py-3 rounded-xl bg-[color:var(--color-primary)]/10 text-[color:var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/20 transition-all border border-[color:var(--color-primary)]/20 shadow-[0_0_15px_rgba(129,140,248,0.1)] flex items-center justify-center gap-2"
                     >
-                        Connect {connector.name}
+                        <span>Connect {connector.name}</span>
                     </button>
                 ))}
             </div>
             
             {/* Xverse Wallet Info for Bitcoin Track */}
-            <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20">
-                <p className="text-[9px] text-[color:var(--color-muted)] leading-relaxed">
-                    <span className="font-bold text-orange-400">💡 Pro Tip:</span> Use <span className="font-bold">Xverse Wallet</span> for Bitcoin integration. 
-                    Xverse supports Starknet and enables seamless BTC ↔ STRK swaps.
+            <div className="p-4 rounded-xl bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-orange-500/20 shadow-sm">
+                <div className="flex items-start gap-2 mb-2">
+                    <span className="text-sm">💡</span>
+                    <p className="text-xs font-bold text-orange-400 uppercase tracking-tight">Pro Tip</p>
+                </div>
+                <p className="text-[11px] text-[color:var(--color-muted)] leading-relaxed">
+                    Use <span className="font-bold text-white/90">Xverse Wallet</span> for Bitcoin integration. 
+                    Xverse supports Starknet and enables seamless <span className="text-orange-300/80 italic">BTC ↔ STRK</span> swaps.
                 </p>
                 <a 
                     href="https://www.xverse.app/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-[8px] text-orange-400 hover:text-orange-300 underline mt-1 inline-block"
+                    className="mt-3 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-[10px] text-orange-400 font-bold uppercase tracking-widest rounded-lg border border-orange-500/20 transition-all inline-flex items-center gap-2 group"
                 >
-                    Download Xverse →
+                    Download Xverse 
+                    <span className="group-hover:translate-x-0.5 transition-transform">→</span>
                 </a>
             </div>
         </div>

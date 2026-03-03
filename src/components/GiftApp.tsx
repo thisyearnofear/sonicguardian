@@ -1,22 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { GiftingService } from '../lib/gifting';
-import { GiftVault } from '../lib/storage';
-import { playStrudelCode, stopStrudel, setDrawCallback } from '../lib/strudel';
-import { extractSonicDNA, detectAndReconstructCode } from '../lib/dna';
-import { isValidBtcAddress } from '../lib/crypto';
+import { GiftingService } from '@/lib/gifting';
+import { GiftVault } from '@/lib/storage';
+import { playStrudelCode, stopStrudel, setDrawCallback } from '@/lib/strudel';
+import { extractSonicDNA, detectAndReconstructCode } from '@/lib/dna';
+import { isValidBtcAddress } from '@/lib/crypto';
 import {
   generateEntropy,
-  encodePattern,
   chunksToSeedPhrase,
   type MusicalChunk
-} from '../lib/entropy-encoder';
+} from '@/lib/entropy-encoder';
 import { StrudelVisualizer } from './StrudelVisualizer';
-import { initWeb3Auth, socialLogin } from '../lib/web3auth';
+import { initWeb3Auth, socialLogin } from '@/lib/web3auth';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
-import { generateBlinding, pedersen, encryptData, deriveKeyFromSignature, decryptData } from '../lib/crypto';
-import { uploadToIPFS, downloadFromIPFS } from '../lib/ipfs';
+import { generateBlinding, pedersen, encryptData, deriveKeyFromSignature, decryptData } from '@/lib/crypto';
+import { uploadToIPFS, downloadFromIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
 import { WalletButton } from './WalletButton';
 import { Tooltip } from './Tooltip';

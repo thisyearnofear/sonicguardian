@@ -6,7 +6,7 @@ import { transpiler } from '@strudel/transpiler';
 
 /**
  * Strudel Code Parser, Validator, and Player
- * Optimized for reliability and visualizer synchronization.
+ * Uses the official repl.evaluate() API for reliable playback.
  */
 
 export interface ParsedPattern {
@@ -18,16 +18,15 @@ export interface ParsedPattern {
 
 // Singleton state
 let audioInitialized = false;
-let scheduler: any = null;
+let replInstance: { evaluate: (code: string, autostart?: boolean) => Promise<any>; stop: () => void; start: () => void; scheduler: any; state: any } | null = null;
 let drawCb: ((haps: any[], time: number) => void) | null = null;
 let animationFrameId: number | null = null;
-let lastPattern: any = null;
 
 /**
  * Initialize Strudel audio context and engine
  */
 export async function initStrudelAudio() {
-  if (audioInitialized && scheduler) return;
+  if (audioInitialized && replInstance) return;
 
   try {
     // 1. Prepare Web Audio resume on interaction
@@ -36,25 +35,23 @@ export async function initStrudelAudio() {
     // 2. Register standard sounds (samples + synths)
     await registerSynthSounds();
     
-    // 3. Setup evaluation scope
-    // This makes Strudel functions (s, note, stack, etc) available to eval()
-    evalScope(
+    // 3. Setup evaluation scope — makes Strudel functions (s, note, stack, etc.) available
+    await evalScope(
       import('@strudel/core'),
       import('@strudel/mini'),
       import('@strudel/tonal'),
       import('@strudel/webaudio')
     );
 
-    // 4. Initialize the REPL scheduler
-    const replInstance = repl({
+    // 4. Initialize the REPL — this is the correct API for code evaluation
+    const ctx = getAudioContext();
+    replInstance = repl({
       defaultOutput: webaudioOutput,
-      getTime: () => getAudioContext().currentTime,
+      getTime: () => ctx.currentTime,
+      transpiler,
     });
     
-    scheduler = replInstance.scheduler;
-    
     // 5. Ensure context is running
-    const ctx = getAudioContext();
     if (ctx && ctx.state === 'suspended') {
       await ctx.resume();
     }
@@ -76,9 +73,9 @@ function startVisualizerLoop() {
   if (animationFrameId) return;
 
   const loop = () => {
-    if (drawCb && scheduler) {
+    if (drawCb && replInstance?.scheduler) {
       const time = getAudioContext().currentTime;
-      const haps = scheduler.getHaps ? scheduler.getHaps(time - 0.1, time + 0.2) : [];
+      const haps = replInstance.scheduler.getHaps ? replInstance.scheduler.getHaps(time - 0.1, time + 0.2) : [];
       drawCb(haps, time);
     }
     animationFrameId = requestAnimationFrame(loop);
@@ -95,11 +92,11 @@ export function setDrawCallback(callback: ((haps: any[], time: number) => void) 
 }
 
 /**
- * Play Strudel code pattern
+ * Play Strudel code pattern using the repl's evaluate() method
  */
 export async function playStrudelCode(code: string): Promise<boolean> {
   try {
-    if (!audioInitialized) {
+    if (!audioInitialized || !replInstance) {
       await initStrudelAudio();
     }
 
@@ -108,34 +105,13 @@ export async function playStrudelCode(code: string): Promise<boolean> {
       await ctx.resume();
     }
 
-    if (!scheduler) {
-      await initStrudelAudio();
-      if (!scheduler) throw new Error('Could not initialize Strudel scheduler');
+    if (!replInstance) {
+      throw new Error('Could not initialize Strudel REPL');
     }
 
-    // Stop previous to be safe
-    if (lastPattern) {
-      try { lastPattern.stop(); } catch(e) {}
-    }
-
-    // 1. Transpile string to JS code
-    const transpiled = transpiler(code);
-    
-    // 2. Evaluate string to get a Pattern object
-    // Note: eval() works here because evalScope has populated the environment
-    const pattern = await eval(transpiled);
-    
-    if (!pattern || typeof pattern.queryArc !== 'function') {
-      throw new Error('Evaluation did not return a valid Pattern object');
-    }
-
-    // 3. Set and start
-    scheduler.setPattern(pattern);
-    lastPattern = pattern;
-    
-    if (scheduler.status !== 'started') {
-      scheduler.start();
-    }
+    // Use the repl's evaluate() — it handles transpilation, eval scoping,
+    // pattern collection ($: syntax), and scheduler wiring correctly.
+    await replInstance.evaluate(code);
 
     return true;
   } catch (error) {
@@ -149,12 +125,8 @@ export async function playStrudelCode(code: string): Promise<boolean> {
  */
 export function stopStrudel() {
   try {
-    if (scheduler) {
-      scheduler.stop();
-    }
-    if (lastPattern) {
-      lastPattern.stop();
-      lastPattern = null;
+    if (replInstance) {
+      replInstance.stop();
     }
   } catch (error) {
     console.error('Failed to stop Strudel:', error);
@@ -165,7 +137,7 @@ export function stopStrudel() {
  * Check if Strudel is currently playing
  */
 export function isStrudelPlaying(): boolean {
-  return scheduler && (scheduler.status === 'started' || scheduler.status === 'running');
+  return replInstance?.state?.started ?? false;
 }
 
 /**
@@ -275,7 +247,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
     {
         name: 'Deep Sub Bass',
         vibe: 'minimal sub bass with space',
-        code: `note("c1 ~ ~ silence, f1 ~ ~ ~").s("sine")
+        code: `note("c1 ~ ~ ~, f1 ~ ~ ~").s("sine")
   .lpf(120)
   .gain(1.0)
   .room(0.2)`,
@@ -297,53 +269,54 @@ export const STRUDEL_PATTERN_LIBRARY = [
     {
         name: 'Chord Progression I-V-vi-IV',
         vibe: 'emotional pop progression with pad sounds',
-        code: `note("I V vi IV").scale("C:major").chord("major7")
+        code: `note("<c3 e3 g3 b3> <g3 b3 d4 f4> <a3 c4 e4 g4> <f3 a3 c4 e4>")
   .s("gm_pad_sweep")
   .slow(4)
   .room(0.8)
   .gain(0.6)`,
         category: 'harmonic',
-        features: ['chord progression', 'scales', 'seventh chords', 'slow evolution'],
+        features: ['chord progression', 'slow evolution'],
     },
     {
-        name: 'Jazz Turnaround',
-        vibe: 'sophisticated ii-V-I progression',
-        code: `note("ii V I").scale("D:minor").chord("minor7")
+        name: 'Jazz Voicings',
+        vibe: 'rich jazz chord voicings',
+        code: `note("<[d3,f3,a3,c4] [g3,b3,d4,f4] [c3,e3,g3,b3]>")
   .s("piano")
   .slow(2)
-  .echo(0.3)
-  .room(0.5)`,
+  .room(0.5)
+  .gain(0.7)`,
         category: 'harmonic',
-        features: ['jazz harmony', 'ii-V-I', 'piano', 'echo'],
+        features: ['jazz harmony', 'piano', 'voicings'],
     },
     {
         name: 'Arpeggiated Synth',
         vibe: 'trance-style arpeggio with filter sweep',
-        code: `note("c3 e3 g3 c4 e4 g4").pattern("<c3 g3 e3 c4>")
+        code: `note("c3 e3 g3 c4 e4 g4 e4 c4")
   .s("supersaw")
   .lpf("<200 400 800 1600>")
   .gain(0.5)
-  .fast(4)`,
+  .fast(2)`,
         category: 'melodic',
-        features: ['arpeggio', 'pattern transformation', 'filter sweep', 'trance'],
+        features: ['arpeggio', 'filter sweep', 'trance'],
     },
     {
         name: 'Pentatonic Melody',
-        vibe: 'flowing pentatonic phrase with triplets',
-        code: `note("c4 d4 e4 g4 a4 c5").pattern("[c4 e4 g4]/3 [d4 a4 c5]/3")
+        vibe: 'flowing pentatonic phrase with delay',
+        code: `note("c4 d4 e4 g4 a4 c5 a4 g4")
   .s("sine")
   .room(0.6)
   .delay(0.25)
-  .gain(0.5)`,
+  .gain(0.5)
+  .slow(2)`,
         category: 'melodic',
-        features: ['pentatonic', 'triplets', 'delay', 'flowing'],
+        features: ['pentatonic', 'delay', 'flowing'],
     },
     {
         name: 'Call and Response',
         vibe: 'two-part melodic conversation',
         code: `stack(
-  note("c4 e4 g4").s("triangle").slow(2).room(0.4),
-  note("g4 e4 c4").s("sine").slow(2).room(0.6).delay(0.3)
+  note("c4 e4 g4 ~").s("triangle").slow(2).room(0.4),
+  note("~ ~ ~ g4 e4 c4 ~ ~").s("sine").slow(2).room(0.6).delay(0.3)
 ).cpm(90)`,
         category: 'melodic',
         features: ['call and response', 'counterpoint', 'stacking'],
@@ -364,7 +337,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
     {
         name: 'Evolving Pad',
         vibe: 'morphing chordal texture with movement',
-        code: `note("<I vi IV V>").scale("A:minor").chord("minor")
+        code: `note("<[c3,e3,g3] [a2,c3,e3] [f2,a2,c3] [g2,b2,d3]>")
   .s("gm_pad_warm")
   .slow(8)
   .lpf("<300 500 800 600>")
@@ -375,13 +348,13 @@ export const STRUDEL_PATTERN_LIBRARY = [
     },
     {
         name: 'Granular Texture',
-        vibe: 'experimental granular synthesis soundscape',
+        vibe: 'experimental synthesis soundscape',
         code: `stack(
-  note("c4").s("fm").slow(16).vibrato(0.05).room(0.9),
-  note("e4").s("sine").slow(12).phaser(0.6).gain(0.3)
+  note("c4").s("fm").slow(16).room(0.9).gain(0.3),
+  note("e4").s("sine").slow(12).gain(0.3).room(0.8)
 ).cpm(50)`,
         category: 'ambient',
-        features: ['granular', 'FM synthesis', 'modulation', 'experimental'],
+        features: ['FM synthesis', 'experimental'],
     },
     
     // === COMPLEX & LAYERED ===
@@ -399,14 +372,14 @@ export const STRUDEL_PATTERN_LIBRARY = [
     },
     {
         name: 'Ambient Technique',
-        vibe: 'downtempo with probabilistic elements',
+        vibe: 'downtempo with layers',
         code: `stack(
-  s("bd[~ ~][~ bd]").bank("RolandTR808").gain(0.9),
-  note("I vi IV V").scale("E:dorian").s("gm_strings").slow(4).room(0.8),
-  note("c4 d4 e4 g4").pattern("c4?0.5 d4?0.5 e4?0.5 g4?0.5").s("sine").slow(2).delay(0.4)
+  s("bd ~ [bd ~] ~").bank("RolandTR808").gain(0.9),
+  note("<[e3,g3,b3] [d3,f3,a3] [c3,e3,g3]>").s("gm_pad_sweep").slow(4).room(0.8).gain(0.4),
+  note("c4 d4 e4 g4").s("sine").slow(2).delay(0.4).gain(0.3)
 ).cpm(95)`,
         category: 'complex',
-        features: ['probabilistic', 'downtempo', 'strings', 'conditional'],
+        features: ['downtempo', 'layered'],
     },
     {
         name: 'Polyrhythmic Study',
@@ -425,7 +398,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
     {
         name: 'House Piano',
         vibe: 'classic house music piano riff',
-        code: `note("[c3 e3 g3] [f3 a3 c4] [g3 b3 d4] [e3 g3 b3]").pattern("<c3 g3 e3 c4>")
+        code: `note("[c3,e3,g3] [f3,a3,c4] [g3,b3,d4] [e3,g3,b3]")
   .s("piano")
   .room(0.4)
   .gain(0.7)
@@ -438,7 +411,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         vibe: 'fast breakbeat with amen-style pattern',
         code: `stack(
   s("bd [~ bd] [bd ~] bd").bank("RolandTR909").gain(1.0),
-  s("sd [~ sd ~ sd]").bank("RolandTR909").gain(0.8),
+  s("~ [~ sd ~ sd]").bank("RolandTR909").gain(0.8),
   s("hh*16").gain(0.3).lpf(10000),
   note("c1 ~ ~ ~").s("sine").lpf(80).gain(0.9)
 ).cpm(174)`,
@@ -449,10 +422,10 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Lo-Fi Hip Hop',
         vibe: 'chill lo-fi beat with vinyl warmth',
         code: `stack(
-  s("bd ~ [bd ~]").bank("RolandTR808").gain(0.8).crush(8),
+  s("bd ~ [bd ~] ~").bank("RolandTR808").gain(0.8).crush(8),
   s("~ sd ~ ~").bank("RolandTR808").gain(0.6).crush(8),
   s("hh*8").gain(0.3).crush(8).lpf(4000),
-  note("I vi IV V").scale("F:major").s("piano").slow(4).room(0.5).crush(10)
+  note("<[f3,a3,c4] [d3,f3,a3] [bb2,d3,f3] [c3,e3,g3]>").s("piano").slow(4).room(0.5).crush(10).gain(0.4)
 ).cpm(85)`,
         category: 'complex',
         features: ['lo-fi', 'bitcrush', 'chill', 'hip hop'],

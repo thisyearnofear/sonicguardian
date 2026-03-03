@@ -1,6 +1,6 @@
 'use client';
 
-import { getTooltipText } from '../lib/tooltips';
+import { getTooltipText } from '@/lib/tooltips';
 
 interface TooltipProps {
   text?: string;

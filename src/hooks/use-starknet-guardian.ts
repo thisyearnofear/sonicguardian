@@ -1,9 +1,9 @@
 'use client';
 
 import { useAccount, useContract, useSendTransaction } from '@starknet-react/core';
-import { abi } from '../lib/abi';
-import { pedersen, isValidBtcAddress, isValidHex } from '../lib/crypto';
-import { BaseAPIError } from '../lib/api';
+import { abi } from '@/lib/abi';
+import { pedersen, isValidBtcAddress, isValidHex } from '@/lib/crypto';
+import { BaseAPIError } from '@/lib/api';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de') as `0x${string}`;
 

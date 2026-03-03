@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { extractSonicDNA, SonicDNA } from '../lib/dna';
-import { generateStrudelCode } from '../lib/ai-agent';
-import { generateAudio } from '../lib/audio';
+import { extractSonicDNA, SonicDNA } from '@/lib/dna';
+import { generateStrudelCode } from '@/lib/ai-agent';
+import { generateAudio } from '@/lib/audio';
 import {
   sessionManager,
   preferencesManager,
@@ -11,29 +11,29 @@ import {
   setAudioEnabled,
   isRealAIEnabled,
   setRealAIEnabled
-} from '../lib/storage';
-import { getCurrentTheme, setTheme } from '../lib/theme';
-import { SonicVisualizer } from '../lib/visualizer';
-import { WalletButton } from './WalletButton';
+} from '@/lib/storage';
+import { getCurrentTheme, setTheme } from '@/lib/theme';
+import { SonicVisualizer } from '@/lib/visualizer';
+import { Header } from './Header';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
-import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '../lib/strudel';
-import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, decryptData } from '../lib/crypto';
-import { uploadToIPFS, downloadFromIPFS } from '../lib/ipfs';
+import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel';
+import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, decryptData } from '@/lib/crypto';
+import { uploadToIPFS, downloadFromIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
-import { MobileUtils } from '../lib/mobile';
+import { MobileUtils } from '@/lib/mobile';
 import {
   generateEntropy,
   encodePattern,
   chunksToSeedPhrase,
   type MusicalChunk,
   type EncodedPattern
-} from '../lib/entropy-encoder';
+} from '@/lib/entropy-encoder';
 import { StrudelEditor } from './StrudelEditor';
 import { PatternExplorer } from './PatternExplorer';
 import { HelpModal } from './HelpModal';
 import { WelcomeModal } from './WelcomeModal';
 import { Tooltip } from './Tooltip';
-import { InteractiveTutorial, TutorialTrigger } from './InteractiveTutorial';
+import { ProtocolForm } from './ProtocolForm';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -115,8 +115,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
   useEffect(() => {
     const theme = getCurrentTheme();
-    setCurrentTheme(theme as any);
-    setTheme(theme as any);
+    setTheme(theme);
     const prefs = preferencesManager.get();
     setUseRealAI(prefs.useRealAI);
     setAudioState(prefs.audioEnabled);
@@ -581,7 +580,8 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
 
   return (
-    <div className="relative min-h-screen bg-[color:var(--background)] selection:bg-[color:var(--color-primary)] selection:text-white">
+    <div className="relative min-h-screen bg-[color:var(--background)] selection:bg-[color:var(--color-primary)] selection:text-white pt-20">
+      <Header />
       <div className="noise" />
       <div className="bg-gradient-mesh" />
 
@@ -764,294 +764,47 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           </div>
 
           {/* Interface Cards */}
-          <div className="lg:col-span-12 max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="lg:col-span-12 max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
 
             {/* Input Side - Streamlined */}
-            <div className="glass rounded-[var(--border-radius)] p-8 space-y-6 flex flex-col justify-between">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold tracking-tight">
-                    {phase === 'registration' ? 'Create Guardian' : 'Recover Access'}
-                  </h2>
-                  <div className="flex gap-2">
-                    <WalletButton />
-                    <button
-                      onClick={() => {
-                        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-                        setCurrentTheme(newTheme);
-                        setTheme(newTheme);
-                      }}
-                      className="p-2 rounded-full hover:bg-[color:var(--color-foreground)]/5 transition-colors"
-                    >
-                      {currentTheme === 'dark' ? '☀️' : '🌙'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        const newState = !audioEnabled;
-                        setAudioEnabled(newState);
-                        setAudioState(newState);
-                      }}
-                      className={`p-2 rounded-full transition-colors ${audioEnabled ? 'bg-[color:var(--color-primary)]/10 text-[color:var(--color-primary)]' : 'hover:bg-[color:var(--color-foreground)]/5'}`}
-                    >
-                      {audioEnabled ? '🔊' : '🔇'}
-                    </button>
-                  </div>
-                </div>
-
-                {phase === 'registration' ? (
-                  // Registration Flow - Secure First
-                  <div className="space-y-4" ref={formContainerRef}>
-                    <div className="p-4 rounded-xl bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse" />
-                        <p className="text-[10px] font-bold text-[color:var(--color-success)] uppercase tracking-widest">
-                          Secure Mode • 256-bit Entropy
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-                        System generates cryptographically secure musical pattern. Memorize the chunks for recovery.
-                      </p>
-                    </div>
-
-                    <div className="relative group">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center gap-2">
-                        Bitcoin Address to Guard
-                        <Tooltip id="bitcoin-address-validation" position="top">
-                          <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
-                        </Tooltip>
-                      </label>
-                      <input
-                        type="text"
-                        value={btcAddress}
-                        onChange={(e) => setBtcAddress(e.target.value)}
-                        placeholder="bc1q... or 1... or 3..."
-                        className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
-                        disabled={isProcessing}
-                      />
-                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
-                      {validationStates.get('btc-address') && (
-                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
-                          validationStates.get('btc-address')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                            'text-[color:var(--color-success)]'
-                          }`}>
-                          <span className={`w-2 h-2 rounded-full ${validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
-                            validationStates.get('btc-address')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                              'bg-[color:var(--color-success)]'
-                            }`} />
-                          <Tooltip id="btc-address-validation" position="top">
-                            <span>{validationStates.get('btc-address')?.message}</span>
-                          </Tooltip>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Advanced: Custom Pattern (collapsed by default) */}
-                    {!useSecureGeneration && (
-                      <div className="relative group animate-in fade-in slide-in-from-top-2 duration-300">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-                          Custom Vibe (Advanced)
-                        </label>
-                        <input
-                          type="text"
-                          value={secretVibe}
-                          onChange={(e) => setSecretVibe(e.target.value)}
-                          placeholder="e.g. A fast, dark industrial techno loop"
-                          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm italic"
-                          disabled={isProcessing}
-                        />
-                        <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
-                        {validationStates.get('custom-vibe') && (
-                          <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('custom-vibe')?.type === 'error' ? 'text-[color:var(--color-error)]' :
-                            validationStates.get('custom-vibe')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                              'text-[color:var(--color-success)]'
-                            }`}>
-                            <span className={`w-2 h-2 rounded-full ${validationStates.get('custom-vibe')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
-                              validationStates.get('custom-vibe')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                                'bg-[color:var(--color-success)]'
-                              }`} />
-                            {validationStates.get('custom-vibe')?.message}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => setUseSecureGeneration(!useSecureGeneration)}
-                      className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors underline"
-                    >
-                      {useSecureGeneration ? '→ Use custom vibe instead' : '← Back to secure mode'}
-                    </button>
-
-                    {dnaHash && (
-                      <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700 space-y-3">
-                        <button
-                          onClick={handleCommitToStarknet}
-                          disabled={isCommiting || !isConnected || !btcAddress || !isValidBtcAddress(btcAddress)}
-                          className={`w-full py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${onChainStatus === 'success'
-                            ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5'
-                            : 'border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed'
-                            }`}
-                        >
-                          {onChainStatus === 'success' ? (
-                            <>✨ Guardian Anchored</>
-                          ) : (
-                            <>
-                              {isConnected ? '🔒 Anchor to Starknet' : '⚠️ Connect Wallet First'}
-                              {isCommiting && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-                            </>
-                          )}
-                        </button>
-
-                        {onChainStatus === 'success' && btcAddress && (
-                          <button
-                            onClick={async () => {
-                              setStatus('Reading commitment from contract...');
-                              const commitment = await getCommitment(btcAddress);
-                              if (commitment && commitment !== '0') {
-                                setStatus(`✅ On-chain verified! Commitment: ${commitment.slice(0, 10)}...`);
-                              } else {
-                                setStatus('⚠️ No commitment found on-chain');
-                              }
-                            }}
-                            className="w-full py-3 rounded-xl border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] transition-all text-xs font-medium tracking-wide"
-                          >
-                            🔍 Verify On-Chain
-                          </button>
-                        )}
-
-                        {onChainStatus === 'success' && (
-                          <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-1000">
-                            <button
-                              onClick={handleDecentralizedBackup}
-                              disabled={isBackingUp || !isConnected}
-                              className={`w-full py-4 rounded-xl border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] hover:bg-[color:var(--color-accent)]/5 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${backupCid ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5' : ''}`}
-                            >
-                              {backupCid ? (
-                                <>🌐 Backed up to IPFS</>
-                              ) : (
-                                <>
-                                  💾 Decentralized Backup (PL Genesis)
-                                  {isBackingUp && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-                                </>
-                              )}
-                            </button>
-                            {backupCid && (
-                              <div className="mt-2 p-2 rounded-lg bg-black/40 border border-white/5 flex items-center justify-between">
-                                <span className="text-[8px] font-mono opacity-50 truncate mr-2">CID: {backupCid}</span>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(backupCid);
-                                    setStatus('CID copied to clipboard!');
-                                  }}
-                                  className="text-[8px] font-bold uppercase tracking-tighter hover:text-[color:var(--color-primary)] transition-colors"
-                                >
-                                  Copy
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // Recovery Flow
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20">
-                      <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-                        Enter your musical chunks, vibe, or an IPFS CID to recover access to your Bitcoin guardian.
-                      </p>
-                    </div>
-
-                    <div className="relative group">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center justify-between">
-                        <span>Recovery Input (Vibe or IPFS CID)</span>
-                        {recoveryVibe.startsWith('Qm') && (
-                          <span className="text-[8px] text-[color:var(--color-success)] font-bold animate-pulse">IPFS CID Detected</span>
-                        )}
-                      </label>
-                      <input
-                        type="text"
-                        value={recoveryVibe}
-                        onChange={(e) => setRecoveryVibe(e.target.value)}
-                        placeholder="Chunks, Vibe or Qm..."
-                        className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm"
-                        disabled={isProcessing}
-                      />
-                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
-                      {validationStates.get('recovery-phrase') && (
-                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('recovery-phrase')?.type === 'error' ? 'text-[color:var(--color-error)]' :
-                          validationStates.get('recovery-phrase')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                            'text-[color:var(--color-success)]'
-                          }`}>
-                          <span className={`w-2 h-2 rounded-full ${validationStates.get('recovery-phrase')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
-                            validationStates.get('recovery-phrase')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                              'bg-[color:var(--color-success)]'
-                            }`} />
-                          {validationStates.get('recovery-phrase')?.message}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="relative group">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-                        Bitcoin Address to Recover
-                      </label>
-                      <input
-                        type="text"
-                        value={btcAddress}
-                        onChange={(e) => setBtcAddress(e.target.value)}
-                        placeholder="bc1q... or 1... or 3..."
-                        className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
-                        disabled={isProcessing}
-                      />
-                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
-                      {validationStates.get('btc-address') && (
-                        <div className={`mt-1 text-[9px] flex items-center gap-2 ${validationStates.get('btc-address')?.type === 'error' ? 'text-[color:var(--color-error)]' :
-                          validationStates.get('btc-address')?.type === 'warning' ? 'text-[color:var(--color-warning)]' :
-                            'text-[color:var(--color-success)]'
-                          }`}>
-                          <span className={`w-2 h-2 rounded-full ${validationStates.get('btc-address')?.type === 'error' ? 'bg-[color:var(--color-error)]' :
-                            validationStates.get('btc-address')?.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
-                              'bg-[color:var(--color-success)]'
-                            }`} />
-                          {validationStates.get('btc-address')?.message}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-[color:var(--color-border)]">
-                <button
-                  onClick={phase === 'registration' ? handleGenerate : handleRecovery}
-                  disabled={isProcessing}
-                  className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden group relative"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--color-primary)] to-[color:var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="relative z-10">
-                    {isProcessing ? 'Processing...' : (
-                      phase === 'registration'
-                        ? 'Generate Guardian'
-                        : 'Verify & Recover'
-                    )}
-                  </span>
-                  {isProcessing && <div className="w-4 h-4 border-2 border-[color:var(--background)] border-t-transparent rounded-full animate-spin relative z-10" />}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsLocked(!isLocked);
-                    setPhase(phase === 'registration' ? 'recovery' : 'registration');
-                    setStatus('');
-                  }}
-                  className="w-full py-3 rounded-xl border border-[color:var(--color-border)] text-[color:var(--color-muted)] text-xs font-bold uppercase tracking-widest hover:text-[color:var(--color-foreground)] hover:border-[color:var(--color-foreground)] transition-all"
-                >
-                  {phase === 'registration' ? 'Switch to Recovery →' : '← Back to Registration'}
-                </button>
-              </div>
-            </div>
+            <ProtocolForm
+              phase={phase}
+              btcAddress={btcAddress}
+              setBtcAddress={setBtcAddress}
+              secretVibe={secretVibe}
+              setSecretVibe={setSecretVibe}
+              recoveryVibe={recoveryVibe}
+              setRecoveryVibe={setRecoveryVibe}
+              dnaHash={dnaHash}
+              useSecureGeneration={useSecureGeneration}
+              setUseSecureGeneration={setUseSecureGeneration}
+              isProcessing={isProcessing}
+              isConnected={isConnected}
+              onChainStatus={onChainStatus}
+              onGenerate={handleGenerate}
+              onRecovery={handleRecovery}
+              onCommit={handleCommitToStarknet}
+              onSwitchPhase={() => {
+                setIsLocked(!isLocked);
+                setPhase(phase === 'registration' ? 'recovery' : 'registration');
+                setStatus('');
+              }}
+              validationStates={validationStates}
+              isCommiting={isCommiting}
+              onVerifyOnChain={async () => {
+                setStatus('Reading commitment from contract...');
+                const commitment = await getCommitment(btcAddress);
+                if (commitment && commitment !== '0') {
+                  setStatus(`✅ On-chain verified! Commitment: ${commitment.slice(0, 10)}...`);
+                } else {
+                  setStatus('⚠️ No commitment found on-chain');
+                }
+              }}
+              onDecentralizedBackup={handleDecentralizedBackup}
+              isBackingUp={isBackingUp}
+              backupCid={backupCid}
+              setStatus={setStatus}
+            />
 
             {/* Tech Output Side */}
             <div className="glass rounded-[var(--border-radius)] p-8 flex flex-col justify-between overflow-hidden relative">

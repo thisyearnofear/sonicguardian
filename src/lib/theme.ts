@@ -100,10 +100,12 @@ export function applyTheme(theme: Theme): void {
   root.style.setProperty('--box-shadow', config.boxShadow);
 
   root.classList.remove('dark', 'light');
-  if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  if (theme === 'dark') {
     root.classList.add('dark');
-  } else {
+  } else if (theme === 'light') {
     root.classList.add('light');
+  } else if (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    root.classList.add('dark');
   }
 }
 

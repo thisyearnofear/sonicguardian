@@ -1,10 +1,14 @@
 'use client';
 
 import React from 'react';
-import { WalletButton } from './WalletButton';
-import { MusicalChunk } from '../lib/entropy-encoder';
-import { isValidBtcAddress } from '../lib/crypto';
+import { isValidBtcAddress } from '@/lib/crypto';
 import { Tooltip } from './Tooltip';
+
+interface ValidationState {
+  isValid: boolean;
+  message: string;
+  type: 'error' | 'warning' | 'success';
+}
 
 interface ProtocolFormProps {
   phase: 'registration' | 'recovery';
@@ -24,6 +28,14 @@ interface ProtocolFormProps {
   onRecovery: () => void;
   onCommit: () => void;
   onSwitchPhase: () => void;
+  validationStates: Map<string, ValidationState>;
+  isCommiting?: boolean;
+  getCommitment?: (address: string) => Promise<string | null>;
+  onVerifyOnChain?: () => void;
+  onDecentralizedBackup?: () => void;
+  isBackingUp?: boolean;
+  backupCid?: string | null;
+  setStatus?: (status: string) => void;
 }
 
 export function ProtocolForm({
@@ -44,15 +56,21 @@ export function ProtocolForm({
   onRecovery,
   onCommit,
   onSwitchPhase,
+  validationStates,
+  isCommiting = false,
+  onVerifyOnChain,
+  onDecentralizedBackup,
+  isBackingUp = false,
+  backupCid = null,
+  setStatus,
 }: ProtocolFormProps) {
   return (
-    <div className="glass rounded-[var(--border-radius)] p-8 space-y-6 flex flex-col justify-between">
+    <div className="glass rounded-[var(--border-radius)] p-8 space-y-6 flex flex-col justify-between h-full">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">
             {phase === 'registration' ? 'Create Guardian' : 'Recover Access'}
           </h2>
-          <WalletButton />
         </div>
 
         {phase === 'registration' ? (
@@ -68,6 +86,13 @@ export function ProtocolForm({
             isConnected={isConnected}
             onChainStatus={onChainStatus}
             onCommit={onCommit}
+            validationStates={validationStates}
+            isCommiting={isCommiting}
+            onVerifyOnChain={onVerifyOnChain}
+            onDecentralizedBackup={onDecentralizedBackup}
+            isBackingUp={isBackingUp}
+            backupCid={backupCid}
+            setStatus={setStatus}
           />
         ) : (
           <RecoveryForm
@@ -76,24 +101,33 @@ export function ProtocolForm({
             recoveryVibe={recoveryVibe}
             setRecoveryVibe={setRecoveryVibe}
             isProcessing={isProcessing}
+            validationStates={validationStates}
           />
         )}
       </div>
 
-      <div className="space-y-4 pt-4 border-t border-[color:var(--color-border)]">
+      <div className="space-y-4 pt-4 border-t border-[color:var(--color-border)] mt-auto">
         <button
           onClick={phase === 'registration' ? onGenerate : onRecovery}
           disabled={isProcessing}
-          className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+          className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden group relative"
         >
-          {isProcessing ? 'Processing...' : phase === 'registration' ? 'Generate Guardian' : 'Verify & Recover'}
+          <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--color-primary)] to-[color:var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
+          <span className="relative z-10">
+            {isProcessing ? 'Processing...' : (
+              phase === 'registration'
+                ? 'Generate Guardian'
+                : 'Verify & Recover'
+            )}
+          </span>
+          {isProcessing && <div className="w-4 h-4 border-2 border-[color:var(--background)] border-t-transparent rounded-full animate-spin relative z-10" />}
         </button>
 
         <button
           onClick={onSwitchPhase}
           className="w-full py-3 rounded-xl border border-[color:var(--color-border)] text-[color:var(--color-muted)] text-xs font-bold uppercase tracking-widest hover:text-[color:var(--color-foreground)] hover:border-[color:var(--color-foreground)] transition-all"
         >
-          {phase === 'registration' ? 'Switch to Recovery' : 'Back to Registration'}
+          {phase === 'registration' ? 'Switch to Recovery →' : '← Back to Registration'}
         </button>
       </div>
     </div>
@@ -112,6 +146,13 @@ function RegistrationForm({
   isConnected,
   onChainStatus,
   onCommit,
+  validationStates,
+  isCommiting,
+  onVerifyOnChain,
+  onDecentralizedBackup,
+  isBackingUp,
+  backupCid,
+  setStatus,
 }: {
   btcAddress: string;
   setBtcAddress: (value: string) => void;
@@ -124,40 +165,68 @@ function RegistrationForm({
   isConnected: boolean;
   onChainStatus: 'none' | 'pending' | 'success' | 'failed';
   onCommit: () => void;
+  validationStates: Map<string, ValidationState>;
+  isCommiting: boolean;
+  onVerifyOnChain?: () => void;
+  onDecentralizedBackup?: () => void;
+  isBackingUp: boolean;
+  backupCid: string | null;
+  setStatus?: (status: string) => void;
 }) {
+  const btcValidation = validationStates.get('btc-address');
+  const vibeValidation = validationStates.get('custom-vibe');
+
   return (
     <div className="space-y-4">
-      <div className="p-4 rounded-xl bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20">
+      <div className="p-4 rounded-xl bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse" />
+          <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
           <p className="text-[10px] font-bold text-[color:var(--color-success)] uppercase tracking-widest">
-            Secure Mode - 256-bit Entropy
+            Secure Mode • 256-bit Entropy
           </p>
         </div>
-        <p className="text-[10px] text-[color:var(--color-muted)]">
-          System generates cryptographically secure musical pattern.
+        <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+          System generates cryptographically secure musical pattern. <span className="text-[color:var(--color-foreground)]/60 font-medium">Memorize the chunks for recovery.</span>
         </p>
       </div>
 
-      <div className="relative">
-        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-          Bitcoin Address
-        </label>
+      <div className="relative group">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] group-focus-within:text-[color:var(--color-accent)] transition-colors flex items-center gap-2">
+            Bitcoin Address to Guard
+            <Tooltip id="bitcoin-address-validation">
+              <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
+            </Tooltip>
+          </label>
+        </div>
         <input
           type="text"
           value={btcAddress}
           onChange={(e) => setBtcAddress(e.target.value)}
           placeholder="bc1q... or 1... or 3..."
-          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none font-mono text-sm"
+          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
           disabled={isProcessing}
         />
-        {btcAddress && !isValidBtcAddress(btcAddress) && (
-          <p className="text-[9px] text-red-500 mt-1">Invalid Bitcoin address</p>
+        <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
+        
+        {btcValidation && (
+          <div className={`mt-1.5 text-[9px] flex items-center gap-2 ${
+            btcValidation.type === 'error' ? 'text-[color:var(--color-error)]' :
+            btcValidation.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+            'text-[color:var(--color-success)]'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${
+              btcValidation.type === 'error' ? 'bg-[color:var(--color-error)]' :
+              btcValidation.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+              'bg-[color:var(--color-success)]'
+            }`} />
+            {btcValidation.message}
+          </div>
         )}
       </div>
 
       {!useSecureGeneration && (
-        <div className="relative">
+        <div className="relative group animate-in fade-in slide-in-from-top-2 duration-300">
           <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
             Custom Vibe (Advanced)
           </label>
@@ -166,31 +235,100 @@ function RegistrationForm({
             value={secretVibe}
             onChange={(e) => setSecretVibe(e.target.value)}
             placeholder="e.g. A fast, dark industrial techno loop"
-            className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none font-light text-sm italic"
+            className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm italic"
             disabled={isProcessing}
           />
+          <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
+          
+          {vibeValidation && (
+            <div className={`mt-1.5 text-[9px] flex items-center gap-2 ${
+              vibeValidation.type === 'error' ? 'text-[color:var(--color-error)]' :
+              vibeValidation.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+              'text-[color:var(--color-success)]'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                vibeValidation.type === 'error' ? 'bg-[color:var(--color-error)]' :
+                vibeValidation.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+                'bg-[color:var(--color-success)]'
+              }`} />
+              {vibeValidation.message}
+            </div>
+          )}
         </div>
       )}
 
       <button
         onClick={() => setUseSecureGeneration(!useSecureGeneration)}
-        className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] underline"
+        className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors underline block"
       >
-        {useSecureGeneration ? 'Use custom vibe instead' : 'Use secure mode'}
+        {useSecureGeneration ? '→ Use custom vibe instead' : '← Back to secure mode'}
       </button>
 
       {dnaHash && (
-        <button
-          onClick={onCommit}
-          disabled={!isConnected || !btcAddress || !isValidBtcAddress(btcAddress) || onChainStatus === 'pending'}
-          className={`w-full py-4 rounded-xl border-2 text-xs font-bold tracking-widest uppercase ${
-            onChainStatus === 'success'
-              ? 'border-green-500 text-green-500 bg-green-500/5'
-              : 'border-[color:var(--color-primary)] text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50'
-          }`}
-        >
-          {onChainStatus === 'success' ? 'Anchored' : isConnected ? 'Anchor to Starknet' : 'Connect Wallet First'}
-        </button>
+        <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700 space-y-3">
+          <button
+            onClick={onCommit}
+            disabled={isCommiting || !isConnected || !btcAddress || !isValidBtcAddress(btcAddress)}
+            className={`w-full py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${
+              onChainStatus === 'success'
+                ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5'
+                : 'border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed'
+            }`}
+          >
+            {onChainStatus === 'success' ? (
+              <>✨ Guardian Anchored</>
+            ) : (
+              <>
+                {isConnected ? '🔒 Anchor to Starknet' : '⚠️ Connect Wallet First'}
+                {isCommiting && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+              </>
+            )}
+          </button>
+
+          {onChainStatus === 'success' && onVerifyOnChain && (
+            <button
+              onClick={onVerifyOnChain}
+              className="w-full py-3 rounded-xl border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] transition-all text-xs font-medium tracking-wide"
+            >
+              🔍 Verify On-Chain
+            </button>
+          )}
+
+          {onChainStatus === 'success' && onDecentralizedBackup && (
+            <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-1000">
+              <button
+                onClick={onDecentralizedBackup}
+                disabled={isBackingUp || !isConnected}
+                className={`w-full py-4 rounded-xl border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] hover:bg-[color:var(--color-accent)]/5 transition-all flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase ${
+                  backupCid ? 'border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:var(--color-success)]/5' : ''
+                }`}
+              >
+                {backupCid ? (
+                  <>🌐 Backed up to IPFS</>
+                ) : (
+                  <>
+                    💾 Decentralized Backup (PL Genesis)
+                    {isBackingUp && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                  </>
+                )}
+              </button>
+              {backupCid && (
+                <div className="mt-2 p-2 rounded-lg bg-black/40 border border-white/5 flex items-center justify-between">
+                  <span className="text-[8px] font-mono opacity-50 truncate mr-2">CID: {backupCid}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(backupCid);
+                      if (setStatus) setStatus('CID copied to clipboard!');
+                    }}
+                    className="text-[8px] font-bold uppercase tracking-tighter hover:text-[color:var(--color-primary)] transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -202,47 +340,87 @@ function RecoveryForm({
   recoveryVibe,
   setRecoveryVibe,
   isProcessing,
+  validationStates,
 }: {
   btcAddress: string;
   setBtcAddress: (value: string) => void;
   recoveryVibe: string;
   setRecoveryVibe: (value: string) => void;
   isProcessing: boolean;
+  validationStates: Map<string, ValidationState>;
 }) {
+  const recoveryValidation = validationStates.get('recovery-phrase');
+  const btcValidation = validationStates.get('btc-address');
+
   return (
     <div className="space-y-4">
-      <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20">
-        <p className="text-[10px] text-[color:var(--color-muted)]">
-          Enter your musical chunks or vibe to recover access.
+      <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20 shadow-sm">
+        <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+          Enter your <span className="text-[color:var(--color-accent)] font-bold">musical chunks</span>, vibe, or an IPFS CID to recover access to your vault.
         </p>
       </div>
 
-      <div>
-        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-          Recovery Phrase
+      <div className="relative group">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center justify-between">
+          <span>Recovery Input (Vibe or IPFS CID)</span>
+          {recoveryVibe.startsWith('Qm') && (
+            <span className="text-[8px] text-[color:var(--color-success)] font-bold animate-pulse">IPFS CID Detected</span>
+          )}
         </label>
         <input
           type="text"
           value={recoveryVibe}
           onChange={(e) => setRecoveryVibe(e.target.value)}
-          placeholder="Enter your musical chunks..."
-          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none font-light text-sm"
+          placeholder="Chunks, Vibe or Qm..."
+          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-primary)] focus:outline-none transition-all duration-500 font-light text-sm"
           disabled={isProcessing}
         />
+        <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-primary)] group-focus-within:w-full transition-all duration-700" />
+        
+        {recoveryValidation && (
+          <div className={`mt-1.5 text-[9px] flex items-center gap-2 ${
+            recoveryValidation.type === 'error' ? 'text-[color:var(--color-error)]' :
+            recoveryValidation.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+            'text-[color:var(--color-success)]'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${
+              recoveryValidation.type === 'error' ? 'bg-[color:var(--color-error)]' :
+              recoveryValidation.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+              'bg-[color:var(--color-success)]'
+            }`} />
+            {recoveryValidation.message}
+          </div>
+        )}
       </div>
 
-      <div>
+      <div className="relative group">
         <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-          Bitcoin Address
+          Bitcoin Address to Recover
         </label>
         <input
           type="text"
           value={btcAddress}
           onChange={(e) => setBtcAddress(e.target.value)}
           placeholder="bc1q... or 1... or 3..."
-          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none font-mono text-sm"
+          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
           disabled={isProcessing}
         />
+        <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
+        
+        {btcValidation && (
+          <div className={`mt-1.5 text-[9px] flex items-center gap-2 ${
+            btcValidation.type === 'error' ? 'text-[color:var(--color-error)]' :
+            btcValidation.type === 'warning' ? 'text-[color:var(--color-warning)]' :
+            'text-[color:var(--color-success)]'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${
+              btcValidation.type === 'error' ? 'bg-[color:var(--color-error)]' :
+              btcValidation.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
+              'bg-[color:var(--color-success)]'
+            }`} />
+            {btcValidation.message}
+          </div>
+        )}
       </div>
     </div>
   );
