@@ -1,7 +1,10 @@
 /**
  * Entropy Encoder for Sonic Guardian
  * Maps 256 bits of cryptographic entropy to deterministic Strudel patterns
- * Enables memorable "musical seed phrases" with full cryptographic security
+ * Enables creative "musical seed phrases" for fun pattern generation
+ * 
+ * Note: This is now an optional creative tool, not a critical security component.
+ * For security, use AI-generated patterns or custom vibes instead.
  */
 
 // Encoding tables for deterministic mapping (synth-based, no samples required)

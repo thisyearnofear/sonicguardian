@@ -1,14 +1,14 @@
 # Sonic Guardian 🎵🔐
 
-**Private Bitcoin recovery using musical patterns.**
+**Sonic Identity Protocol — your creative expression is your on-chain identity.**
 
-> "Your vibe is now your signature."
+> "Your creative expression is now your digital signature."
 
 ## 🏆 Starknet Hackathon RE{DEFINE} Submission
 
 **Tracks:** Privacy + Bitcoin
 
-**Status:** ✅ Account Deployed | ⏸️ Contract Deployment (tooling issue)
+**Status:** ✅ Account Deployed | ✅ Contract Deployed
 
 ### Quick Links for Judges
 - **[Quick Start](./QUICKSTART.md)** - Project overview & demo flow
@@ -16,7 +16,9 @@
 - **[Contract Status](./contracts/DEPLOYMENT_STATUS.md)** - Deployment info
 - **[Account TX](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)** - On-chain proof
 
-## Quick Start
+## Sonic Identity Protocol
+
+Sonic Guardian transforms musical patterns into unique on-chain identities. Instead of static keys, we use dynamic, human-verifiable creative expressions as digital signatures.
 
 ```bash
 pnpm install
@@ -26,24 +28,23 @@ pnpm dev
 
 ## How It Works
 
-1. **Enter vibe** → "dark industrial techno"
-2. **AI translates** → Strudel code (Venice AI)
-3. **DNA extracted** → SHA-256 hash (client-side)
-4. **Commit to Starknet** → Pedersen commitment
-5. **Recover** → Replay your musical pattern
+1. **Enter creative prompt** → "dark industrial techno"
+2. **AI translates** → Strudel code (Venice AI) — Creative expression tool
+3. **DNA extracted** → Fingerprint for pattern identity (client-side)
+4. **Commit to Starknet** → Pedersen commitment (ZK proof of authorship)
+5. **Verify Identity** → Replay your musical pattern to prove "I made this"
 
 ## Features
 
-- 🎵 **Musical seed phrases** - 256-bit entropy in 5-7 chunks (with decoder for recovery)
+- 🎵 **Sonic identity minting** - Musical patterns as creative expression committed on-chain
 - 🔐 **Privacy-first** - All crypto client-side (AES-GCM)
-- 💾 **Decentralized Backup** - Encrypted persistence via IPFS (Protocol Labs Track)
-- 🔑 **Social login** - Web3Auth OAuth (Google/Apple) with MPC key derivation
+- 💾 **Decentralized Identity Backup** - Encrypted persistence via IPFS (Protocol Labs Track)
+- 🔑 **Social onboarding** - Web3Auth OAuth (Google/Apple) with MPC key derivation
 - 🤖 **Agent-ready** - REST API + MCP server
-- 🎁 **Bitcoin gifting** - Frontend-only gifting with ZK privacy
+- 🎁 **Sonic Gifting** - Gift tokens with a sonic signature (the song is the greeting card)
 - 🎼 **Strudel Showcase** - 16+ interactive pattern demos
 - 💰 **Xverse Support** - Bitcoin wallet integration for BTC Track
-- 📱 **Offline capable** - Works without network connectivity
-- 🔒 **Secure storage** - Encrypted blinding factors tied to wallet addresses
+- 🔒 **Verify Authorship** - Replay your sound to prove identity on-chain
 
 ## Documentation
 

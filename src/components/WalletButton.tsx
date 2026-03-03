@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
-import { useAccount, useConnect, useDisconnect } from '@starknet-react/core';
+import React, { useState } from 'react';
+import { useAccount, useDisconnect } from '@starknet-react/core';
+import { ConnectWalletModal } from './ConnectWalletModal';
 
 export function WalletButton() {
     const { address, status } = useAccount();
-    const { connect, connectors } = useConnect();
     const { disconnect } = useDisconnect();
-
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [copied, setCopied] = React.useState(false);
 
     const copyAddress = () => {
@@ -44,40 +44,21 @@ export function WalletButton() {
     }
 
     return (
-        <div className="flex flex-col gap-4">
-            {/* Primary Connectors */}
-            <div className="flex flex-col gap-2">
-                {connectors.map((connector) => (
-                    <button
-                        key={connector.id}
-                        onClick={() => connect({ connector })}
-                        className="w-full px-5 py-3 rounded-xl bg-[color:var(--color-primary)]/10 text-[color:var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/20 transition-all border border-[color:var(--color-primary)]/20 shadow-[0_0_15px_rgba(129,140,248,0.1)] flex items-center justify-center gap-2"
-                    >
-                        <span>Connect {connector.name}</span>
-                    </button>
-                ))}
-            </div>
-            
-            {/* Xverse Wallet Info for Bitcoin Track */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-orange-500/20 shadow-sm">
-                <div className="flex items-start gap-2 mb-2">
-                    <span className="text-sm">💡</span>
-                    <p className="text-xs font-bold text-orange-400 uppercase tracking-tight">Pro Tip</p>
-                </div>
-                <p className="text-[11px] text-[color:var(--color-muted)] leading-relaxed">
-                    Use <span className="font-bold text-white/90">Xverse Wallet</span> for Bitcoin integration. 
-                    Xverse supports Starknet and enables seamless <span className="text-orange-300/80 italic">BTC ↔ STRK</span> swaps.
-                </p>
-                <a 
-                    href="https://www.xverse.app/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="mt-3 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-[10px] text-orange-400 font-bold uppercase tracking-widest rounded-lg border border-orange-500/20 transition-all inline-flex items-center gap-2 group"
-                >
-                    Download Xverse 
-                    <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-                </a>
-            </div>
-        </div>
+        <>
+            <button
+                onClick={() => setIsModalOpen(true)}
+                className="px-5 py-2.5 rounded-xl bg-[color:var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[color:var(--color-primary)]/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_4px_15px_rgba(129,140,248,0.4)] flex items-center gap-2"
+            >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Connect Wallet
+            </button>
+
+            <ConnectWalletModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+            />
+        </>
     );
 }

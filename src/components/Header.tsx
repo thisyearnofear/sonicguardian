@@ -41,12 +41,12 @@ export function Header() {
           <div className="w-8 h-8 bg-gradient-to-br from-[color:var(--color-primary)] to-[color:var(--color-accent)] rounded-lg flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-xl">S</span>
           </div>
-          <span className="text-xl font-bold tracking-tight hidden sm:block">
+          <span className="text-xl font-bold tracking-tight">
             Sonic<span className="text-[color:var(--color-primary)]">Guardian</span>
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <WalletButton />
           
           <button
@@ -55,7 +55,7 @@ export function Header() {
             title={`Current theme: ${currentTheme}. Click to switch.`}
           >
             <span className="text-lg group-hover:scale-110 transition-transform">{getThemeIcon()}</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] hidden md:block">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] hidden lg:block">
               {currentTheme}
             </span>
           </button>

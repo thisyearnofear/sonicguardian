@@ -3,8 +3,9 @@ import { walk } from 'estree-walker';
 import { validators } from './api';
 
 /**
- * Sonic DNA extraction with cryptographic security
+ * Sonic DNA extraction for identity fingerprinting
  * Captures rhythmic, harmonic, and temporal semantics from Strudel patterns
+ * Creates a unique fingerprint for each musical identity
  */
 export interface SonicDNA {
   dna: string;

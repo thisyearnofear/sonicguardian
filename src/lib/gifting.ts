@@ -20,8 +20,9 @@ export class GiftingService {
   }
 
   /**
-   * Create a Real Bitcoin Gift Vault on Starknet
-   * Escrows native-backed BTC tokens on-chain
+   * Create a Sonic Gift Vault on Starknet
+   * Escrows tokens with a sonic signature as the message
+   * The wallet signature provides the authorization
    */
   async createGift(
     account: Account,

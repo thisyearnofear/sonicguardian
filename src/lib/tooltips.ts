@@ -44,7 +44,7 @@ export const TOOLTIP_DEFINITIONS: TooltipDefinition[] = [
   },
   {
     id: 'musical-dna',
-    text: 'A unique fingerprint extracted from your musical pattern. The same pattern always generates the same DNA hash, making it perfect for verification.',
+    text: 'A unique fingerprint extracted from your musical pattern. The same pattern always generates the same DNA hash, creating your on-chain identity signature.',
     category: 'technical'
   },
   {

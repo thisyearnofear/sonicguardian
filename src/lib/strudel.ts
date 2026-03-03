@@ -1,7 +1,7 @@
 'use client';
 
 import { repl, evalScope } from '@strudel/core';
-import { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } from '@strudel/webaudio';
+import { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds, samples, aliasBank } from '@strudel/webaudio';
 import { transpiler } from '@strudel/transpiler';
 
 /**
@@ -32,8 +32,16 @@ export async function initStrudelAudio() {
     // 1. Prepare Web Audio resume on interaction
     initAudioOnFirstClick();
     
-    // 2. Register standard sounds (samples + synths)
-    await registerSynthSounds();
+    // 2. Register synth sounds + load drum machine samples from CDN
+    const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main/';
+    await Promise.all([
+      registerSynthSounds(),
+      samples(`${ds}/tidal-drum-machines.json`),
+      samples(`${ds}/Dirt-Samples.json`),
+      samples(`${ds}/piano.json`),
+    ]);
+    // Alias bank names (e.g. "RolandTR909" -> actual sample paths)
+    await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
     
     // 3. Setup evaluation scope — makes Strudel functions (s, note, stack, etc.) available
     await evalScope(

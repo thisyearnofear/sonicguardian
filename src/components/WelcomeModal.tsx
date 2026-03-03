@@ -12,17 +12,17 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
   const steps = [
     {
       title: "Welcome to Sonic Guardian 🎵",
-      content: "Protect your Bitcoin with musical patterns instead of seed phrases. Your vibe becomes your cryptographic signature.",
+      content: "Create a unique sonic identity using live-coded musical patterns. Your vibe becomes your on-chain signature.",
       emoji: "🔐"
     },
     {
       title: "How It Works",
-      content: "Generate a unique musical pattern → Commit to Starknet → Recover anytime by replaying your sound. All privacy-preserving with zero-knowledge proofs.",
+      content: "Generate a musical pattern → Commit to Starknet → Verify your identity anytime by replaying your sound. Privacy-preserving with zero-knowledge proofs.",
       emoji: "⚡"
     },
     {
       title: "Ready to Start?",
-      content: "Choose 'Secure Generation' for maximum entropy, or enter your own vibe. Either way, your musical DNA will be cryptographically unique.",
+      content: "Choose 'Secure Generation' for a random pattern, or enter your own vibe. Your musical DNA will be cryptographically unique and verifiably yours.",
       emoji: "🚀"
     }
   ];

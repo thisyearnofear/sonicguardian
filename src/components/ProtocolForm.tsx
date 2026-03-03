@@ -69,7 +69,7 @@ export function ProtocolForm({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">
-            {phase === 'registration' ? 'Create Guardian' : 'Recover Access'}
+            {phase === 'registration' ? 'Mint Sonic Identity' : 'Verify Authorship'}
           </h2>
         </div>
 
@@ -116,8 +116,8 @@ export function ProtocolForm({
           <span className="relative z-10">
             {isProcessing ? 'Processing...' : (
               phase === 'registration'
-                ? 'Generate Guardian'
-                : 'Verify & Recover'
+                ? 'Mint Sonic Identity'
+                : 'Verify Authorship'
             )}
           </span>
           {isProcessing && <div className="w-4 h-4 border-2 border-[color:var(--background)] border-t-transparent rounded-full animate-spin relative z-10" />}
@@ -127,7 +127,7 @@ export function ProtocolForm({
           onClick={onSwitchPhase}
           className="w-full py-3 rounded-xl border border-[color:var(--color-border)] text-[color:var(--color-muted)] text-xs font-bold uppercase tracking-widest hover:text-[color:var(--color-foreground)] hover:border-[color:var(--color-foreground)] transition-all"
         >
-          {phase === 'registration' ? 'Switch to Recovery →' : '← Back to Registration'}
+          {phase === 'registration' ? 'Switch to Verification →' : '← Back to Minting'}
         </button>
       </div>
     </div>
@@ -182,18 +182,18 @@ function RegistrationForm({
         <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
           <p className="text-[10px] font-bold text-[color:var(--color-success)] uppercase tracking-widest">
-            Secure Mode • 256-bit Entropy
+            Identity Mode • Random Pattern Generator
           </p>
         </div>
         <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-          System generates cryptographically secure musical pattern. <span className="text-[color:var(--color-foreground)]/60 font-medium">Memorize the chunks for recovery.</span>
+          System generates a unique musical pattern as your sonic identity. <span className="text-[color:var(--color-foreground)]/60 font-medium">This vibe serves as your on-chain fingerprint.</span>
         </p>
       </div>
 
       <div className="relative group">
         <div className="flex items-center justify-between mb-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] group-focus-within:text-[color:var(--color-accent)] transition-colors flex items-center gap-2">
-            Bitcoin Address to Guard
+            Bitcoin Address to Link
             <Tooltip id="bitcoin-address-validation">
               <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
             </Tooltip>
@@ -257,12 +257,12 @@ function RegistrationForm({
         </div>
       )}
 
-      <button
-        onClick={() => setUseSecureGeneration(!useSecureGeneration)}
-        className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors underline block"
-      >
-        {useSecureGeneration ? '→ Use custom vibe instead' : '← Back to secure mode'}
-      </button>
+        <button
+          onClick={() => setUseSecureGeneration(!useSecureGeneration)}
+          className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors underline block"
+        >
+          {useSecureGeneration ? '→ Use custom vibe instead' : '← Back to pattern generator'}
+        </button>
 
       {dnaHash && (
         <div className="pt-4 animate-in fade-in slide-in-from-top-4 duration-700 space-y-3">
@@ -276,10 +276,10 @@ function RegistrationForm({
             }`}
           >
             {onChainStatus === 'success' ? (
-              <>✨ Guardian Anchored</>
+              <>✨ Identity Anchored</>
             ) : (
               <>
-                {isConnected ? '🔒 Anchor to Starknet' : '⚠️ Connect Wallet First'}
+                {isConnected ? '🔒 Commit Identity to Starknet' : '⚠️ Connect Wallet First'}
                 {isCommiting && <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
               </>
             )}
@@ -356,13 +356,13 @@ function RecoveryForm({
     <div className="space-y-4">
       <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/5 border border-[color:var(--color-accent)]/20 shadow-sm">
         <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-          Enter your <span className="text-[color:var(--color-accent)] font-bold">musical chunks</span>, vibe, or an IPFS CID to recover access to your vault.
+          Replay your <span className="text-[color:var(--color-accent)] font-bold">musical pattern</span> or vibe description to prove authorship of this sonic identity.
         </p>
       </div>
 
       <div className="relative group">
         <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block flex items-center justify-between">
-          <span>Recovery Input (Vibe or IPFS CID)</span>
+          <span>Verification Input (Pattern or IPFS CID)</span>
           {recoveryVibe.startsWith('Qm') && (
             <span className="text-[8px] text-[color:var(--color-success)] font-bold animate-pulse">IPFS CID Detected</span>
           )}
@@ -395,7 +395,7 @@ function RecoveryForm({
 
       <div className="relative group">
         <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-          Bitcoin Address to Recover
+          Bitcoin Address to Verify
         </label>
         <input
           type="text"

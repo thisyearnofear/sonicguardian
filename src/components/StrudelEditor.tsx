@@ -24,7 +24,7 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
       try {
         const { StrudelMirror } = await import('@strudel/codemirror');
         const { evalScope } = await import('@strudel/core');
-        const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds } = await import('@strudel/webaudio');
+        const { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds, samples, aliasBank } = await import('@strudel/webaudio');
         const { transpiler } = await import('@strudel/transpiler');
 
         // Setup canvas for visual feedback
@@ -101,13 +101,21 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
           },
           prebake: async () => {
             initAudioOnFirstClick();
+            const ds = 'https://raw.githubusercontent.com/felixroos/dough-samples/main/';
             const loadModules = evalScope(
               import('@strudel/core'),
               import('@strudel/mini'),
               import('@strudel/tonal'),
               import('@strudel/webaudio'),
             );
-            await Promise.all([loadModules, registerSynthSounds()]);
+            await Promise.all([
+              loadModules,
+              registerSynthSounds(),
+              samples(`${ds}/tidal-drum-machines.json`),
+              samples(`${ds}/Dirt-Samples.json`),
+              samples(`${ds}/piano.json`),
+            ]);
+            await aliasBank(`https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json`);
           },
         });
 

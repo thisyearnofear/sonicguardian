@@ -143,7 +143,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       if (btcInput) {
         const tooltip = MobileUtils.createTooltip(
           btcInput,
-          'Enter your Bitcoin address to protect. This will be anchored to Starknet for secure recovery.',
+          'Enter your Bitcoin address to link to your sonic identity on Starknet.',
           'top'
         );
         setTooltips(prev => new Map(prev.set('btc-address', tooltip)));
@@ -168,7 +168,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (btcAddress.trim() === '') {
       setValidationStates(prev => new Map(prev.set('btc-address', {
         isValid: true,
-        message: 'Enter your Bitcoin address to protect your funds',
+        message: 'Enter a Bitcoin address to link to your sonic identity',
         type: 'success'
       })));
       return;
@@ -194,7 +194,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (recoveryVibe.trim() === '') {
       setValidationStates(prev => new Map(prev.set('recovery-phrase', {
         isValid: true,
-        message: 'Enter your musical chunks or vibe to recover access',
+        message: 'Enter your musical pattern or vibe to verify your identity',
         type: 'success'
       })));
       return;
@@ -203,7 +203,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (recoveryVibe.trim().length < 5) {
       setValidationStates(prev => new Map(prev.set('recovery-phrase', {
         isValid: false,
-        message: 'Recovery phrase should be at least 5 characters long',
+        message: 'Verification input should be at least 5 characters long',
         type: 'warning'
       })));
     } else {
@@ -258,7 +258,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
   const handleGenerate = async () => {
     setIsProcessing(true);
-    setStatus('Generating Musical Seed Phrase...');
+    setStatus('Minting Sonic Identity...');
 
     try {
       let code: string;
@@ -279,11 +279,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         setSeedPhrase(phrase);
         setMusicalChunks(chunks);
 
-        setStatus(`Secure Pattern Generated (256 bits entropy, ${chunks.length} chunks)`);
+        setStatus(`Random Pattern Generated (256 bits entropy, ${chunks.length} chunks)`);
       } else {
         // Use AI generation (less secure, but user-friendly)
         if (!secretVibe.trim()) {
-          setStatus('Please define your sonic signature...');
+          setStatus('Please define your musical vibe...');
           setIsProcessing(false);
           return;
         }
@@ -315,7 +315,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           blindingFactor
         );
 
-        setStatus('Musical Guardian Ready. Hit ▶ to hear your key.');
+        setStatus('Sonic Identity Ready. Hit ▶ to hear your signature.');
         setShowOnboarding(false);
         visualizerRef.current?.updateDNASequence(dna.dna);
         visualizerRef.current?.highlightParticles(Array.from({ length: 8 }, (_, i) => i));
@@ -333,7 +333,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (!dnaHash || !isConnected) return;
 
     if (!btcAddress) {
-      setStatus('⚠️ Please enter a Bitcoin address to guard.');
+      setStatus('⚠️ Please enter a Bitcoin address to link.');
       return;
     }
 
@@ -344,13 +344,13 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
     setIsCommiting(true);
     setOnChainStatus('pending');
-    setStatus('🔒 Anchoring Acoustic DNA to Starknet (Pedersen Commitment)...');
+    setStatus('🔒 Committing Sonic Identity to Starknet (Pedersen Commitment)...');
 
     try {
       await registerGuardian(btcAddress, dnaHash, blinding);
       sessionManager.updateSession({ btcAddress });
       setOnChainStatus('success');
-      setStatus('✅ Identity Anchored! Your Bitcoin is now guarded by this musical vibe.');
+      setStatus('✅ Sonic Identity Anchored! Your pattern is now committed on-chain.');
     } catch (error) {
       console.error(error);
       setOnChainStatus('failed');
@@ -362,7 +362,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
   const handleDecentralizedBackup = async () => {
     if (!generatedCode || !blinding || !btcAddress) {
-      setStatus('⚠️ Please generate a guardian first.');
+      setStatus('⚠️ Please mint a sonic identity first.');
       return;
     }
 
@@ -389,7 +389,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
       const encryptionKey = await deriveKeyFromSignature(signatureStr);
 
-      setStatus('📦 Encrypting acoustic signature & blinding factor...');
+      setStatus('📦 Encrypting sonic identity & blinding factor...');
       
       // 2. Encrypt sensitive data
       const sensitiveData = JSON.stringify({
@@ -439,7 +439,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         setIsAudioPlaying(false);
         setStatus('❌ Failed to start audio. Please try again.');
       } else {
-        setStatus('Playing your guardian signature...');
+        setStatus('Playing your sonic signature...');
       }
     }
   };
@@ -479,7 +479,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       // The AI will return a vibe description, set it as the input
       const idea = response.code.replace(/[`"']/g, '').trim();
       setSecretVibe(idea);
-      setStatus('Idea loaded. Click Mint Sonic DNA to synthesize it.');
+      setStatus('Idea loaded. Click Mint Sonic Identity to synthesize it.');
     } catch {
       setStatus('Could not generate idea. Try typing your own vibe.');
     } finally {
@@ -494,7 +494,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     }
 
     setIsProcessing(true);
-    setStatus('Analysis phase: determining recovery route...');
+    setStatus('Verifying authorship of sonic identity...');
 
     try {
       let finalDnaHash = '';
@@ -503,10 +503,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
       // 1. Check if input is an IPFS CID
       if (recoveryVibe.startsWith('Qm')) {
-        setStatus('🌐 Fetching encrypted backup from IPFS...');
+        setStatus('🌐 Fetching encrypted identity from IPFS...');
         const encryptedData = await downloadFromIPFS(recoveryVibe);
         
-        if (!encryptedData) throw new Error('Could not find backup on IPFS');
+        if (!encryptedData) throw new Error('Could not find identity on IPFS');
 
         if (!account) throw new Error('Wallet not connected');
 
@@ -522,7 +522,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
             
         const decryptionKey = await deriveKeyFromSignature(signatureStr);
         
-        setStatus('🔓 Decrypting acoustic signature...');
+        setStatus('🔓 Decrypting sonic identity...');
         const decryptedData = await decryptData(encryptedData, decryptionKey);
         const backup = JSON.parse(decryptedData);
         
@@ -530,7 +530,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         finalBlinding = backup.blinding;
         finalCode = backup.code;
         
-        setStatus('✅ IPFS backup decrypted successfully!');
+        setStatus('✅ IPFS identity decrypted successfully!');
       } else {
         // Standard Vibe Recovery
         setStatus('Extracting DNA from musical pattern...');
@@ -546,10 +546,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       }
 
       // 2. Verify and Authorize
-      setStatus('Generating ZK-Acoustic Proof on Starknet...');
+      setStatus('Generating ZK proof of knowledge on Starknet...');
       await authorizeBtcRecovery(btcAddress, finalDnaHash, finalBlinding);
 
-      setStatus('✅ Access Granted! Identity verified by Acoustic DNA.');
+      setStatus('✅ Authorship Verified! Sonic signature matches on-chain commitment.');
       
       // Update visualizer and state
       const recoveryDna = await extractSonicDNA(finalCode);
@@ -564,7 +564,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       onRecovery?.(finalDnaHash);
     } catch (error) {
       console.error(error);
-      setStatus('❌ Access Denied. Musical patterns or CID decryption failed.');
+      setStatus('❌ Verification Failed. Pattern mismatch or decryption error.');
       onFailure?.();
     } finally {
       setIsProcessing(false);
@@ -590,7 +590,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         {/* Header — tight, just the badge + title */}
         <header className="text-center mb-6 space-y-3 max-w-2xl relative">
           <div className="inline-block px-3 py-1 rounded-full border border-[color:var(--color-primary)]/40 text-[color:var(--color-primary)] text-[10px] font-bold tracking-widest uppercase animate-pulse-soft">
-            Starknet Privacy Track ✦ ZK-Acoustic Protocol
+            Starknet Privacy Track ✦ Sonic Identity Protocol
           </div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-gradient leading-[1.05]">
             Sonic Guardian
@@ -622,15 +622,15 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               <div className="absolute bottom-4 left-0 right-0 flex flex-col sm:flex-row gap-2 px-4 justify-center">
                 <div className="glass px-3 py-2 rounded-xl border border-red-500/20 backdrop-blur-md max-w-[200px]">
                   <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-0.5">😩 The Problem</p>
-                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Bitcoin seed phrases get stolen, lost, or phished. Recovery is risky and exposes credentials.</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">On-chain identity is invisible — addresses are opaque, impersonal, and impossible to verify humanly.</p>
                 </div>
                 <div className="glass px-3 py-2 rounded-xl border border-[color:var(--color-primary)]/30 backdrop-blur-md max-w-[200px]">
                   <p className="text-[9px] font-bold text-[color:var(--color-primary)] uppercase tracking-widest mb-0.5">🎵 The Concept</p>
-                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Your vibe becomes a memorable recovery key. Acoustic DNA generates zero-knowledge proofs for Bitcoin multisig.</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Your vibe becomes your on-chain identity. Musical patterns create human-verifiable, privacy-preserving signatures.</p>
                 </div>
                 <div className="glass px-3 py-2 rounded-xl border border-[color:var(--color-success)]/30 backdrop-blur-md max-w-[200px]">
                   <p className="text-[9px] font-bold text-[color:var(--color-success)] uppercase tracking-widest mb-0.5">🔒 The Utility</p>
-                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Private Bitcoin recovery via Pedersen commitments on Starknet. Prove ownership without exposing credentials.</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-snug">Commit your sonic identity to Starknet via Pedersen commitments. Verify authorship without revealing your pattern.</p>
                 </div>
               </div>
             </div>
@@ -813,19 +813,19 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               <div className="absolute -right-4 -bottom-4 opacity-5 font-bold text-8xl pointer-events-none tracking-tighter italic">STRUDEL</div>
 
               <div className="space-y-6 relative z-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[color:var(--color-success)] animate-pulse" />
-                    <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)]">Live Stream Analysis</h3>
-                  </div>
-                  {!status && !generatedCode && (
-                    <div className="flex gap-1">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="w-1 h-3 bg-[color:var(--color-primary)]/20 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
-                      ))}
-                    </div>
-                  )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[color:var(--color-success)] animate-pulse" />
+                  <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)]">Live Sonic Identity Analysis</h3>
                 </div>
+                {!status && !generatedCode && (
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-1 h-3 bg-[color:var(--color-primary)]/20 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                )}
+              </div>
 
                 {status ? (
                   <div className="animate-in fade-in slide-in-from-left-2 duration-300">
@@ -850,7 +850,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                             <span className="text-[color:var(--color-primary)]">▸</span> <span className="text-[color:var(--color-primary)] font-bold">SYSTEM_READY:</span> Waiting for acoustic input...
                           </p>
                           <p className="text-[10px] font-mono text-[color:var(--color-muted)]/60 leading-relaxed italic">
-                            Protocol ⇄ ZK-Acoustic ready. Sonic DNA will appear here once synthesized.
+                            Protocol ready. Your sonic identity will appear here once minted.
                           </p>
                         </div>
                         <div className="pt-2 grid grid-cols-2 gap-4">
@@ -883,7 +883,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Your Sonic Guardian</h4>
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)]">Your Sonic Identity</h4>
                           <span className="px-1.5 py-0.5 rounded bg-[color:var(--color-primary)]/10 border border-[color:var(--color-primary)]/20 text-[8px] font-bold text-[color:var(--color-primary)] uppercase tracking-tighter">Live Code</span>
                         </div>
                       </div>
@@ -905,7 +905,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       />
 
                       <p className="text-[9px] text-[color:var(--color-muted)] mt-3 italic">
-                        Edit the code above to customize your pattern. Changes update your guardian's DNA hash.
+                        Edit the code above to customize your pattern. Changes update your identity's DNA hash.
                       </p>
                     </div>
 
@@ -914,7 +914,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                       <div className="space-y-6 pt-6 border-t border-white/5">
                         <div className="flex items-center justify-between">
                           <h4 className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)]">
-                            {musicalChunks.length > 0 ? 'Musical Seed Phrase' : 'Acoustic Signature Breakdown'}
+                            {musicalChunks.length > 0 ? 'Sonic Identity Details' : 'Acoustic Signature Breakdown'}
                           </h4>
                         </div>
 
@@ -922,10 +922,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                           <div className="space-y-4">
                             <div className="p-4 rounded-xl border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/5">
                               <p className="text-[9px] font-bold text-[color:var(--color-warning)] uppercase tracking-widest mb-2">
-                                ⚠️ Save These Chunks Securely
+                                💾 Your Identity Details
                               </p>
                               <p className="text-[10px] text-[color:var(--color-muted)] mb-3">
-                                Memorize or store in password manager. You'll need them for recovery.
+                                Save these details to verify your sonic identity in the future.
                               </p>
                               <div className="space-y-2">
                                 {musicalChunks.map((chunk, i) => (
@@ -948,7 +948,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(seedPhrase);
-                                  setStatus('Seed phrase copied to clipboard!');
+                                  setStatus('Identity details copied to clipboard!');
                                 }}
                                 className="mt-3 w-full py-2 rounded-lg bg-[color:var(--color-primary)]/10 border border-[color:var(--color-primary)]/30 text-[10px] font-bold text-[color:var(--color-primary)] hover:bg-[color:var(--color-primary)]/20 transition-all"
                               >
@@ -1042,7 +1042,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                           </code>
                         </div>
                         <p className="text-[9px] text-[color:var(--color-muted)] italic">
-                          Click "Use" to set as your guardian pattern, or generate a secure one below
+                          Click a pattern above to preview, or mint your own sonic identity below
                         </p>
                       </div>
                     ) : (
@@ -1055,7 +1055,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         <div className="space-y-3 max-w-[280px]">
                           <div className="text-2xl font-bold opacity-40 italic tracking-tight">Ready to synthesize</div>
                           <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
-                            Click ▶ on any pattern to preview, or generate a secure guardian below. Your acoustic signature will materialize here as cryptographic code.
+                            Click ▶ on any pattern to preview, or mint your own sonic identity below. Your acoustic signature will materialize here as creative code.
                           </p>
                           <div className="flex items-center justify-center gap-2 pt-2">
                             <div className="w-1 h-1 bg-[color:var(--color-primary)] rounded-full animate-ping" />

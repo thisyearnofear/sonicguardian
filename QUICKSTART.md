@@ -1,8 +1,8 @@
 # Sonic Guardian - Quick Start Guide
 
-> "Your vibe is now your signature."
+> "Your creative expression is now your digital signature."
 
-**Private Bitcoin recovery using musical patterns on Starknet.**
+**Sonic Identity Protocol — musical patterns as creative expression on Starknet.**
 
 ---
 
@@ -22,29 +22,29 @@
 ## TL;DR
 
 1. **User enters a musical vibe** (e.g., "dark industrial techno")
-2. **AI translates to Strudel code** (Venice AI)
-3. **DNA extracted & committed** to Starknet (Pedersen hash)
-4. **Recovery = replay the pattern** - no seed words needed
+2. **AI translates to Strudel code** (Venice AI) — Creative expression tool
+3. **DNA extracted & committed** to Starknet (Pedersen hash) — ZK proof of authorship
+4. **Verify Identity = Replay the pattern** — Prove you created it anytime
 
 ---
 
 ## Demo Flow
 
-### 1. Registration
-1. Enter a Bitcoin address to protect
+### 1. Mint Sonic Identity
+1. Enter a Bitcoin address to link to your identity
 2. Either:
-   - **Secure Mode** (256-bit entropy, musical chunks)
+   - **Random Pattern Generator** (256-bit entropy, musical chunks)
    - **Custom Vibe** ("fast dark techno")
-3. Click **Generate Guardian**
+3. Click **Mint Identity**
 4. Hear your acoustic signature
-5. Optionally anchor to Starknet
+5. Commit your sonic identity to Starknet
 
-### 2. Recovery
-1. Switch to Recovery tab
-2. Enter your Bitcoin address
-3. Enter your musical pattern/chunks
-4. Click **Verify & Recover**
-5. If matched → funds unlocked
+### 2. Verify Authorship
+1. Switch to **Verify Authorship** tab
+2. Enter your linked Bitcoin address
+3. Replay your musical pattern/chunks
+4. Click **Verify Identity**
+5. If matched → authorship confirmed on-chain (ZK proof of knowledge)
 
 ---
 
@@ -66,9 +66,9 @@ Each demo is **interactive** - click play to hear it!
 | Feature | Implementation |
 |---------|---------------|
 | **AI Synthesis** | Venice AI → Strudel pattern code |
-| **DNA Extraction** | Deterministic AST parsing → SHA-256 |
-| **ZK Commitment** | Pedersen hash on Starknet |
-| **Recovery** | Acoustic pattern verification |
+| **DNA Extraction** | Fingerprint for pattern identity |
+| **ZK Commitment** | Pedersen hash on Starknet (Authorship proof) |
+| **Verification** | ZK proof of knowledge of your sonic pattern |
 | **Agent API** | REST + MCP for AI agents |
 
 ---

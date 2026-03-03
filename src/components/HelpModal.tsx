@@ -62,7 +62,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     <div>
                       <h4 className="font-bold text-[color:var(--color-text)]">Generate Musical DNA</h4>
                       <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                        Enter a vibe or use secure generation. AI creates a unique Strudel pattern that becomes your cryptographic signature.
+                        Enter a vibe or use secure generation. AI creates a unique Strudel pattern that becomes your on-chain sonic identity.
                       </p>
                     </div>
                   </div>
@@ -80,9 +80,9 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/20 flex items-center justify-center text-[color:var(--color-primary)] font-bold">3</div>
                     <div>
-                      <h4 className="font-bold text-[color:var(--color-text)]">Recover Anytime</h4>
+                      <h4 className="font-bold text-[color:var(--color-text)]">Verify Anytime</h4>
                       <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                        Switch to Recovery mode, replay your musical pattern, and prove ownership without revealing your secret.
+                        Switch to Verify mode, replay your musical pattern to verify your identity without revealing your secret.
                       </p>
                     </div>
                   </div>
@@ -91,7 +91,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
               <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/10 border border-[color:var(--color-accent)]/20">
                 <p className="text-xs text-[color:var(--color-muted)]">
-                  💡 <strong>Tip:</strong> Save your musical chunks! They're like a BIP39 seed phrase but way more memorable.
+                  💡 <strong>Tip:</strong> Save your musical chunks! They describe your unique sonic identity.
                 </p>
               </div>
             </>
@@ -100,7 +100,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div>
                 <h4 className="font-bold text-[color:var(--color-primary)] mb-2">What is Musical DNA?</h4>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Your musical pattern is converted to a SHA-256 hash (256-bit entropy). This "DNA" is deterministic—same pattern always produces the same hash.
+                  Your musical pattern is converted to a deterministic SHA-256 hash. This "DNA" is your sonic fingerprint—same pattern always produces the same hash, making it a reliable on-chain identity.
                 </p>
               </div>
 
@@ -121,21 +121,21 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div>
                 <h4 className="font-bold text-[color:var(--color-primary)] mb-2">What if I forget my pattern?</h4>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Save your musical chunks (the text descriptions). You can reconstruct the pattern from them using the entropy decoder.
+                  Save your musical chunks (the text descriptions). You can reconstruct the pattern from them to re-verify your sonic identity anytime.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-bold text-[color:var(--color-primary)] mb-2">Why Strudel?</h4>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Strudel is a live-coding language for music. It's deterministic (same code = same sound) and human-readable, making it perfect for memorable cryptographic keys.
+                  Strudel is a live-coding language for music. It's deterministic (same code = same sound) and human-readable, making it perfect for unique on-chain identities.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-bold text-[color:var(--color-primary)] mb-2">Can I use this for real Bitcoin?</h4>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  This is a proof-of-concept for the hackathon. For production use, integrate with actual Bitcoin recovery mechanisms and audit the cryptography.
+                  This is a proof-of-concept demonstrating sonic identity as a verification layer for on-chain identity. Your wallet secures funds; the pattern is your human-verifiable sonic signature.
                 </p>
               </div>
 
