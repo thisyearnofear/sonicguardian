@@ -240,7 +240,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         vibe: 'cyclic pattern that rotates through variations',
         code: `stack(
   s("<bd*4 bd[~ bd] bd*2 [bd ~ bd bd]>").bank("RolandTR808"),
-  s("oh*2 ~").gain(0.7).room(0.3)
+  s("ho*2 ~").gain(0.7).room(0.3)
 ).cpm(128)`,
         category: 'rhythm',
         features: ['rotation', 'pattern cycling', 'variation'],
