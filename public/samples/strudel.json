@@ -6,5 +6,8 @@
   "sd": ["/sd/rytm-00-hard.wav", "/sd/rytm-01-classic.wav"],
   "hh": ["/hh/000_hh3closedhh.wav", "/hh/001_hh3crash.wav", "/hh/002_hh3hit1.wav", "/hh/003_hh3hit2.wav", "/hh/004_hh3hit3.wav", "/hh/005_hh3kick1.wav", "/hh/006_hh3kick2.wav", "/hh/007_hh3openhh.wav", "/hh/008_hh3rerc1.wav", "/hh/009_hh3rerc2.wav", "/hh/010_hh3ride.wav", "/hh/011_hh3snare1.wav", "/hh/012_hh3snare2.wav"],
   "hc": ["/hc/HHCD0.wav", "/hc/HHCD2.wav", "/hc/HHCD4.wav", "/hc/HHCD6.wav", "/hc/HHCD8.wav", "/hc/HHCDA.wav"],
-  "ho": ["/ho/HHOD0.wav", "/ho/HHOD2.wav", "/ho/HHOD4.wav", "/ho/HHOD6.wav", "/ho/HHOD8.wav", "/ho/HHODA.wav"]
+  "ho": ["/ho/HHOD0.wav", "/ho/HHOD2.wav", "/ho/HHOD4.wav", "/ho/HHOD6.wav", "/ho/HHOD8.wav", "/ho/HHODA.wav"],
+  "RolandTR808": ["/808/CB.WAV", "/808/CH.WAV", "/808/CL.WAV", "/808/CP.WAV", "/808/MA.WAV", "/808/RS.WAV", "/sd/rytm-00-hard.wav", "/sd/rytm-01-classic.wav", "/hh/000_hh3closedhh.wav", "/hh/001_hh3crash.wav", "/hh/007_hh3openhh.wav", "/hc/HHCD0.wav", "/hc/HHCD2.wav", "/ho/HHOD0.wav", "/ho/HHOD2.wav"],
+  "RolandTR909": ["/bd/BT0A0A7.wav", "/bd/BT0A0D0.wav", "/bd/BT0A0D3.wav", "/bd/BT0A0DA.wav", "/sd/rytm-00-hard.wav", "/sd/rytm-01-classic.wav", "/hh/000_hh3closedhh.wav", "/hh/001_hh3crash.wav", "/hh/007_hh3openhh.wav", "/hc/HHCD0.wav", "/hc/HHCD2.wav", "/ho/HHOD0.wav", "/ho/HHOD2.wav", "/909/BT0A0A7.WAV"],
+  "RolandTR707": ["/bd/BT0A0A7.wav", "/bd/BT0A0D0.wav", "/sd/rytm-00-hard.wav", "/hh/000_hh3closedhh.wav", "/hh/007_hh3openhh.wav"]
 }
