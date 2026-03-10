@@ -29,38 +29,16 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
     if (!isServer && !dev) {
-      // CodeMirror 6 requires consistent module naming to work properly
-      // Using 'named' prevents hash-based module IDs that break dynamic imports
+      // COMPLETELY DISABLE MINIFICATION
+      // CodeMirror 6 and Strudel are incompatible with webpack minification
+      // This is the only reliable fix for "X is not a function" errors
+      // Bundle size increase is acceptable for functionality
+      config.optimization.minimize = false;
+      config.optimization.minimizer = [];
+      
+      // Use named module IDs for consistency
       config.optimization.moduleIds = 'named';
       config.optimization.chunkIds = 'named';
-      
-      // Use terser with conservative settings
-      const TerserPlugin = require('terser-webpack-plugin');
-      config.optimization.minimizer = [
-        new TerserPlugin({
-          terserOptions: {
-            compress: {
-              // Keep function and class names
-              keep_fnames: true,
-              keep_classnames: true,
-              // Disable some aggressive optimizations
-              pure_getters: false,
-              passes: 1,
-            },
-            mangle: {
-              // Keep function and class names
-              keep_fnames: true,
-              keep_classnames: true,
-              // Don't mangle top-level
-              toplevel: false,
-            },
-            format: {
-              // Keep comments
-              comments: false,
-            },
-          },
-        }),
-      ];
     }
     return config;
   },
