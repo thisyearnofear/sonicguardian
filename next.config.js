@@ -25,26 +25,37 @@ const nextConfig = {
     '@replit/codemirror-vim',
     '@replit/codemirror-vscode-keymap',
   ],
+  // Production source maps for debugging
+  productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
     if (!isServer && !dev) {
-      // Use standard terser with keep_fnames for all code
-      // This is the most compatible fix for CodeMirror 6 "X is not a function" errors
+      // CodeMirror 6 requires consistent module naming to work properly
+      // Using 'named' prevents hash-based module IDs that break dynamic imports
+      config.optimization.moduleIds = 'named';
+      config.optimization.chunkIds = 'named';
+      
+      // Use terser with conservative settings
       const TerserPlugin = require('terser-webpack-plugin');
       config.optimization.minimizer = [
         new TerserPlugin({
           terserOptions: {
             compress: {
+              // Keep function and class names
               keep_fnames: true,
               keep_classnames: true,
+              // Disable some aggressive optimizations
+              pure_getters: false,
+              passes: 1,
             },
             mangle: {
+              // Keep function and class names
               keep_fnames: true,
               keep_classnames: true,
-              // Preserve top-level function names
-              toplevel: true,
+              // Don't mangle top-level
+              toplevel: false,
             },
             format: {
-              // Preserve comments
+              // Keep comments
               comments: false,
             },
           },
