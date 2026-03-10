@@ -34,11 +34,14 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                Object.defineProperty(window, 'ethereum', {
-                  value: window.ethereum,
-                  writable: true,
-                  configurable: true,
-                });
+                if (Object.getOwnPropertyDescriptor(window, 'ethereum')?.configurable !== false) {
+                  var _eth = window.ethereum;
+                  Object.defineProperty(window, 'ethereum', {
+                    get: function() { return _eth; },
+                    set: function(v) { _eth = v; },
+                    configurable: true,
+                  });
+                }
               } catch {}
             `,
           }}
