@@ -35,6 +35,7 @@ import { WelcomeModal } from './WelcomeModal';
 import { Tooltip } from './Tooltip';
 import { ProtocolForm } from './ProtocolForm';
 import { TutorialTrigger } from './InteractiveTutorial';
+import { requestCrossChainProof, type StorageProof } from '@/lib/cross-chain';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -69,6 +70,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [validationStates, setValidationStates] = useState<Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>>(new Map());
   const [showPatternExplorer, setShowPatternExplorer] = useState(false);
   const [showAllPatterns, setShowAllPatterns] = useState(false);
+
+  // Cross-Chain Identity State
+  const [isRequestingProof, setIsRequestingProof] = useState(false);
+  const [storageProof, setStorageProof] = useState<StorageProof | null>(null);
+  const [activeTab, setActiveTab] = useState<'guardian' | 'cross-chain'>('guardian');
 
   const visualizerContainerRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<SonicVisualizer | null>(null);
@@ -449,6 +455,27 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       } else {
         setStatus('Playing your sonic signature...');
       }
+    }
+  };
+
+  const handleRequestCrossChainProof = async (targetChain: 'ethereum' | 'base' | 'optimism') => {
+    if (!btcAddress) {
+      setStatus('⚠️ Please provide a Bitcoin address first.');
+      return;
+    }
+
+    setIsRequestingProof(true);
+    setStatus(`🌀 Initiating ${targetChain} Storage Proof (Herodotus)...`);
+
+    try {
+      const proof = await requestCrossChainProof(btcAddress, targetChain);
+      setStorageProof(proof);
+      setStatus(`✅ Proof requested! ID: ${proof.proofId}. Awaiting consensus...`);
+    } catch (error) {
+      console.error('Cross-chain proof failed:', error);
+      setStatus('❌ Proof request failed. Please check network.');
+    } finally {
+      setIsRequestingProof(false);
     }
   };
 
@@ -1115,6 +1142,57 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               Credentials are anchored to Starknet using <span className="text-[color:var(--color-foreground)] font-medium">Shielded Protocols</span>, ensuring a privacy-first experience for the entire ecosystem.
             </p>
           </div>
+        </section>
+
+        {/* NEW: Cross-Chain Identity Expansion */}
+        <section className="mt-24 w-full max-w-4xl border-t border-[color:var(--color-border)] pt-12">
+          <div className="text-center mb-12">
+            <div className="inline-block px-3 py-1 rounded-full bg-[color:var(--color-accent)]/10 border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] text-[10px] font-bold tracking-widest uppercase mb-4">
+              Experimental • Multi-Chain Utility
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Cross-Chain Sonic Identity</h2>
+            <p className="text-[color:var(--color-muted)] text-sm max-w-xl mx-auto">
+              Export your Starknet sonic signature to other ecosystems using <span className="text-[color:var(--color-foreground)] font-bold">Storage Proofs</span>. Your identity, verified everywhere.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {(['ethereum', 'base', 'optimism'] as const).map((chain) => (
+              <div key={chain} className="glass p-6 rounded-2xl border border-white/5 flex flex-col justify-between group hover:border-[color:var(--color-accent)]/30 transition-all">
+                <div className="mb-6">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    {chain === 'ethereum' ? 'Ξ' : chain === 'base' ? '🔵' : '🔴'}
+                  </div>
+                  <h4 className="text-xs font-bold uppercase tracking-widest mb-2">{chain}</h4>
+                  <p className="text-[10px] text-[color:var(--color-muted)] leading-relaxed">
+                    Verify your Bitcoin authorship on {chain} using a Herodotus state proof of your Starknet commitment.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => handleRequestCrossChainProof(chain)}
+                  disabled={isRequestingProof || !dnaHash}
+                  className="w-full py-2.5 rounded-lg border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] text-[10px] font-bold uppercase tracking-widest hover:bg-[color:var(--color-accent)]/10 disabled:opacity-30 transition-all"
+                >
+                  {isRequestingProof ? 'Requesting...' : `Export to ${chain}`}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {storageProof && (
+            <div className="mt-8 p-4 rounded-xl bg-[color:var(--color-success)]/5 border border-[color:var(--color-success)]/20 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-500">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-[color:var(--color-success)] rounded-full animate-pulse" />
+                <span className="text-[10px] font-mono text-[color:var(--color-success)] uppercase font-bold tracking-wider">
+                  Storage Proof Active: {storageProof.proofId}
+                </span>
+              </div>
+              <span className="text-[9px] text-[color:var(--color-muted)] italic">
+                Awaiting Target Chain Finality
+              </span>
+            </div>
+          )}
         </section>
       </main>
 
