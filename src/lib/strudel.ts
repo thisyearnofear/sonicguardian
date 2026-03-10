@@ -28,6 +28,18 @@ class StrudelEngine {
   private animationFrameId: number | null = null;
   private lastHaps: any[] = [];
 
+  // Valid sample names (based on actual sample files)
+  private validSamples = ['bd', 'sd', 'hh', 'hc', 'ho', 'cp', '808', '909'];
+
+  // Filter code to only use valid sample names
+  private sanitizeCode(code: string): string {
+    // Replace invalid sample references with valid ones
+    return code
+      .replace(/\.s\(["'](?:piano|fm|gm_pad|x)[^"']*["']\)/g, '.s("bd")')
+      .replace(/s\(["'](?:piano|fm|gm_pad|x)[^"']*["']\)/g, (match) => 
+        match.replace(/piano|fm|gm_pad|x/g, 'bd'));
+  }
+
   private constructor() {}
 
   public static getInstance(): StrudelEngine {
@@ -123,7 +135,8 @@ class StrudelEngine {
         await ctx.resume();
       }
 
-      await this.replInstance.evaluate(code);
+      const sanitizedCode = this.sanitizeCode(code);
+      await this.replInstance.evaluate(sanitizedCode);
       return true;
     } catch (error) {
       console.error('Strudel Playback Error:', error);
