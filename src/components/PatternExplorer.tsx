@@ -215,7 +215,7 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
 
   const handleRemix = async () => {
     if (!activeDemo) return;
-    const remixed = mutatePattern(activeDemo.code, 'moderate');
+    const remixed = mutatePattern(activeDemo.code);
     stopStrudel();
     setActiveDemo({ ...activeDemo, code: remixed, name: `${activeDemo.name} (Remix)` });
     const success = await playStrudelCode(remixed);

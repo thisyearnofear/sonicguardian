@@ -310,7 +310,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
       setGeneratedCode(code);
 
-      const dna = await extractSonicDNA(code, { includeTimestamp: true });
+      const dna = await extractSonicDNA(code);
 
       if (dna) {
         setDna(dna);
@@ -913,7 +913,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                         onCodeChange={(newCode) => {
                           setGeneratedCode(newCode);
                           // Regenerate DNA hash when code changes
-                          extractSonicDNA(newCode, { includeTimestamp: true }).then(newDna => {
+                          extractSonicDNA(newCode).then(newDna => {
                             if (newDna) {
                               setDna(newDna);
                               setDnaHash(newDna.hash);

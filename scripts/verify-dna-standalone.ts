@@ -95,12 +95,12 @@ async function extractSonicDNA(code: string, salt: string) {
     });
 
     const normalized = Array.from(features).sort().join('|');
-    const hashHex = hash.computePoseidonHashOnElements([BigInt('0x' + Buffer.from(normalized).toString('hex'))]).toString(16);
+    const hashHex = hash.computePoseidonHashOnElements([BigInt('0x' + Buffer.from(normalized).toString('hex'))]).toString();
 
     const commitment = await pedersen(hexToFelt(hashHex.substring(0, 32)), hexToFelt(salt.substring(0, 32)));
 
     return { dna: normalized, commitment, hash: hashHex };
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
     return null;
   }

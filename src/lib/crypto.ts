@@ -4,7 +4,7 @@
  * and AES-GCM for secure backups.
  */
 
-import { hash, ec } from 'starknet';
+import { hash, ec, Signature } from 'starknet';
 
 /**
  * Acoustic Key Derivation (AKD)
@@ -20,7 +20,7 @@ export function getAcousticPublicKey(dnaHash: string): string {
  * Sign a message using the derived acoustic key (Private Key = DNA Hash)
  * Returns a signature that proves knowledge of the DNA without revealing it.
  */
-export function signWithAcousticKey(dnaHash: string, messageHash: string): ec.Signature {
+export function signWithAcousticKey(dnaHash: string, messageHash: string): Signature {
     const privateKey = hexToFelt(dnaHash);
     return ec.starkCurve.sign(messageHash, privateKey);
 }

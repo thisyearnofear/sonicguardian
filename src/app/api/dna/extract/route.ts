@@ -26,10 +26,7 @@ export async function POST(request: NextRequest) {
     // Validate code
     const validatedCode = validators.code(code);
 
-    const dna = await extractSonicDNA(validatedCode, {
-      salt: options?.salt,
-      includeTimestamp: true
-    });
+    const dna = await extractSonicDNA(validatedCode, options?.salt);
 
     if (!dna) {
       return createAPIError('Failed to extract DNA from code', 'EXTRACTION_FAILED', 400);
@@ -38,7 +35,7 @@ export async function POST(request: NextRequest) {
     return createAPIResponse({
       dna: dna.dna,
       hash: dna.hash,
-      timestamp: dna.timestamp
+      salt: dna.salt
     });
   } catch (error: any) {
     return handleAPIError(error);
@@ -68,9 +65,7 @@ export async function GET(request: NextRequest) {
     // Validate code
     const validatedCode = validators.code(code);
 
-    const dna = await extractSonicDNA(validatedCode, {
-      includeTimestamp: true
-    });
+    const dna = await extractSonicDNA(validatedCode);
 
     if (!dna) {
       return createAPIError('Failed to extract DNA from code', 'EXTRACTION_FAILED', 400);
@@ -79,7 +74,7 @@ export async function GET(request: NextRequest) {
     return createAPIResponse({
       dna: dna.dna,
       hash: dna.hash,
-      timestamp: dna.timestamp
+      salt: dna.salt
     });
   } catch (error: any) {
     return handleAPIError(error);

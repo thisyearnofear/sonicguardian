@@ -20,7 +20,7 @@ patterns.forEach(p => {
       if (key === 'parent' || key === 'repl') return undefined;
       return value;
     }, 2));
-  } catch (e) {
+  } catch (e: any) {
     console.error(`Failed to parse ${p}:`, e.message);
   }
   console.log('\n');

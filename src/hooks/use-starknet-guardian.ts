@@ -97,12 +97,24 @@ export function useStarknetGuardian() {
             // Generate signature off-chain using DNA as private key
             const signature = signWithAcousticKey(dnaHash, messageHash);
             
+            // Extract r and s correctly from Signature type
+            let r, s;
+            if (Array.isArray(signature)) {
+                r = signature[0];
+                s = signature[1];
+            } else if ('r' in signature && 's' in signature) {
+                r = (signature as any).r;
+                s = (signature as any).s;
+            } else {
+                throw new Error('Unsupported signature format');
+            }
+
             // @ts-ignore
             return await contract.verify_acoustic_signature(
                 feltBtcAddress, 
                 messageHash, 
-                hexToFelt(signature.r.toString(16)), 
-                hexToFelt(signature.s.toString(16))
+                hexToFelt(r.toString(16)), 
+                hexToFelt(s.toString(16))
             );
         } catch (error) {
             console.error('Acoustic proof failed:', error);
@@ -128,12 +140,24 @@ export function useStarknetGuardian() {
             // Sign with Acoustic Key
             const signature = signWithAcousticKey(dnaHash, message);
 
+            // Extract r and s correctly from Signature type
+            let r, s;
+            if (Array.isArray(signature)) {
+                r = signature[0];
+                s = signature[1];
+            } else if ('r' in signature && 's' in signature) {
+                r = (signature as any).r;
+                s = (signature as any).s;
+            } else {
+                throw new Error('Unsupported signature format');
+            }
+
             const result = await sendAsync([
                 contract.populate('authorize_with_acoustic_signature', [
                     feltBtcAddress,
                     message,
-                    hexToFelt(signature.r.toString(16)),
-                    hexToFelt(signature.s.toString(16))
+                    hexToFelt(r.toString(16)),
+                    hexToFelt(s.toString(16))
                 ]),
             ]);
 
