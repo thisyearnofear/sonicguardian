@@ -206,9 +206,9 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Four on the Floor',
         vibe: 'classic house kick pattern with hi-hats',
         code: `stack(
-  s("bd*4").bank("RolandTR909").gain(1.2),
-  s("~ hh ~ hh").bank("RolandTR909").gain(0.6),
-  s("sd*2 ~ sd").bank("RolandTR909").gain(0.9)
+  s("bd*4").gain(1.2),
+  s("~ hh ~ hh").gain(0.6),
+  s("sd*2 ~ sd").gain(0.9)
 ).cpm(124)`,
         category: 'rhythm',
         features: ['basic rhythms', 'drum banks', 'stacking'],
@@ -217,9 +217,9 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Euclidean Groove',
         vibe: 'complex polyrhythmic pattern using Euclidean distribution',
         code: `stack(
-  s("bd(3,8)").bank("RolandTR808"),
+  s("bd(3,8)"),
   s("hh*8").gain(0.5),
-  s("cp(2,4)").bank("RolandTR909").slow(2)
+  s("cp(2,4)").slow(2)
 ).cpm(110)`,
         category: 'rhythm',
         features: ['polyrhythm', 'nested patterns', 'euclidean-style'],
@@ -228,9 +228,9 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Syncopated Funk',
         vibe: 'funky off-beat pattern with ghost notes',
         code: `stack(
-  s("[bd ~ bd] [~ bd ~]").bank("RolandTR707"),
+  s("[bd ~ bd] [~ bd ~]"),
   s("hh[~ x][x ~][x x]").gain(0.4),
-  s("[~ sd ~ sd]").bank("RolandTR909").distort(0.5)
+  s("[~ sd ~ sd]").distort(0.5)
 ).cpm(100)`,
         category: 'rhythm',
         features: ['syncopation', 'ghost notes', 'layered percussion'],
@@ -239,7 +239,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Rotating Percussion',
         vibe: 'cyclic pattern that rotates through variations',
         code: `stack(
-  s("<bd*4 bd[~ bd] bd*2 [bd ~ bd bd]>").bank("RolandTR808"),
+  s("<bd*4 bd[~ bd] bd*2 [bd ~ bd bd]>"),
   s("ho*2 ~").gain(0.7).room(0.3)
 ).cpm(128)`,
         category: 'rhythm',
@@ -376,8 +376,8 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Full Techno Arrangement',
         vibe: 'complete 4-layer techno track',
         code: `stack(
-  s("bd*4").bank("RolandTR909").gain(1.2),
-  s("~ sd ~ sd").bank("RolandTR909").distort(0.3),
+  s("bd*4").gain(1.2),
+  s("~ sd ~ sd").distort(0.3),
   s("hh*16").gain(0.35).lpf(8000),
   note("c2 ~ f2 ~").s("sawtooth").lpf(400).distort(1.5).gain(0.7)
 ).cpm(132)`,
@@ -388,7 +388,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Ambient Technique',
         vibe: 'downtempo with layers',
         code: `stack(
-  s("bd ~ [bd ~] ~").bank("RolandTR808").gain(0.9),
+  s("bd ~ [bd ~] ~").gain(0.9),
   note("<[e3,g3,b3] [d3,f3,a3] [c3,e3,g3]>").s("gm_pad_sweep").slow(4).room(0.8).gain(0.4),
   note("c4 d4 e4 g4").s("sine").slow(2).delay(0.4).gain(0.3)
 ).cpm(95)`,
@@ -399,8 +399,8 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Polyrhythmic Study',
         vibe: 'complex interlocking rhythmic patterns',
         code: `stack(
-  s("bd*3").bank("RolandTR909").slow(3),
-  s("sd*4").bank("RolandTR909").slow(4),
+  s("bd*3").slow(3),
+  s("sd*4").slow(4),
   s("hh*5").gain(0.4).slow(5),
   note("c2").s("sine").slow(6).room(0.7)
 ).cpm(100)`,
@@ -424,8 +424,8 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'DnB Breakbeat',
         vibe: 'fast breakbeat with amen-style pattern',
         code: `stack(
-  s("bd [~ bd] [bd ~] bd").bank("RolandTR909").gain(1.0),
-  s("~ [~ sd ~ sd]").bank("RolandTR909").gain(0.8),
+  s("bd [~ bd] [bd ~] bd").gain(1.0),
+  s("~ [~ sd ~ sd]").gain(0.8),
   s("hh*16").gain(0.3).lpf(10000),
   note("c1 ~ ~ ~").s("sine").lpf(80).gain(0.9)
 ).cpm(174)`,
@@ -436,8 +436,8 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Lo-Fi Hip Hop',
         vibe: 'chill lo-fi beat with vinyl warmth',
         code: `stack(
-  s("bd ~ [bd ~] ~").bank("RolandTR808").gain(0.8).crush(8),
-  s("~ sd ~ ~").bank("RolandTR808").gain(0.6).crush(8),
+  s("bd ~ [bd ~] ~").gain(0.8).crush(8),
+  s("~ sd ~ ~").gain(0.6).crush(8),
   s("hh*8").gain(0.3).crush(8).lpf(4000),
   note("<[f3,a3,c4] [d3,f3,a3] [bb2,d3,f3] [c3,e3,g3]>").s("piano").slow(4).room(0.5).crush(10).gain(0.4)
 ).cpm(85)`,

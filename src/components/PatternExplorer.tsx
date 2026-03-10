@@ -23,21 +23,21 @@ const FEATUREDEMOS: FeatureDemo[] = [
   {
     name: 'Basic Rhythms',
     description: 'Simple repeating patterns using * notation',
-    code: `s("bd*4").bank("RolandTR909").gain(0.9)`,
+    code: `s("bd*4").gain(0.9)`,
     category: 'rhythm',
     difficulty: 'beginner',
   },
   {
     name: 'Syncopation',
     description: 'Off-beat patterns with rests (~)',
-    code: `s("bd[~ ~][~ bd]").bank("RolandTR808")`,
+    code: `s("bd[~ ~][~ bd]")`,
     category: 'rhythm',
     difficulty: 'beginner',
   },
   {
     name: 'Nested Patterns',
     description: 'Patterns within patterns for complex rhythms',
-    code: `s("bd[~ sd][sd ~]").bank("RolandTR909")`,
+    code: `s("bd[~ sd][sd ~]")`,
     category: 'rhythm',
     difficulty: 'intermediate',
   },
@@ -55,7 +55,7 @@ const FEATUREDEMOS: FeatureDemo[] = [
   {
     name: 'Euclidean Rhythms',
     description: 'Mathematically distributed beats',
-    code: `s("bd[~ ~][~ ~]").bank("RolandTR808")`,
+    code: `s("bd[~ ~][~ ~]")`,
     category: 'rhythm',
     difficulty: 'intermediate',
   },
@@ -108,7 +108,7 @@ const FEATUREDEMOS: FeatureDemo[] = [
   {
     name: 'Pattern Rotation',
     description: 'Rotate through variations with <> ',
-    code: `s("<bd*4 bd[~ bd] bd*2>").bank("RolandTR808")`,
+    code: `s("<bd*4 bd[~ bd] bd*2>")`,
     category: 'transformation',
     difficulty: 'intermediate',
   },
@@ -122,7 +122,7 @@ const FEATUREDEMOS: FeatureDemo[] = [
   {
     name: 'Conditional Patterns',
     description: 'sometimes() applies changes randomly',
-    code: `s("bd*4").bank("909").sometimes("<>").gain(0.9)`,
+    code: `s("bd*4").sometimes("<>").gain(0.9)`,
     category: 'transformation',
     difficulty: 'advanced',
   },
@@ -138,7 +138,7 @@ const FEATUREDEMOS: FeatureDemo[] = [
   {
     name: 'Distortion',
     description: 'Add grit with distort()',
-    code: `s("bd*4").bank("909").distort(2.5).gain(0.9)`,
+    code: `s("bd*4").distort(2.5).gain(0.9)`,
     category: 'effect',
     difficulty: 'beginner',
   },

@@ -9,7 +9,7 @@
 const SCALES = ['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'harmonic_minor'] as const;
 const CHORD_PROGRESSIONS = ['I V vi IV', 'ii V I', 'vi IV I V', 'I vi IV V', 'i VII VI'] as const;
 const DRUMS = ['bd', 'sd', 'hh', 'oh', 'cp', 'rim'] as const;
-const BANKS = ['RolandTR808', 'RolandTR909', 'RolandTR707'] as const;
+const BANKS = ['bd', 'sd', 'hh'] as const;
 
 // === Mini Notation Patterns ===
 

@@ -211,7 +211,7 @@ export function getTemplateVibe(prompt: string): string {
 
   // High-quality templates instead of simple mocks
   if (lowerPrompt.includes("techno")) {
-    return `stack(s("bd*4"), s("~ sd ~ sd").bank("RolandTR909"), s("hh*16").gain(0.4)).cpm(128)`;
+    return `stack(s("bd*4"), s("~ sd ~ sd"), s("hh*16").gain(0.4)).cpm(128)`;
   }
   if (lowerPrompt.includes("ambient") || lowerPrompt.includes("dark")) {
     return `note("c2 [eb2 g2] bb1").s("sawtooth").lpf(400).lpq(10).slow(2).room(0.8)`;
@@ -221,7 +221,7 @@ export function getTemplateVibe(prompt: string): string {
   }
   
   // Generic but valid Strudel code
-  return `s("bd [~ sd] [bd bd] sd").bank("RolandTR808")`;
+  return `s("bd [~ sd] [bd bd] sd")`;
 }
 
 /**
