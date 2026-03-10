@@ -12,22 +12,40 @@ const nextConfig = {
     '@strudel/web',
     'superdough',
     '@kabelsalat/web',
+    '@codemirror/state',
+    '@codemirror/view',
+    '@codemirror/language',
+    '@codemirror/commands',
+    '@codemirror/search',
+    '@codemirror/autocomplete',
+    '@codemirror/lang-javascript',
+    '@lezer/highlight',
+    '@lezer/common',
+    '@replit/codemirror-emacs',
+    '@replit/codemirror-vim',
+    '@replit/codemirror-vscode-keymap',
   ],
   webpack: (config, { isServer, dev }) => {
     if (!isServer && !dev) {
-      // Keep minification but configure terser to not mangle function names
-      // This fixes CodeMirror 6 "X is not a function" errors
+      // Use standard terser with keep_fnames for all code
+      // This is the most compatible fix for CodeMirror 6 "X is not a function" errors
       const TerserPlugin = require('terser-webpack-plugin');
       config.optimization.minimizer = [
         new TerserPlugin({
           terserOptions: {
             compress: {
-              // Keep function names to prevent "X is not a function" errors
               keep_fnames: true,
+              keep_classnames: true,
             },
             mangle: {
-              // Keep function names during mangling
               keep_fnames: true,
+              keep_classnames: true,
+              // Preserve top-level function names
+              toplevel: true,
+            },
+            format: {
+              // Preserve comments
+              comments: false,
             },
           },
         }),

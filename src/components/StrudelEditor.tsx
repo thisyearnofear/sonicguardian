@@ -102,7 +102,15 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
         }
       } catch (error) {
         console.error('[StrudelEditor] Initialization failed:', error);
-        setInitError(error instanceof Error ? error.message : 'Failed to load Strudel engine');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load Strudel engine';
+        
+        // Detect minification errors
+        const isMinificationError = /is not a function|Cannot read propert|undefined is not a function/.test(errorMessage);
+        const helpfulMessage = isMinificationError 
+          ? 'Strudel editor failed to load. Please try: 1) Hard refresh (Ctrl+Shift+R), 2) Clear browser cache, 3) Try in a different browser.'
+          : errorMessage;
+        
+        setInitError(helpfulMessage);
       }
     };
 
