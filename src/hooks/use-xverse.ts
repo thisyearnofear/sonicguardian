@@ -64,9 +64,10 @@ export function useXverse(): UseXverseResult {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAddresses();
-  }, [fetchAddresses]);
+  // Removed auto-connect - only connect when user explicitly clicks
+  // useEffect(() => {
+  //   fetchAddresses();
+  // }, [fetchAddresses]);
 
   const connect = useCallback(async () => {
     setIsLoading(true);
