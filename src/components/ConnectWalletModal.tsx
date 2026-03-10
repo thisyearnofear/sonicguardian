@@ -68,32 +68,43 @@ export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps)
             ))}
           </div>
 
-          {/* Xverse Pro Tip */}
+          {/* Bitcoin Wallets Pro Tip */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-orange-500/20 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="text-4xl">₿</span>
             </div>
-            
+
             <div className="relative space-y-3">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-5 h-5 bg-orange-500/20 rounded-full text-[10px]">💡</span>
-                <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Pro Tip</p>
+                <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Bitcoin Integration</p>
               </div>
-              
+
               <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-                Use <span className="font-bold text-white/90">Xverse Wallet</span> for Bitcoin integration. 
-                Xverse supports Starknet and enables seamless <span className="text-orange-300 italic">BTC ↔ STRK</span> swaps.
+                Connect a <span className="font-bold text-white/90">Bitcoin wallet</span> to anchor your sonic identity.
+                Supports both <span className="font-bold text-white/90">Xverse</span> and <span className="font-bold text-white/90">Leather</span> wallets.
               </p>
-              
-              <a 
-                href="https://www.xverse.app/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-[10px] text-orange-400 font-bold uppercase tracking-widest rounded-xl border border-orange-500/20 transition-all group/btn"
-              >
-                Download Xverse 
-                <span className="group-hover/btn:translate-x-0.5 transition-transform">→</span>
-              </a>
+
+              <div className="flex gap-2 flex-wrap">
+                <a
+                  href="https://www.xverse.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-[10px] text-orange-400 font-bold uppercase tracking-widest rounded-xl border border-orange-500/20 transition-all group/btn"
+                >
+                  Get Xverse
+                  <span className="group-hover/btn:translate-x-0.5 transition-transform">→</span>
+                </a>
+                <a
+                  href="https://leather.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-[10px] text-purple-400 font-bold uppercase tracking-widest rounded-xl border border-purple-500/20 transition-all group/btn"
+                >
+                  Get Leather
+                  <span className="group-hover/btn:translate-x-0.5 transition-transform">→</span>
+                </a>
+              </div>
             </div>
           </div>
 

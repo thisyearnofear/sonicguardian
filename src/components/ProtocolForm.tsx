@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { isValidBtcAddress } from '@/lib/crypto';
 import { Tooltip } from './Tooltip';
-import { useXverse } from '@/hooks/use-xverse';
+import { useBitcoinWallet } from '@/hooks/use-bitcoin-wallet';
 
 interface ValidationState {
   isValid: boolean;
@@ -176,21 +176,21 @@ function RegistrationForm({
 }) {
   const btcValidation = validationStates.get('btc-address');
   const vibeValidation = validationStates.get('custom-vibe');
-  const { addresses, isConnected: isXverseConnected, connect: connectXverse, disconnect: disconnectXverse, isLoading: isXverseLoading } = useXverse();
+  const { addresses, isConnected: isBtcConnected, connect: connectBtcWallet, disconnect: disconnectBtcWallet, isLoading: isBtcLoading, walletName } = useBitcoinWallet();
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
 
-  const handleXverseConnect = async () => {
-    await connectXverse();
+  const handleConnectBtcWallet = async () => {
+    await connectBtcWallet();
   };
 
-  const handleXverseDisconnect = () => {
-    disconnectXverse();
+  const handleDisconnectBtcWallet = () => {
+    disconnectBtcWallet();
     if (!btcAddress || addresses.some(a => a.address === btcAddress)) {
       setBtcAddress('');
     }
   };
 
-  const handleSelectXverseAddress = (addr: string) => {
+  const handleSelectBtcAddress = (addr: string) => {
     setBtcAddress(addr);
   };
 
@@ -222,16 +222,16 @@ function RegistrationForm({
               <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
             </Tooltip>
           </label>
-          {isXverseConnected && (
+          {isBtcConnected && (
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[9px] text-[color:var(--color-success)] font-bold uppercase tracking-widest">
                 <span className="w-1.5 h-1.5 bg-[color:var(--color-success)] rounded-full" />
-                Xverse Connected
+                {walletName || 'Bitcoin Wallet'} Connected
               </span>
               <button
-                onClick={handleXverseDisconnect}
+                onClick={handleDisconnectBtcWallet}
                 className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-error)] transition-colors"
-                title="Disconnect Xverse"
+                title="Disconnect Wallet"
               >
                 ×
               </button>
@@ -244,27 +244,27 @@ function RegistrationForm({
             value={btcAddress}
             onChange={(e) => setBtcAddress(e.target.value)}
             placeholder="bc1q... or 1... or 3..."
-            className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm pr-24"
+            className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm pr-32"
             disabled={isProcessing}
           />
-          
-          {!isXverseConnected && (
+
+          {!isBtcConnected && (
             <button
-              onClick={handleXverseConnect}
-              disabled={isXverseLoading}
+              onClick={handleConnectBtcWallet}
+              disabled={isBtcLoading}
               className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 font-bold uppercase tracking-widest border border-orange-500/20 transition-all flex items-center gap-2"
             >
-              {isXverseLoading ? '...' : '+ Xverse'}
+              {isBtcLoading ? '...' : '+ Bitcoin Wallet'}
             </button>
           )}
         </div>
-        
-        {isXverseConnected && addresses.length > 0 && (
+
+        {isBtcConnected && addresses.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {addresses.map((addr) => (
               <button
                 key={addr.address}
-                onClick={() => handleSelectXverseAddress(addr.address)}
+                onClick={() => handleSelectBtcAddress(addr.address)}
                 onDoubleClick={() => handleCopyAddress(addr.address)}
                 title="Click to select, double-click to copy"
                 className={`text-[9px] px-2 py-1 rounded border transition-all flex items-center gap-1 ${
