@@ -34,7 +34,7 @@ import { HelpModal } from './HelpModal';
 import { WelcomeModal } from './WelcomeModal';
 import { Tooltip } from './Tooltip';
 import { ProtocolForm } from './ProtocolForm';
-import { TutorialTrigger } from './InteractiveTutorial';
+import { TutorialTrigger, InteractiveTutorial } from './InteractiveTutorial';
 import { requestCrossChainProof, type StorageProof } from '@/lib/cross-chain';
 
 interface SonicGuardianProps {
@@ -74,6 +74,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [showVisualizer, setShowVisualizer] = useState(true);
   const [showPatternShowcase, setShowPatternShowcase] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Cross-Chain Identity State
   const [isRequestingProof, setIsRequestingProof] = useState(false);
@@ -337,6 +338,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
         setStatus('Sonic Identity Ready. Hit ▶ to hear your signature.');
         setShowOnboarding(false);
+        // Show tutorial for first-time users after onboarding completes
+        if (!hasVisited) {
+          setShowTutorial(true);
+        }
         visualizerRef.current?.updateDNASequence(dna.dna);
         visualizerRef.current?.highlightParticles(Array.from({ length: 8 }, (_, i) => i));
         if (audioEnabled) playAudio('success');
@@ -1168,8 +1173,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
         {/* Interactive Tutorial Trigger */}
         <TutorialTrigger onTrigger={() => {
-          // Logic to trigger tutorial can be added here
-          console.log('Tutorial triggered');
+          setShowTutorial(true);
         }} />
 
         {/* Protocol Analysis Section */}
@@ -1285,6 +1289,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
       {/* Welcome Modal */}
       {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+
+      {/* Interactive Tutorial */}
+      <InteractiveTutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 }
