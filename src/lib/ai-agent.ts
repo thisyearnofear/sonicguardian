@@ -150,7 +150,7 @@ ADVANCED PRIMITIVES:
 - .slow(n).fast(n).chop(n) - Temporal manipulation
 
 SOPHISTICATED EXAMPLES:
-- "Dark Industrial Techno": stack(s("bd*4").lpf("<400 800 1200>"), s("~ [sd/2 cp] ~ sd").distort(2), s("hh*16").gain(0.4).struct("x [x x] x/2")).cpm(132)
+- "Dark Industrial Techno": stack(s("bd*4").lpf("<400 800 1200>"), s("~ [sd/2 cp] ~ sd").distort(2), s("hh*16").gain(0.4).struct("hh [hh hh] hh/2")).cpm(132)
 - "Shimmering Ambient": note("<c4 eb4 g4 bb4>/4").s("sine").slow(8).room(0.9).lpf(800).gain(0.6).rev()
 - "Acid Bassline": note("c2(3,8)").s("sawtooth").lpf("<400 800 1200>").lpq(20).distort(2).fast(2).scale("c:phrygian")
 - "Glitch Breaks": s("amen").chop(16).speed("<1 0.5 1.5 0.8>").sometimes(".distort(1)").rev()

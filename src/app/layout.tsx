@@ -29,6 +29,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                Object.defineProperty(window, 'ethereum', {
+                  value: window.ethereum,
+                  writable: true,
+                  configurable: true,
+                });
+              } catch {}
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${spaceMono.variable} antialiased`}
       >
