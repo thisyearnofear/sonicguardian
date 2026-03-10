@@ -70,6 +70,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [validationStates, setValidationStates] = useState<Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>>(new Map());
   const [showPatternExplorer, setShowPatternExplorer] = useState(false);
   const [showAllPatterns, setShowAllPatterns] = useState(false);
+  const [showExplanations, setShowExplanations] = useState(false);
+  const [showVisualizer, setShowVisualizer] = useState(true);
+  const [showPatternShowcase, setShowPatternShowcase] = useState(false);
+  const [hasVisited, setHasVisited] = useState(false);
 
   // Cross-Chain Identity State
   const [isRequestingProof, setIsRequestingProof] = useState(false);
@@ -108,6 +112,8 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (!hasVisited) {
       setShowWelcome(true);
       localStorage.setItem('sonic_guardian_visited', 'true');
+    } else {
+      setHasVisited(true);
     }
   }, []);
 
@@ -608,12 +614,20 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       <main className="relative z-10 container mx-auto px-4 py-12 flex flex-col items-center">
         {/* Header — tight, just the badge + title */}
         <header className="text-center mb-6 space-y-3 max-w-2xl relative">
-          <div className="inline-block px-3 py-1 rounded-full border border-[color:var(--color-primary)]/40 text-[color:var(--color-primary)] text-[10px] font-bold tracking-widest uppercase animate-pulse-soft">
-            Starknet Privacy Track ✦ Sonic Identity Protocol
-          </div>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-gradient leading-[1.05]">
-            Sonic Guardian
-          </h1>
+          {!hasVisited ? (
+            <>
+              <div className="inline-block px-3 py-1 rounded-full border border-[color:var(--color-primary)]/40 text-[color:var(--color-primary)] text-[10px] font-bold tracking-widest uppercase animate-pulse-soft">
+                Starknet Privacy Track ✦ Sonic Identity Protocol
+              </div>
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-gradient leading-[1.05]">
+                Sonic Guardian
+              </h1>
+            </>
+          ) : (
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tighter text-gradient leading-[1.05]">
+              Sonic Guardian
+            </h1>
+          )}
 
           {/* Help Button */}
           <button
@@ -632,7 +646,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           <div className="lg:col-span-12 flex flex-col items-center justify-center mb-4">
             <div
               ref={visualizerContainerRef}
-              className="relative w-full h-[300px] md:h-[500px] animate-float"
+              className={`relative w-full transition-all duration-500 ${showVisualizer ? 'h-[300px] md:h-[400px]' : 'h-0'} animate-float overflow-hidden`}
             >
               {/* Central Glow */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[color:var(--color-primary)] rounded-full blur-[100px] opacity-30" />
@@ -653,41 +667,76 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 </div>
               </div>
             </div>
+            
+            {/* Visualizer Toggle */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setShowVisualizer(!showVisualizer)}
+                className="text-[9px] px-3 py-1.5 rounded-lg bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-foreground)]/10 text-[color:var(--color-muted)] border border-[color:var(--color-border)] transition-all flex items-center gap-2"
+              >
+                {showVisualizer ? '▼' : '▶'} {showVisualizer ? 'Hide' : 'Show'} Visualizer
+              </button>
+              <button
+                onClick={() => setShowExplanations(!showExplanations)}
+                className={`text-[9px] px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${
+                  showExplanations 
+                    ? 'bg-[color:var(--color-primary)]/10 border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)]'
+                    : 'bg-[color:var(--color-foreground)]/5 border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:border-[color:var(--color-primary)]/30'
+                }`}
+              >
+                💡 {showExplanations ? 'Hide' : 'Learn'} How It Works
+              </button>
+            </div>
           </div>
 
           {/* Pattern Showcase Section - Interactive Demo */}
-          <div className="lg:col-span-12 mb-12">
-            <div className="text-center mb-6">
-              <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)] mb-2">
-                Strudel Synthesis Library
-              </h3>
-              <p className="text-xs text-[color:var(--color-muted)]">
-                Click to select • Then hit ▶ to hear
-              </p>
-            </div>
-
-            {/* Pattern Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-              {(showAllPatterns ? STRUDEL_PATTERN_LIBRARY : STRUDEL_PATTERN_LIBRARY.slice(0, 6)).map((pattern) => (
+          <div className="lg:col-span-12 mb-8">
+            {!showPatternShowcase ? (
+              <div className="text-center">
                 <button
-                  key={pattern.name}
-                  onClick={() => setSelectedPatternId(pattern.name)}
-                  className={`group p-4 rounded-xl border transition-all text-left ${selectedPatternId === pattern.name
-                    ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
-                    : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
-                    }`}
+                  onClick={() => setShowPatternShowcase(true)}
+                  className="px-6 py-3 rounded-xl border border-[color:var(--color-primary)]/30 text-[color:var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:bg-[color:var(--color-primary)]/10 transition-all flex items-center gap-3 mx-auto"
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-all ${selectedPatternId === pattern.name
-                    ? 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)]'
-                    : 'bg-[color:var(--color-foreground)]/5 text-[color:var(--color-muted)]'
-                    }`}>
-                    {selectedPatternId === pattern.name ? '✓' : '♪'}
-                  </div>
-                  <p className="text-[10px] font-bold mb-1">{pattern.name}</p>
-                  <p className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{pattern.vibe}</p>
+                  <span>♪</span> Explore Sonic Patterns
+                  <span className="px-2 py-0.5 rounded bg-[color:var(--color-primary)]/20 text-[9px]">{STRUDEL_PATTERN_LIBRARY.length} available</span>
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-[color:var(--color-muted)]">
+                    Strudel Synthesis Library
+                  </h3>
+                  <button
+                    onClick={() => setShowPatternShowcase(false)}
+                    className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors"
+                  >
+                    ← Collapse
+                  </button>
+                </div>
+                
+                {/* Pattern Cards Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                  {(showAllPatterns ? STRUDEL_PATTERN_LIBRARY : STRUDEL_PATTERN_LIBRARY.slice(0, 6)).map((pattern) => (
+                    <button
+                      key={pattern.name}
+                      onClick={() => setSelectedPatternId(pattern.name)}
+                      className={`group p-4 rounded-xl border transition-all text-left ${selectedPatternId === pattern.name
+                        ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary)]/10 scale-105 shadow-lg shadow-[color:var(--color-primary)]/20'
+                        : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/40 hover:scale-102'
+                        }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-all ${selectedPatternId === pattern.name
+                        ? 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)]'
+                        : 'bg-[color:var(--color-foreground)]/5 text-[color:var(--color-muted)]'
+                        }`}>
+                        {selectedPatternId === pattern.name ? '✓' : '♪'}
+                      </div>
+                      <p className="text-[10px] font-bold mb-1">{pattern.name}</p>
+                      <p className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{pattern.vibe}</p>
+                    </button>
+                  ))}
+                </div>
 
             {/* Progressive Disclosure Toggle */}
             <div className="flex justify-center mb-8">
@@ -781,6 +830,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 </div>
               </div>
             )}
+            </div>)}
           </div>
 
           {/* Interface Cards */}
