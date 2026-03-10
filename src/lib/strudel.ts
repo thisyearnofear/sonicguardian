@@ -57,7 +57,7 @@ class StrudelEngine {
         await Promise.all([
           registerSynthSounds(),
           // Prioritize local samples, fallback to CDN
-          samples('/samples/', 'github:tidalcycles/Dirt-Samples'),
+          samples('/samples/strudel.json', 'github:tidalcycles/Dirt-Samples'),
           evalScope(
             import('@strudel/core'),
             import('@strudel/mini'),

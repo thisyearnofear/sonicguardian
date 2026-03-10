@@ -1,0 +1,10 @@
+{
+  "_base": "/samples/",
+  "808": ["/808/CB.WAV", "/808/CH.WAV", "/808/CL.WAV", "/808/CP.WAV", "/808/MA.WAV", "/808/RS.WAV"],
+  "909": ["/909/BT0A0A7.WAV"],
+  "bd": ["/bd/BT0A0A7.wav", "/bd/BT0A0D0.wav", "/bd/BT0A0D3.wav", "/bd/BT0A0DA.wav", "/bd/BT0AAD0.wav", "/bd/BT0AADA.wav", "/bd/BT3A0D0.wav", "/bd/BT3A0D3.wav", "/bd/BT3A0D7.wav", "/bd/BT3A0DA.wav", "/bd/BT3AAD0.wav", "/bd/BT3AADA.wav", "/bd/BT7A0D0.wav", "/bd/BT7A0D3.wav", "/bd/BT7A0D7.wav", "/bd/BT7A0DA.wav", "/bd/BT7AAD0.wav", "/bd/BT7AADA.wav", "/bd/BTAA0D0.wav", "/bd/BTAA0D3.wav", "/bd/BTAA0D7.wav", "/bd/BTAA0DA.wav", "/bd/BTAAAD0.wav", "/bd/BTAAADA.wav"],
+  "sd": ["/sd/rytm-00-hard.wav", "/sd/rytm-01-classic.wav"],
+  "hh": ["/hh/000_hh3closedhh.wav", "/hh/001_hh3crash.wav", "/hh/002_hh3hit1.wav", "/hh/003_hh3hit2.wav", "/hh/004_hh3hit3.wav", "/hh/005_hh3kick1.wav", "/hh/006_hh3kick2.wav", "/hh/007_hh3openhh.wav", "/hh/008_hh3rerc1.wav", "/hh/009_hh3rerc2.wav", "/hh/010_hh3ride.wav", "/hh/011_hh3snare1.wav", "/hh/012_hh3snare2.wav"],
+  "hc": ["/hc/HHCD0.wav", "/hc/HHCD2.wav", "/hc/HHCD4.wav", "/hc/HHCD6.wav", "/hc/HHCD8.wav", "/hc/HHCDA.wav"],
+  "ho": ["/ho/HHOD0.wav", "/ho/HHOD2.wav", "/ho/HHOD4.wav", "/ho/HHOD6.wav", "/ho/HHOD8.wav", "/ho/HHODA.wav"]
+}
