@@ -55,6 +55,7 @@
   "devDependencies": {
     "@types/three": "^0.160.0",
     "@types/webcrypto": "0.0.30",
-    "husky": "9.1.7"
+    "husky": "9.1.7",
+    "terser-webpack-plugin": "5.4.0"
   }
 }
