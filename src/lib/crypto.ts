@@ -4,7 +4,26 @@
  * and AES-GCM for secure backups.
  */
 
-import { hash } from 'starknet';
+import { hash, ec } from 'starknet';
+
+/**
+ * Acoustic Key Derivation (AKD)
+ * Derives a deterministic Starknet public key from a Sonic DNA hash.
+ * This allows the musical identity to act as a private key without ever revealing it.
+ */
+export function getAcousticPublicKey(dnaHash: string): string {
+    const privateKey = hexToFelt(dnaHash);
+    return ec.starkCurve.getStarkKey(privateKey);
+}
+
+/**
+ * Sign a message using the derived acoustic key (Private Key = DNA Hash)
+ * Returns a signature that proves knowledge of the DNA without revealing it.
+ */
+export function signWithAcousticKey(dnaHash: string, messageHash: string): ec.Signature {
+    const privateKey = hexToFelt(dnaHash);
+    return ec.starkCurve.sign(messageHash, privateKey);
+}
 
 /**
  * Compute Pedersen hash (Standard Starknet version)

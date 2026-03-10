@@ -54,11 +54,10 @@ class StrudelEngine {
         initAudioOnFirstClick();
         
         // 2. Load Core Modules & Sounds
-        // Note: Using Promise.all for performance, but these are heavy
         await Promise.all([
           registerSynthSounds(),
-          // Fallback to CDN if github is slow, or local in production
-          samples('github:tidalcycles/Dirt-Samples'),
+          // Prioritize local samples, fallback to CDN
+          samples('/samples/', 'github:tidalcycles/Dirt-Samples'),
           evalScope(
             import('@strudel/core'),
             import('@strudel/mini'),

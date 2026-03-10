@@ -21,7 +21,8 @@ trait ISonicGuardian<TContractState> {
         ref self: TContractState,
         btc_address: felt252,
         commitment: felt252,
-        blinding_commitment: felt252
+        blinding_commitment: felt252,
+        acoustic_key: felt252
     );
     fn verify_recovery(
         self: @TContractState,
@@ -29,11 +30,25 @@ trait ISonicGuardian<TContractState> {
         dna_hash: felt252,
         blinding: felt252
     ) -> bool;
+    fn verify_acoustic_signature(
+        self: @TContractState,
+        btc_address: felt252,
+        message_hash: felt252,
+        signature_r: felt252,
+        signature_s: felt252
+    ) -> bool;
     fn authorize_btc_recovery(
         ref self: TContractState,
         btc_address: felt252,
         dna_hash: felt252,
         blinding: felt252
+    ) -> felt252;
+    fn authorize_with_acoustic_signature(
+        ref self: TContractState,
+        btc_address: felt252,
+        message_hash: felt252,
+        signature_r: felt252,
+        signature_s: felt252
     ) -> felt252;
     
     // New On-Chain Gifting Functions
@@ -54,6 +69,7 @@ trait ISonicGuardian<TContractState> {
     );
 
     fn get_commitment(self: @TContractState, btc_address: felt252) -> felt252;
+    fn get_acoustic_key(self: @TContractState, btc_address: felt252) -> felt252;
     fn get_vault_commitment(self: @TContractState, vault_id: felt252) -> felt252;
     fn get_guardian_count(self: @TContractState) -> u256;
     fn get_version(self: @TContractState) -> felt252;
@@ -65,12 +81,15 @@ mod SonicGuardian {
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::pedersen::pedersen;
+    use core::ecdsa::check_ecdsa_signature;
     use super::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     #[storage]
     struct Storage {
         // Map BTC address to Pedersen commitment
         commitments: Map::<felt252, felt252>,
+        // Map BTC address to Acoustic Public Key (ZK-Proof anchor)
+        acoustic_keys: Map::<felt252, felt252>,
         // Map BTC address to Starknet owner
         owners: Map::<felt252, ContractAddress>,
         // Map BTC address to blinding commitment
@@ -136,13 +155,15 @@ mod SonicGuardian {
             ref self: ContractState,
             btc_address: felt252,
             commitment: felt252,
-            blinding_commitment: felt252
+            blinding_commitment: felt252,
+            acoustic_key: felt252
         ) {
             let caller = get_caller_address();
             let existing = self.commitments.read(btc_address);
             assert(existing == 0, 'Guardian already registered');
             
             self.commitments.write(btc_address, commitment);
+            self.acoustic_keys.write(btc_address, acoustic_key);
             self.owners.write(btc_address, caller);
             self.blinding_commitments.write(btc_address, blinding_commitment);
             
@@ -169,6 +190,18 @@ mod SonicGuardian {
             stored_commitment == computed_commitment
         }
 
+        fn verify_acoustic_signature(
+            self: @ContractState,
+            btc_address: felt252,
+            message_hash: felt252,
+            signature_r: felt252,
+            signature_s: felt252
+        ) -> bool {
+            let public_key = self.acoustic_keys.read(btc_address);
+            if public_key == 0 { return false; }
+            check_ecdsa_signature(message_hash, public_key, signature_r, signature_s)
+        }
+
         fn authorize_btc_recovery(
             ref self: ContractState,
             btc_address: felt252,
@@ -184,7 +217,25 @@ mod SonicGuardian {
                 timestamp: get_block_timestamp(),
             });
             
-            // Return a simple success token
+            'AUTHORIZED'
+        }
+
+        fn authorize_with_acoustic_signature(
+            ref self: ContractState,
+            btc_address: felt252,
+            message_hash: felt252,
+            signature_r: felt252,
+            signature_s: felt252
+        ) -> felt252 {
+            let is_valid = self.verify_acoustic_signature(btc_address, message_hash, signature_r, signature_s);
+            assert(is_valid, 'Invalid acoustic signature');
+            
+            self.emit(RecoveryVerified {
+                btc_address,
+                verifier: get_caller_address(),
+                timestamp: get_block_timestamp(),
+            });
+            
             'AUTHORIZED'
         }
 
@@ -258,6 +309,10 @@ mod SonicGuardian {
             self.commitments.read(btc_address)
         }
 
+        fn get_acoustic_key(self: @ContractState, btc_address: felt252) -> felt252 {
+            self.acoustic_keys.read(btc_address)
+        }
+
         fn get_vault_commitment(self: @ContractState, vault_id: felt252) -> felt252 {
             self.vault_commitments.read(vault_id)
         }
@@ -267,8 +322,7 @@ mod SonicGuardian {
         }
 
         fn get_version(self: @ContractState) -> felt252 {
-            'v1.1.0-gift-escrow'
+            'v1.2.0-acoustic-zk'
         }
     }
 }
-

@@ -2,7 +2,7 @@
 
 import { useAccount, useContract, useSendTransaction } from '@starknet-react/core';
 import { abi } from '@/lib/abi';
-import { pedersen, isValidBtcAddress, isValidHex, hashStringToFelt, hexToFelt } from '@/lib/crypto';
+import { pedersen, isValidBtcAddress, isValidHex, hashStringToFelt, hexToFelt, getAcousticPublicKey, signWithAcousticKey } from '@/lib/crypto';
 import { BaseAPIError } from '@/lib/api';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de') as `0x${string}`;
@@ -40,7 +40,7 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Register a Bitcoin guardian with Pedersen commitment
+     * Register a Bitcoin guardian with Pedersen commitment and Acoustic Public Key
      */
     const registerGuardian = async (
         btcAddress: string,
@@ -57,15 +57,19 @@ export function useStarknetGuardian() {
             const feltDnaHash = hexToFelt(dnaHash);
             const feltBlinding = hexToFelt(blinding);
 
-            // 2. Compute commitments (client-side matches Cairo pedersen_hash)
+            // 2. Compute commitments
             const commitment = await pedersen(feltDnaHash, feltBlinding);
             const blindingCommitment = await pedersen(feltBlinding, feltBlinding);
+
+            // 3. Derive Acoustic Public Key (ZK anchor)
+            const acousticKey = getAcousticPublicKey(dnaHash);
 
             const result = await sendAsync([
                 contract.populate('register_guardian', [
                     feltBtcAddress,
                     hexToFelt(commitment),
-                    hexToFelt(blindingCommitment)
+                    hexToFelt(blindingCommitment),
+                    hexToFelt(acousticKey)
                 ]),
             ]);
 
@@ -77,7 +81,71 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Verify recovery proof (read-only)
+     * Verify recovery via Acoustic Signature (Zero-Knowledge)
+     */
+    const verifyAcousticProof = async (
+        btcAddress: string,
+        dnaHash: string,
+        message: string
+    ): Promise<boolean> => {
+        try {
+            if (!contract) return false;
+            
+            const feltBtcAddress = await hashStringToFelt(btcAddress);
+            const messageHash = hexToFelt(message); // Message to sign
+            
+            // Generate signature off-chain using DNA as private key
+            const signature = signWithAcousticKey(dnaHash, messageHash);
+            
+            // @ts-ignore
+            return await contract.verify_acoustic_signature(
+                feltBtcAddress, 
+                messageHash, 
+                hexToFelt(signature.r.toString(16)), 
+                hexToFelt(signature.s.toString(16))
+            );
+        } catch (error) {
+            console.error('Acoustic proof failed:', error);
+            return false;
+        }
+    };
+
+    /**
+     * Authorize recovery via Acoustic Signature (True ZK)
+     */
+    const authorizeWithAcousticSignature = async (
+        btcAddress: string,
+        dnaHash: string
+    ) => {
+        if (!contract) throw new Error('Contract not initialized');
+
+        try {
+            const feltBtcAddress = await hashStringToFelt(btcAddress);
+            
+            // Create a unique message hash for this authorization (BTC address + timestamp)
+            const message = await hashStringToFelt(`${btcAddress}:${Date.now()}`);
+            
+            // Sign with Acoustic Key
+            const signature = signWithAcousticKey(dnaHash, message);
+
+            const result = await sendAsync([
+                contract.populate('authorize_with_acoustic_signature', [
+                    feltBtcAddress,
+                    message,
+                    hexToFelt(signature.r.toString(16)),
+                    hexToFelt(signature.s.toString(16))
+                ]),
+            ]);
+
+            return result;
+        } catch (error) {
+            console.error('Acoustic authorization failed:', error);
+            throw new BaseAPIError('Failed to authorize with acoustic proof', 'AUTHORIZATION_FAILED', 500);
+        }
+    };
+
+    /**
+     * Legacy: Verify recovery proof (reveal DNA hash)
      */
     const verifyRecovery = async (
         btcAddress: string,
@@ -101,7 +169,7 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Authorize Bitcoin recovery
+     * Legacy: Authorize Bitcoin recovery (reveal DNA hash)
      */
     const authorizeBtcRecovery = async (
         btcAddress: string,
@@ -239,6 +307,8 @@ export function useStarknetGuardian() {
         registerGuardian,
         verifyRecovery,
         authorizeBtcRecovery,
+        authorizeWithAcousticSignature,
+        verifyAcousticProof,
         createOnChainGift,
         claimOnChainGift,
         getCommitment,

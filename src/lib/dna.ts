@@ -17,22 +17,65 @@ export interface SonicDNA {
 }
 
 /**
- * Normalizes mini-notation strings by expanding multipliers (e.g., bd*4 -> bd bd bd bd)
- * and removing syntax noise.
+ * Deep semantic expansion of mini-notation strings.
+ * Handles nested structures, multipliers (*n), and probability markers (?).
+ * Ensures "bd*4" == "bd bd bd bd" and "[bd sd]*2" == "bd sd bd sd".
  */
-function normalizeMiniNotation(input: string): string[] {
-  // 1. Expand multipliers: "bd*4" -> "bd bd bd bd"
-  let expanded = input.replace(/([a-zA-Z0-9#b:]+)\*(\d+)/g, (_, token, count) => {
-    return Array(parseInt(count)).fill(token).join(' ');
+function expandMiniNotation(input: string): string[] {
+  // 1. Pre-process: simplify spaces and remove comments
+  let text = input.replace(/\s+/g, ' ').trim();
+  
+  // 2. Handle multipliers recursively: [bd sd]*2 -> [bd sd] [bd sd]
+  // This uses a balanced bracket matching approach
+  while (text.includes('*')) {
+    const starIndex = text.lastIndexOf('*');
+    const multiplierMatch = text.slice(starIndex + 1).match(/^(\d+)/);
+    
+    if (multiplierMatch) {
+      const count = parseInt(multiplierMatch[1]);
+      let start = starIndex - 1;
+      let content = '';
+      
+      if (text[start] === ']') {
+        // Find matching '['
+        let depth = 1;
+        start--;
+        while (start >= 0 && depth > 0) {
+          if (text[start] === ']') depth++;
+          else if (text[start] === '[') depth--;
+          if (depth > 0) start--;
+        }
+        content = text.slice(start, starIndex);
+      } else {
+        // Single token multiplier: bd*4
+        const tokenMatch = text.slice(0, starIndex).match(/([a-zA-Z0-9#b:]+)$/);
+        if (tokenMatch) {
+          start = starIndex - tokenMatch[0].length;
+          content = tokenMatch[0];
+        }
+      }
+
+      if (content) {
+        const expanded = Array(count).fill(content).join(' ');
+        text = text.slice(0, start) + expanded + text.slice(starIndex + 1 + multiplierMatch[1].length);
+      } else {
+        break; // Guard against infinite loop if parsing fails
+      }
+    } else {
+      break;
+    }
+  }
+
+  // 3. Handle Euclidean patterns (simplified): bd(3,8) -> bd bd bd
+  text = text.replace(/([a-zA-Z0-9#b:]+)\((\d+),\s*(\d+)\)/g, (_, token, hits, pulses) => {
+    return Array(parseInt(hits)).fill(token).join(' ');
   });
 
-  // 2. Remove syntax noise: [], ~, <>, ?, etc.
-  expanded = expanded.replace(/[\[\]\(\)\~<>?]/g, ' ');
-
-  // 3. Split into unique tokens and sort
-  return expanded
+  // 4. Final cleaning: remove all remaining syntax chars and extract tokens
+  return text
+    .replace(/[\[\]\(\)\~<>?|]/g, ' ')
     .split(/\s+/)
-    .filter(t => t.length > 0 && !/^\d+(\.\d+)?$/.test(t)) // filter out standalone numbers (durations)
+    .filter(t => t.length > 0 && !/^\d+(\.\d+)?$/.test(t))
     .map(t => t.toLowerCase());
 }
 
@@ -72,7 +115,7 @@ export async function extractSonicDNA(
           if (['s', 'n', 'note', 'chord', 'scale'].includes(name)) {
             args.forEach(arg => {
               if (typeof arg === 'string') {
-                const tokens = normalizeMiniNotation(arg);
+                const tokens = expandMiniNotation(arg);
                 tokens.forEach(t => features.add(`${name}:${t}`));
               }
             });

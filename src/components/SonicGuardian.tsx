@@ -75,7 +75,15 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const audioContextRef = useRef<AudioContext | null>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
 
-  const { isConnected, registerGuardian, verifyRecovery, authorizeBtcRecovery, getCommitment } = useStarknetGuardian();
+  const { 
+    isConnected, 
+    registerGuardian, 
+    verifyRecovery, 
+    authorizeBtcRecovery, 
+    getCommitment,
+    authorizeWithAcousticSignature,
+    verifyAcousticProof 
+  } = useStarknetGuardian();
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -498,60 +506,44 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
     try {
       let finalDnaHash = '';
-      let finalBlinding = '';
       let finalCode = '';
 
-      // 1. Check if input is an IPFS CID
+      // 1. Resolve DNA (from IPFS or Vibe)
       if (recoveryVibe.startsWith('Qm')) {
         setStatus('🌐 Fetching encrypted identity from IPFS...');
         const encryptedData = await downloadFromIPFS(recoveryVibe);
-        
         if (!encryptedData) throw new Error('Could not find identity on IPFS');
-
         if (!account) throw new Error('Wallet not connected');
 
         setStatus('🔐 Deriving decryption key from your wallet...');
         const signatureResult = await account.signMessage({
           message: "SonicGuardian Decentralized Backup - Signature used to derive your private encryption key. Never share this signature.",
         } as any);
-        const signatureStr = Array.isArray(signatureResult) 
-          ? signatureResult.join('') 
-          : typeof signatureResult === 'string' 
-            ? signatureResult 
-            : JSON.stringify(signatureResult);
-            
+        const signatureStr = Array.isArray(signatureResult) ? signatureResult.join('') : JSON.stringify(signatureResult);
         const decryptionKey = await deriveKeyFromSignature(signatureStr);
         
         setStatus('🔓 Decrypting sonic identity...');
         const decryptedData = await decryptData(encryptedData, decryptionKey);
         const backup = JSON.parse(decryptedData);
-        
         finalDnaHash = backup.dnaHash;
-        finalBlinding = backup.blinding;
         finalCode = backup.code;
-        
-        setStatus('✅ IPFS identity decrypted successfully!');
       } else {
-        // Standard Vibe Recovery
         setStatus('Extracting DNA from musical pattern...');
         const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
         const dna = await extractSonicDNA(agentResponse.code);
-        
         if (!dna) throw new Error('DNA extraction failed');
-        
-        const session = sessionManager.getCurrentSession();
         finalDnaHash = dna.hash;
-        finalBlinding = session?.blinding || '';
         finalCode = agentResponse.code;
       }
 
-      // 2. Verify and Authorize
-      setStatus('Generating ZK proof of knowledge on Starknet...');
-      await authorizeBtcRecovery(btcAddress, finalDnaHash, finalBlinding);
+      // 2. TRUE ZK PROOF: Authorize via Acoustic Signature
+      // This proves knowledge of DNA without revealing it on-chain
+      setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
+      await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
 
-      setStatus('✅ Authorship Verified! Sonic signature matches on-chain commitment.');
+      setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
       
-      // Update visualizer and state
+      // Update visualizer
       const recoveryDna = await extractSonicDNA(finalCode);
       if (recoveryDna) {
         setDna(recoveryDna);

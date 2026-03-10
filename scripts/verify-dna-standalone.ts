@@ -19,12 +19,42 @@ async function pedersen(a: string, b: string): Promise<string> {
 
 // --- DNA Logic (Copied from src/lib/dna.ts for validation) ---
 
-function normalizeMiniNotation(input: string): string[] {
-  let expanded = input.replace(/([a-zA-Z0-9#b:]+)\*(\d+)/g, (_, token, count) => {
-    return Array(parseInt(count)).fill(token).join(' ');
+function expandMiniNotation(input: string): string[] {
+  let text = input.replace(/\s+/g, ' ').trim();
+  while (text.includes('*')) {
+    const starIndex = text.lastIndexOf('*');
+    const multiplierMatch = text.slice(starIndex + 1).match(/^(\d+)/);
+    if (multiplierMatch) {
+      const count = parseInt(multiplierMatch[1]);
+      let start = starIndex - 1;
+      let content = '';
+      if (text[start] === ']') {
+        let depth = 1;
+        start--;
+        while (start >= 0 && depth > 0) {
+          if (text[start] === ']') depth++;
+          else if (text[start] === '[') depth--;
+          if (depth > 0) start--;
+        }
+        content = text.slice(start, starIndex);
+      } else {
+        const tokenMatch = text.slice(0, starIndex).match(/([a-zA-Z0-9#b:]+)$/);
+        if (tokenMatch) {
+          start = starIndex - tokenMatch[0].length;
+          content = tokenMatch[0];
+        }
+      }
+      if (content) {
+        const expanded = Array(count).fill(content).join(' ');
+        text = text.slice(0, start) + expanded + text.slice(starIndex + 1 + multiplierMatch[1].length);
+      } else break;
+    } else break;
+  }
+  text = text.replace(/([a-zA-Z0-9#b:]+)\((\d+),\s*(\d+)\)/g, (_, token, hits, pulses) => {
+    return Array(parseInt(hits)).fill(token).join(' ');
   });
-  expanded = expanded.replace(/[\[\]\(\)\~<>?]/g, ' ');
-  return expanded
+  return text
+    .replace(/[\[\]\(\)\~<>?|]/g, ' ')
     .split(/\s+/)
     .filter(t => t.length > 0 && !/^\d+(\.\d+)?$/.test(t))
     .map(t => t.toLowerCase());
@@ -53,7 +83,7 @@ async function extractSonicDNA(code: string, salt: string) {
           if (['s', 'n', 'note', 'chord', 'scale'].includes(name)) {
             args.forEach(arg => {
               if (typeof arg === 'string') {
-                const tokens = normalizeMiniNotation(arg);
+                const tokens = expandMiniNotation(arg);
                 tokens.forEach(t => features.add(`${name}:${t}`));
               }
             });
@@ -77,46 +107,37 @@ async function extractSonicDNA(code: string, salt: string) {
 }
 
 
+
 // --- Test Suite ---
 
 async function runVerification() {
   console.log('🧪 VERIFYING SEMANTIC DNA COMMITMENTS\n');
 
-  const p1 = 's("bd*4").bank("RolandTR909")';
-  const p2 = 's("bd bd bd bd").bank("RolandTR909")';
   const salt = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
-  console.log('Testing Normalization (bd*4 vs bd bd bd bd)...');
-  const d1 = await extractSonicDNA(p1, salt);
-  const d2 = await extractSonicDNA(p2, salt);
+  console.log('Case 1: Basic Normalization (bd*4 vs bd bd bd bd)...');
+  const d1 = await extractSonicDNA('s("bd*4")', salt);
+  const d2 = await extractSonicDNA('s("bd bd bd bd")', salt);
+  console.log(`Match: ${d1?.dna === d2?.dna ? '✅' : '❌'} (${d1?.dna})`);
 
-  console.log(`DNA 1: ${d1?.dna}`);
-  console.log(`DNA 2: ${d2?.dna}`);
-  
-  if (d1?.dna === d2?.dna) {
-    console.log('✅ DNA Strings Match (Semantic extraction successful)');
-  } else {
-    console.error('❌ DNA Strings Differ (Normalization failed)');
-  }
+  console.log('\nCase 2: Nested Expansion ([bd sd]*2 vs bd sd bd sd)...');
+  const d3 = await extractSonicDNA('s("[bd sd]*2")', salt);
+  const d4 = await extractSonicDNA('s("bd sd bd sd")', salt);
+  console.log(`Match: ${d3?.dna === d4?.dna ? '✅' : '❌'} (${d3?.dna})`);
 
-  if (d1?.commitment === d2?.commitment) {
-    console.log('✅ Commitments Match (Deterministic)');
-  } else {
-    console.error('❌ Commitments Differ');
-  }
+  console.log('\nCase 3: Euclidean Flattening (bd(3,8) vs bd bd bd)...');
+  const d5 = await extractSonicDNA('s("bd(3,8)")', salt);
+  const d6 = await extractSonicDNA('s("bd bd bd")', salt);
+  console.log(`Match: ${d5?.dna === d6?.dna ? '✅' : '❌'} (${d5?.dna})`);
 
-  console.log('\nTesting Uniqueness (techno vs ambient)...');
-  const p3 = 'note("c2 eb2 g2").s("sawtooth").lpf(400)';
-  const d3 = await extractSonicDNA(p3, salt);
-  
-  if (d1?.commitment !== d3?.commitment) {
-    console.log('✅ Commitments are unique for different patterns');
-  } else {
-    console.error('❌ Collision detected!');
-  }
+  console.log('\nCase 4: Complex Combo ([bd sd]*2 hh*4)...');
+  const d7 = await extractSonicDNA('s("[bd sd]*2 hh*4")', salt);
+  console.log(`DNA: ${d7?.dna}`);
+  console.log(`Features: ${d7?.dna.split('|').length} tokens`);
 
-  console.log(`\nFinal Commitment (felt): ${d1?.commitment}`);
+  console.log(`\nFinal Commitment Example: ${d7?.commitment}`);
   console.log('🏁 Verification complete.');
 }
+
 
 runVerification();

@@ -9,7 +9,8 @@ export const abi = [
                 "inputs": [
                     { "name": "btc_address", "type": "core::felt252" },
                     { "name": "commitment", "type": "core::felt252" },
-                    { "name": "blinding_commitment", "type": "core::felt252" }
+                    { "name": "blinding_commitment", "type": "core::felt252" },
+                    { "name": "acoustic_key", "type": "core::felt252" }
                 ],
                 "outputs": [],
                 "state_mutability": "external"
@@ -24,6 +25,41 @@ export const abi = [
                 ],
                 "outputs": [{ "type": "core::bool" }],
                 "state_mutability": "view"
+            },
+            {
+                "name": "verify_acoustic_signature",
+                "type": "function",
+                "inputs": [
+                    { "name": "btc_address", "type": "core::felt252" },
+                    { "name": "message_hash", "type": "core::felt252" },
+                    { "name": "signature_r", "type": "core::felt252" },
+                    { "name": "signature_s", "type": "core::felt252" }
+                ],
+                "outputs": [{ "type": "core::bool" }],
+                "state_mutability": "view"
+            },
+            {
+                "name": "authorize_btc_recovery",
+                "type": "function",
+                "inputs": [
+                    { "name": "btc_address", "type": "core::felt252" },
+                    { "name": "dna_hash", "type": "core::felt252" },
+                    { "name": "blinding", "type": "core::felt252" }
+                ],
+                "outputs": [{ "type": "core::felt252" }],
+                "state_mutability": "external"
+            },
+            {
+                "name": "authorize_with_acoustic_signature",
+                "type": "function",
+                "inputs": [
+                    { "name": "btc_address", "type": "core::felt252" },
+                    { "name": "message_hash", "type": "core::felt252" },
+                    { "name": "signature_r", "type": "core::felt252" },
+                    { "name": "signature_s", "type": "core::felt252" }
+                ],
+                "outputs": [{ "type": "core::felt252" }],
+                "state_mutability": "external"
             },
             {
                 "name": "create_onchain_gift",
@@ -57,6 +93,13 @@ export const abi = [
                 "state_mutability": "view"
             },
             {
+                "name": "get_acoustic_key",
+                "type": "function",
+                "inputs": [{ "name": "btc_address", "type": "core::felt252" }],
+                "outputs": [{ "type": "core::felt252" }],
+                "state_mutability": "view"
+            },
+            {
                 "name": "get_vault_commitment",
                 "type": "function",
                 "inputs": [{ "name": "vault_id", "type": "core::felt252" }],
@@ -79,7 +122,6 @@ export const abi = [
             }
         ]
     },
-    // ERC20 ABI for interacting with sBTC/tBTC
     {
         "name": "IERC20",
         "type": "interface",
@@ -114,4 +156,3 @@ export const abi = [
         ]
     }
 ];
-
