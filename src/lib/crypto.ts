@@ -115,13 +115,32 @@ export async function deriveKeyFromSignature(signature: string): Promise<string>
 }
 
 /**
+ * Convert a generic string (e.g. BTC address) to a felt252 deterministically.
+ * Uses SHA-256 and applies MODULO.
+ */
+export async function hashStringToFelt(input: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hexToFelt(hex);
+}
+
+/**
  * Convert hex string to felt252
  */
 export function hexToFelt(hex: string): string {
     const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
-    const clean = hex.replace(/^0x/, '');
-    return (BigInt('0x' + clean) % MODULO).toString();
+    const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+    try {
+        return (BigInt('0x' + clean) % MODULO).toString();
+    } catch {
+        // Fallback for non-hex strings if accidentally passed
+        return "0";
+    }
 }
+
 
 /**
  * Basic Bitcoin address validation

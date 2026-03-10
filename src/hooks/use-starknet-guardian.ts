@@ -2,7 +2,7 @@
 
 import { useAccount, useContract, useSendTransaction } from '@starknet-react/core';
 import { abi } from '@/lib/abi';
-import { pedersen, isValidBtcAddress, isValidHex } from '@/lib/crypto';
+import { pedersen, isValidBtcAddress, isValidHex, hashStringToFelt, hexToFelt } from '@/lib/crypto';
 import { BaseAPIError } from '@/lib/api';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de') as `0x${string}`;
@@ -41,9 +41,6 @@ export function useStarknetGuardian() {
 
     /**
      * Register a Bitcoin guardian with Pedersen commitment
-     * @param btcAddress - Bitcoin address to guard
-     * @param dnaHash - Acoustic DNA hash
-     * @param blinding - Blinding factor for commitment
      */
     const registerGuardian = async (
         btcAddress: string,
@@ -52,26 +49,23 @@ export function useStarknetGuardian() {
     ) => {
         validateInputs(btcAddress, dnaHash, blinding);
 
-        if (!contract) {
-            throw new Error('Contract not initialized');
-        }
+        if (!contract) throw new Error('Contract not initialized');
 
         try {
-            // Compute Pedersen commitment client-side
-            const commitment = await pedersen(dnaHash, blinding);
-            const blindingCommitment = await pedersen(blinding, blinding); // Commit to blinding
+            // 1. Normalize inputs to felts
+            const feltBtcAddress = await hashStringToFelt(btcAddress);
+            const feltDnaHash = hexToFelt(dnaHash);
+            const feltBlinding = hexToFelt(blinding);
 
-            // Convert to felt252 (mod prime field)
-            const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
-            const feltBtcAddress = (BigInt('0x' + btcAddress.replace(/^0x/, '')) % MODULO).toString();
-            const feltCommitment = (BigInt('0x' + commitment) % MODULO).toString();
-            const feltBlindingCommitment = (BigInt('0x' + blindingCommitment) % MODULO).toString();
+            // 2. Compute commitments (client-side matches Cairo pedersen_hash)
+            const commitment = await pedersen(feltDnaHash, feltBlinding);
+            const blindingCommitment = await pedersen(feltBlinding, feltBlinding);
 
             const result = await sendAsync([
                 contract.populate('register_guardian', [
                     feltBtcAddress,
-                    feltCommitment,
-                    feltBlindingCommitment
+                    hexToFelt(commitment),
+                    hexToFelt(blindingCommitment)
                 ]),
             ]);
 
@@ -83,10 +77,7 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Verify recovery proof (read-only, no transaction)
-     * @param btcAddress - Bitcoin address
-     * @param dnaHash - Acoustic DNA hash
-     * @param blinding - Blinding factor
+     * Verify recovery proof (read-only)
      */
     const verifyRecovery = async (
         btcAddress: string,
@@ -95,23 +86,14 @@ export function useStarknetGuardian() {
     ): Promise<boolean> => {
         try {
             validateInputs(btcAddress, dnaHash, blinding);
+            if (!contract) throw new Error('Contract not initialized');
 
-            if (!contract) {
-                throw new Error('Contract not initialized');
-            }
-
-            const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
-            const feltBtcAddress = (BigInt('0x' + btcAddress.replace(/^0x/, '')) % MODULO).toString();
-            const feltDnaHash = (BigInt('0x' + dnaHash) % MODULO).toString();
-            const feltBlinding = (BigInt('0x' + blinding) % MODULO).toString();
+            const feltBtcAddress = await hashStringToFelt(btcAddress);
+            const feltDnaHash = hexToFelt(dnaHash);
+            const feltBlinding = hexToFelt(blinding);
 
             // @ts-ignore - Cairo view function
-            const result = await contract.verify_recovery(
-                feltBtcAddress,
-                feltDnaHash,
-                feltBlinding
-            );
-            return result;
+            return await contract.verify_recovery(feltBtcAddress, feltDnaHash, feltBlinding);
         } catch (error) {
             console.error('Verification failed:', error);
             return false;
@@ -119,10 +101,7 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Authorize Bitcoin recovery (creates authorization token)
-     * @param btcAddress - Bitcoin address
-     * @param dnaHash - Acoustic DNA hash
-     * @param blinding - Blinding factor
+     * Authorize Bitcoin recovery
      */
     const authorizeBtcRecovery = async (
         btcAddress: string,
@@ -130,16 +109,12 @@ export function useStarknetGuardian() {
         blinding: string
     ) => {
         validateInputs(btcAddress, dnaHash, blinding);
-
-        if (!contract) {
-            throw new Error('Contract not initialized');
-        }
+        if (!contract) throw new Error('Contract not initialized');
 
         try {
-            const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
-            const feltBtcAddress = (BigInt('0x' + btcAddress.replace(/^0x/, '')) % MODULO).toString();
-            const feltDnaHash = (BigInt('0x' + dnaHash) % MODULO).toString();
-            const feltBlinding = (BigInt('0x' + blinding) % MODULO).toString();
+            const feltBtcAddress = await hashStringToFelt(btcAddress);
+            const feltDnaHash = hexToFelt(dnaHash);
+            const feltBlinding = hexToFelt(blinding);
 
             const result = await sendAsync([
                 contract.populate('authorize_btc_recovery', [
@@ -161,15 +136,10 @@ export function useStarknetGuardian() {
      */
     const getCommitment = async (btcAddress: string): Promise<string | null> => {
         try {
-            if (!isValidBtcAddress(btcAddress)) {
-                throw new BaseAPIError('Invalid Bitcoin address format', 'INVALID_BTC_ADDRESS', 400);
-            }
-
+            if (!isValidBtcAddress(btcAddress)) return null;
             if (!contract) return null;
 
-            const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
-            const feltBtcAddress = (BigInt('0x' + btcAddress.replace(/^0x/, '')) % MODULO).toString();
-
+            const feltBtcAddress = await hashStringToFelt(btcAddress);
             // @ts-ignore - Cairo view function
             const result = await contract.get_commitment(feltBtcAddress);
             return result.toString();
@@ -244,11 +214,14 @@ export function useStarknetGuardian() {
         }
 
         try {
+            const feltDnaHash = hexToFelt(dnaHash);
+            const feltBlinding = hexToFelt(blinding);
+
             const result = await sendAsync([
                 contract.populate('claim_onchain_gift', [
                     vaultId,
-                    dnaHash,
-                    blinding,
+                    feltDnaHash,
+                    feltBlinding,
                     recipient
                 ]),
             ]);
@@ -273,5 +246,3 @@ export function useStarknetGuardian() {
         isConnected: status === 'connected',
     };
 }
-
-

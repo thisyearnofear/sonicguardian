@@ -1,13 +1,16 @@
 'use client';
 
 import { repl, evalScope } from '@strudel/core';
-import { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds, samples, aliasBank } from '@strudel/webaudio';
+import { getAudioContext, webaudioOutput, initAudioOnFirstClick, registerSynthSounds, samples } from '@strudel/webaudio';
 import { transpiler } from '@strudel/transpiler';
 
 /**
- * Strudel Code Parser, Validator, and Player
- * Uses the official repl.evaluate() API for reliable playback.
+ * Strudel Engine Singleton
+ * Core source of truth for all musical pattern execution and audio state.
+ * Follows DRY and CONSOLIDATION principles.
  */
+
+export type EngineStatus = 'idle' | 'initializing' | 'ready' | 'error';
 
 export interface ParsedPattern {
   code: string;
@@ -16,178 +19,187 @@ export interface ParsedPattern {
   warnings: string[];
 }
 
-// Singleton state
-let audioInitialized = false;
-let replInstance: { evaluate: (code: string, autostart?: boolean) => Promise<any>; stop: () => void; start: () => void; scheduler: any; state: any } | null = null;
-let drawCb: ((haps: any[], time: number) => void) | null = null;
-let animationFrameId: number | null = null;
+class StrudelEngine {
+  private static instance: StrudelEngine;
+  private status: EngineStatus = 'idle';
+  private replInstance: any = null;
+  private initPromise: Promise<void> | null = null;
+  private drawCb: ((haps: any[], time: number) => void) | null = null;
+  private animationFrameId: number | null = null;
+  private lastHaps: any[] = [];
 
-/**
- * Initialize Strudel audio context and engine
- */
-export async function initStrudelAudio() {
-  if (audioInitialized && replInstance) return;
+  private constructor() {}
 
-  try {
-    // 1. Prepare Web Audio resume on interaction
-    initAudioOnFirstClick();
-    
-    // 2. Register synth sounds + load samples using github: format
-    await Promise.all([
-      registerSynthSounds(),
-      samples('github:tidalcycles/Dirt-Samples'),
-    ]);
-    
-    // 3. Setup evaluation scope — makes Strudel functions (s, note, stack, etc.) available
-    await evalScope(
-      import('@strudel/core'),
-      import('@strudel/mini'),
-      import('@strudel/tonal'),
-      import('@strudel/webaudio')
-    );
-
-    // 4. Initialize the REPL — this is the correct API for code evaluation
-    const ctx = getAudioContext();
-    replInstance = repl({
-      defaultOutput: webaudioOutput,
-      getTime: () => ctx.currentTime,
-      transpiler,
-    });
-    
-    // 5. Ensure context is running
-    if (ctx && ctx.state === 'suspended') {
-      await ctx.resume();
+  public static getInstance(): StrudelEngine {
+    if (!StrudelEngine.instance) {
+      StrudelEngine.instance = new StrudelEngine();
     }
+    return StrudelEngine.instance;
+  }
+
+  /**
+   * Initializes the Strudel audio engine and evaluation scope.
+   * Uses a promise lock to prevent race conditions during concurrent calls.
+   */
+  public async init(): Promise<void> {
+    if (this.status === 'ready') return;
+    if (this.initPromise) return this.initPromise;
+
+    this.status = 'initializing';
+    this.initPromise = (async () => {
+      try {
+        console.log('🌀 Initializing Strudel Engine...');
+        
+        // 1. Audio Interaction Premise
+        initAudioOnFirstClick();
+        
+        // 2. Load Core Modules & Sounds
+        // Note: Using Promise.all for performance, but these are heavy
+        await Promise.all([
+          registerSynthSounds(),
+          // Fallback to CDN if github is slow, or local in production
+          samples('github:tidalcycles/Dirt-Samples'),
+          evalScope(
+            import('@strudel/core'),
+            import('@strudel/mini'),
+            import('@strudel/tonal'),
+            import('@strudel/webaudio')
+          )
+        ]);
+
+        // 3. Instantiate REPL
+        const ctx = getAudioContext();
+        this.replInstance = repl({
+          defaultOutput: webaudioOutput,
+          getTime: () => ctx.currentTime,
+          transpiler,
+        });
+
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+
+        this.status = 'ready';
+        this.startSyncLoop();
+        console.log('✅ Strudel Engine Ready');
+      } catch (error) {
+        this.status = 'error';
+        console.error('❌ Strudel Engine Initialization Failed:', error);
+        throw error;
+      } finally {
+        this.initPromise = null;
+      }
+    })();
+
+    return this.initPromise;
+  }
+
+  private startSyncLoop() {
+    if (this.animationFrameId) return;
+
+    const loop = () => {
+      if (this.drawCb && this.replInstance?.scheduler) {
+        const time = getAudioContext().currentTime;
+        // Accurate scheduling window for visualizer
+        const haps = this.replInstance.scheduler.getHaps ? 
+          this.replInstance.scheduler.getHaps(time - 0.05, time + 0.15) : [];
+        
+        this.drawCb(haps, time);
+        this.lastHaps = haps;
+      }
+      this.animationFrameId = requestAnimationFrame(loop);
+    };
     
-    audioInitialized = true;
-    console.log('🌀 Strudel Engine Ready');
-    
-    // 6. Start visualizer sync loop
-    startVisualizerLoop();
-  } catch (error) {
-    console.error('Failed to initialize Strudel audio:', error);
+    this.animationFrameId = requestAnimationFrame(loop);
+  }
+
+  public async play(code: string): Promise<boolean> {
+    try {
+      if (this.status !== 'ready') {
+        await this.init();
+      }
+
+      const ctx = getAudioContext();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      await this.replInstance.evaluate(code);
+      return true;
+    } catch (error) {
+      console.error('Strudel Playback Error:', error);
+      return false;
+    }
+  }
+
+  public stop(): void {
+    if (this.replInstance) {
+      this.replInstance.stop();
+    }
+  }
+
+  public isPlaying(): boolean {
+    return this.replInstance?.state?.started ?? false;
+  }
+
+  public getStatus(): EngineStatus {
+    return this.status;
+  }
+
+  public setDrawCallback(callback: ((haps: any[], time: number) => void) | null): void {
+    this.drawCb = callback;
+  }
+
+  public getActiveHapsCount(time: number): number {
+    return this.lastHaps.filter(h => h.isActive?.(time)).length;
+  }
+
+  public cleanup(): void {
+    this.stop();
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.drawCb = null;
   }
 }
 
-/**
- * Sync loop for visualizer updates
- */
-function startVisualizerLoop() {
-  if (animationFrameId) return;
-
-  const loop = () => {
-    if (drawCb && replInstance?.scheduler) {
-      const time = getAudioContext().currentTime;
-      const haps = replInstance.scheduler.getHaps ? replInstance.scheduler.getHaps(time - 0.1, time + 0.2) : [];
-      drawCb(haps, time);
-    }
-    animationFrameId = requestAnimationFrame(loop);
-  };
-  
-  animationFrameId = requestAnimationFrame(loop);
-}
+// Export functional wrappers for backward compatibility and ease of use
+export const engine = StrudelEngine.getInstance();
+export const initStrudelAudio = () => engine.init();
+export const playStrudelCode = (code: string) => engine.play(code);
+export const stopStrudel = () => engine.stop();
+export const isStrudelPlaying = () => engine.isPlaying();
+export const cleanupStrudel = () => engine.cleanup();
+export const setDrawCallback = (cb: any) => engine.setDrawCallback(cb);
 
 /**
- * Set callback for visualizer updates
- */
-export function setDrawCallback(callback: ((haps: any[], time: number) => void) | null) {
-  drawCb = callback;
-}
-
-/**
- * Play Strudel code pattern using the repl's evaluate() method
- */
-export async function playStrudelCode(code: string): Promise<boolean> {
-  try {
-    if (!audioInitialized || !replInstance) {
-      await initStrudelAudio();
-    }
-
-    const ctx = getAudioContext();
-    if (ctx && ctx.state === 'suspended') {
-      await ctx.resume();
-    }
-
-    if (!replInstance) {
-      throw new Error('Could not initialize Strudel REPL');
-    }
-
-    // Use the repl's evaluate() — it handles transpilation, eval scoping,
-    // pattern collection ($: syntax), and scheduler wiring correctly.
-    await replInstance.evaluate(code);
-
-    return true;
-  } catch (error) {
-    console.error('Failed to play Strudel code:', error);
-    return false;
-  }
-}
-
-/**
- * Stop Strudel playback
- */
-export function stopStrudel() {
-  try {
-    if (replInstance) {
-      replInstance.stop();
-    }
-  } catch (error) {
-    console.error('Failed to stop Strudel:', error);
-  }
-}
-
-/**
- * Check if Strudel is currently playing
- */
-export function isStrudelPlaying(): boolean {
-  return replInstance?.state?.started ?? false;
-}
-
-/**
- * Cleanup Strudel resources
- */
-export function cleanupStrudel() {
-  try {
-    stopStrudel();
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
-    }
-  } catch (error) {
-    console.error('Failed to cleanup Strudel:', error);
-  }
-}
-
-/**
- * Parse and validate Strudel code
+ * Centralized Parser & Validator
  */
 export function parseStrudelCode(code: string): ParsedPattern {
-  try {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    
-    if (!code || typeof code !== 'string') {
-      errors.push('Code must be a non-empty string');
-      return { code, isValid: false, errors, warnings };
-    }
-    
-    const dangerousPatterns = [/eval\s*\(/i, /Function\s*\(/i, /localStorage/i, /document\.cookie/i];
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(code)) {
-        errors.push(`Potentially dangerous code pattern detected`);
-      }
-    }
-    
-    return {
-      code,
-      isValid: errors.length === 0,
-      errors,
-      warnings
-    };
-  } catch (error) {
-    return { code, isValid: false, errors: ['Parse failed'], warnings: [] };
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  if (!code?.trim()) {
+    return { code, isValid: false, errors: ['Pattern cannot be empty'], warnings };
   }
+
+  // Security Audit
+  const dangerousPatterns = [/eval\s*\(/i, /Function\s*\(/i, /localStorage/i, /document\.cookie/i];
+  dangerousPatterns.forEach(p => {
+    if (p.test(code)) errors.push('Dangerous code pattern detected');
+  });
+
+  // Basic Syntax Validation (Enhanced)
+  // Check for common Strudel entry points or stack structures
+  const validStart = /^(stack|s\(|note\(|n\(|slow\(|fast\(|cat\(|seq\(|\/\/|\/\*)/.test(code.trim());
+  if (!validStart) {
+    warnings.push('Pattern might be missing a valid Strudel entry point (e.g., s() or stack())');
+  }
+
+  return { code, isValid: errors.length === 0, errors, warnings };
 }
+
 
 export const STRUDEL_PATTERN_LIBRARY = [
     // === RHYTHM & PERCUSSION ===

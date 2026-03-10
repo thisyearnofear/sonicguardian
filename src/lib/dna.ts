@@ -1,137 +1,115 @@
 import { parse } from 'acorn';
 import { walk } from 'estree-walker';
-import { validators } from './api';
+import { pedersen, hexToFelt } from './crypto';
 
 /**
- * Sonic DNA extraction for identity fingerprinting
- * Captures rhythmic, harmonic, and temporal semantics from Strudel patterns
- * Creates a unique fingerprint for each musical identity
+ * Sonic DNA - Advanced Musical Fingerprinting
+ * Captures semantic musical features for on-chain ZK verification.
+ * Follows CLEAN and ENHANCEMENT principles.
  */
-export interface SonicDNA {
-  dna: string;
-  features: string[];
-  hash: string;
-  salt: string;
-  timestamp: number;
-  rhythmicFeatures?: string[];
-  harmonicFeatures?: string[];
-  temporalFeatures?: string[];
-}
 
-export interface DNAExtractionOptions {
-  salt?: string;
-  includeTimestamp?: boolean;
-  captureSemantics?: boolean;  // Capture rhythmic/temporal/harmonic features
+export interface SonicDNA {
+  dna: string;          // Normalized feature string
+  commitment: string;   // Pedersen commitment (felt)
+  features: string[];
+  hash: string;         // SHA-256 hash
+  salt: string;
 }
 
 /**
- * Extracts musical features from a Strudel pattern string
- * Now captures rhythmic, harmonic, and temporal semantics
+ * Normalizes mini-notation strings by expanding multipliers (e.g., bd*4 -> bd bd bd bd)
+ * and removing syntax noise.
+ */
+function normalizeMiniNotation(input: string): string[] {
+  // 1. Expand multipliers: "bd*4" -> "bd bd bd bd"
+  let expanded = input.replace(/([a-zA-Z0-9#b:]+)\*(\d+)/g, (_, token, count) => {
+    return Array(parseInt(count)).fill(token).join(' ');
+  });
+
+  // 2. Remove syntax noise: [], ~, <>, ?, etc.
+  expanded = expanded.replace(/[\[\]\(\)\~<>?]/g, ' ');
+
+  // 3. Split into unique tokens and sort
+  return expanded
+    .split(/\s+/)
+    .filter(t => t.length > 0 && !/^\d+(\.\d+)?$/.test(t)) // filter out standalone numbers (durations)
+    .map(t => t.toLowerCase());
+}
+
+/**
+ * Extract semantic musical DNA from Strudel code.
  */
 export async function extractSonicDNA(
   code: string,
-  options: DNAExtractionOptions = {}
+  salt?: string
 ): Promise<SonicDNA | null> {
   try {
-    const validatedCode = code.trim();
+    const trimmedCode = code.trim();
+    if (!trimmedCode) throw new Error('Empty code');
 
-    if (!validatedCode) {
-      throw new Error('Empty code provided');
-    }
+    const features: Set<string> = new Set();
+    const activeSalt = salt || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36));
 
-    const features: Array<{ name: string; args: (string | number)[] }> = [];
-    const rhythmicFeatures: string[] = [];
-    const harmonicFeatures: string[] = [];
-    const temporalFeatures: string[] = [];
-
-    const ast = parse(validatedCode, {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-    });
+    // 1. Parse JS AST
+    const ast = parse(trimmedCode, { ecmaVersion: 2022, sourceType: 'module' });
 
     walk(ast as any, {
       enter(node) {
         if (node.type === 'CallExpression') {
-          let name = '';
-          if (node.callee.type === 'Identifier') {
-            name = (node.callee as any).name;
-          } else if (node.callee.type === 'MemberExpression') {
-            name = (node.callee.property as any).name;
-          }
+          const name = node.callee.type === 'Identifier' ? 
+            (node.callee as any).name : 
+            (node.callee.type === 'MemberExpression' ? (node.callee.property as any).name : '');
 
-          if (name) {
-            const args = node.arguments.map((arg: any) => {
-              if (arg.type === 'Literal') return arg.value;
-              if (arg.type === 'TemplateLiteral') return arg.quasis[0].value.raw;
-              return null;
-            }).filter(a => a !== null);
+          if (!name || ['evaluate', 'm', 'stack'].includes(name)) return;
 
-            // Normalize: Round to nearest integer for robustness, and lowercase strings
-            const normalizedArgs = args.map(a => {
-              if (typeof a === 'number') return Math.round(a * 10) / 10;
-              if (typeof a === 'string') return a.toLowerCase().trim();
-              return a;
+          const args = node.arguments.map((arg: any) => {
+            if (arg.type === 'Literal') return arg.value;
+            if (arg.type === 'TemplateLiteral') return arg.quasis[0].value.raw;
+            return null;
+          }).filter(a => a !== null);
+
+          // Deep parse mini-notation strings
+          if (['s', 'n', 'note', 'chord', 'scale'].includes(name)) {
+            args.forEach(arg => {
+              if (typeof arg === 'string') {
+                const tokens = normalizeMiniNotation(arg);
+                tokens.forEach(t => features.add(`${name}:${t}`));
+              }
             });
-
-            features.push({ name, args: normalizedArgs });
-
-            // Categorize features by musical semantics
-            if (options.captureSemantics) {
-              // Rhythmic: drums, patterns, timing
-              if (['s', 'note', 'n', 'bd', 'sd', 'hh', 'oh', 'cp', 'rim'].includes(name)) {
-                rhythmicFeatures.push(`${name}(${normalizedArgs.join(',')})`);
-              }
-              
-              // Temporal: time modifiers
-              if (['slow', 'fast', 'sometimes', 'when', 'cpm', 'slowfast'].includes(name)) {
-                temporalFeatures.push(`${name}(${normalizedArgs.join(',')})`);
-              }
-              
-              // Harmonic: scales, chords, notes
-              if (['scale', 'chord', 'n', 'note'].includes(name)) {
-                harmonicFeatures.push(`${name}(${normalizedArgs.join(',')})`);
-              }
-
-              // Pattern transformations
-              if (['pattern', 'stack', 'seq', 'cat'].includes(name)) {
-                rhythmicFeatures.push(`${name}(${normalizedArgs.join(',')})`);
-              }
-            }
+          } else {
+            // General effects/modifiers
+            features.add(`${name}(${args.map(a => typeof a === 'number' ? Math.round(a * 10) / 10 : a).join(',')})`);
           }
         }
       }
     });
 
-    // Normalize: Remove duplicates, sort by function name, and stringify
-    const uniqueFeatures = Array.from(new Set(features
-      .filter(f => !['m', 'evaluate', 's', 'stack'].includes(f.name))
-      .map(f => `${f.name}(${f.args.join(',')})`)
-    )).sort();
+    // 2. Normalize features (Sort and Join)
+    const normalized = Array.from(features).sort().join('|');
 
-    const normalized = uniqueFeatures.join('|');
+    // 3. Generate SHA-256 Hash
+    const encoder = new TextEncoder();
+    const data = encoder.encode(normalized + activeSalt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // Generate cryptographic hash
-    const salt = options.salt || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
-    const hash = await generateHash(normalized + salt);
-    const timestamp = options.includeTimestamp ? Date.now() : 0;
+    // 4. Compute ZK-friendly Pedersen Commitment
+    const commitment = await pedersen(hexToFelt(hashHex.substring(0, 32)), hexToFelt(activeSalt.substring(0, 32)));
 
     return {
       dna: normalized,
-      features: features.map(f => f.name).filter((v, i, a) => a.indexOf(v) === i),
-      hash: hash,
-      salt: salt,
-      timestamp: timestamp,
-      ...(options.captureSemantics && {
-        rhythmicFeatures: Array.from(new Set(rhythmicFeatures)).sort(),
-        harmonicFeatures: Array.from(new Set(harmonicFeatures)).sort(),
-        temporalFeatures: Array.from(new Set(temporalFeatures)).sort(),
-      })
+      commitment,
+      features: Array.from(features),
+      hash: hashHex,
+      salt: activeSalt
     };
   } catch (error) {
-    console.error("Failed to extract Sonic DNA:", error);
+    console.error('DNA Extraction Failed:', error);
     return null;
   }
 }
+
+
 
 /**
  * Detects if a prompt contains musical chunks and reconstructs the code
