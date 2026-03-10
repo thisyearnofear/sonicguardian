@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Wallet, { AddressPurpose } from 'sats-connect';
+import { request, AddressPurpose } from 'sats-connect';
 
 interface BitcoinWalletAddressItem {
   address: string;
@@ -36,7 +36,7 @@ export function useBitcoinWallet(): UseBitcoinWalletResult {
 
   const processAddresses = (result: unknown): BitcoinWalletAddress[] => {
     const data = result as { addresses: BitcoinWalletAddressItem[] };
-    if (!data.addresses) return [];
+    if (!data?.addresses) return [];
     return data.addresses
       .filter((addr) => addr.purpose === 'payment' || addr.purpose === 'ordinals')
       .map((addr) => ({
@@ -50,7 +50,7 @@ export function useBitcoinWallet(): UseBitcoinWalletResult {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await Wallet.request('getAddresses', {
+      const response = await request('getAccounts', {
         purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
         message: 'Connect to Sonic Guardian',
       });
@@ -62,7 +62,7 @@ export function useBitcoinWallet(): UseBitcoinWalletResult {
         // Detect wallet type from first address
         if (addrs.length > 0) {
           const walletType = addrs[0].walletType || 'unknown';
-          setWalletName(walletType.toLowerCase().includes('leather') ? 'Leather' : 
+          setWalletName(walletType.toLowerCase().includes('leather') ? 'Leather' :
                        walletType.toLowerCase().includes('xverse') ? 'Xverse' : 'Bitcoin Wallet');
         }
       } else {
@@ -78,7 +78,9 @@ export function useBitcoinWallet(): UseBitcoinWalletResult {
     }
   }, []);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    // sats-connect v4 doesn't have a disconnect API
+    // Just clear local state
     setAddresses([]);
     setIsConnectedState(false);
     setWalletName(null);
