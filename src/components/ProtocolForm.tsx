@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { isValidBtcAddress } from '@/lib/crypto';
 import { Tooltip } from './Tooltip';
+import { useXverse } from '@/hooks/use-xverse';
 
 interface ValidationState {
   isValid: boolean;
@@ -109,8 +110,8 @@ export function ProtocolForm({
       <div className="space-y-4 pt-4 border-t border-[color:var(--color-border)] mt-auto">
         <button
           onClick={phase === 'registration' ? onGenerate : onRecovery}
-          disabled={isProcessing}
-          className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden group relative"
+          disabled={isProcessing || (phase === 'registration' && !btcAddress.trim()) || (phase === 'registration' && !isValidBtcAddress(btcAddress))}
+          className="w-full py-5 rounded-2xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold tracking-widest uppercase text-sm hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden group relative"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--color-primary)] to-[color:var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
           <span className="relative z-10">
@@ -175,6 +176,29 @@ function RegistrationForm({
 }) {
   const btcValidation = validationStates.get('btc-address');
   const vibeValidation = validationStates.get('custom-vibe');
+  const { addresses, isConnected: isXverseConnected, connect: connectXverse, disconnect: disconnectXverse, isLoading: isXverseLoading } = useXverse();
+  const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
+
+  const handleXverseConnect = async () => {
+    await connectXverse();
+  };
+
+  const handleXverseDisconnect = () => {
+    disconnectXverse();
+    if (!btcAddress || addresses.some(a => a.address === btcAddress)) {
+      setBtcAddress('');
+    }
+  };
+
+  const handleSelectXverseAddress = (addr: string) => {
+    setBtcAddress(addr);
+  };
+
+  const handleCopyAddress = (addr: string) => {
+    navigator.clipboard.writeText(addr);
+    setCopiedAddr(addr);
+    setTimeout(() => setCopiedAddr(null), 2000);
+  };
 
   return (
     <div className="space-y-4">
@@ -198,15 +222,68 @@ function RegistrationForm({
               <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
             </Tooltip>
           </label>
+          {isXverseConnected && (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-[9px] text-[color:var(--color-success)] font-bold uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 bg-[color:var(--color-success)] rounded-full" />
+                Xverse Connected
+              </span>
+              <button
+                onClick={handleXverseDisconnect}
+                className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-error)] transition-colors"
+                title="Disconnect Xverse"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
-        <input
-          type="text"
-          value={btcAddress}
-          onChange={(e) => setBtcAddress(e.target.value)}
-          placeholder="bc1q... or 1... or 3..."
-          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
-          disabled={isProcessing}
-        />
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            value={btcAddress}
+            onChange={(e) => setBtcAddress(e.target.value)}
+            placeholder="bc1q... or 1... or 3..."
+            className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm pr-24"
+            disabled={isProcessing}
+          />
+          
+          {!isXverseConnected && (
+            <button
+              onClick={handleXverseConnect}
+              disabled={isXverseLoading}
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 font-bold uppercase tracking-widest border border-orange-500/20 transition-all flex items-center gap-2"
+            >
+              {isXverseLoading ? '...' : '+ Xverse'}
+            </button>
+          )}
+        </div>
+        
+        {isXverseConnected && addresses.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {addresses.map((addr) => (
+              <button
+                key={addr.address}
+                onClick={() => handleSelectXverseAddress(addr.address)}
+                onDoubleClick={() => handleCopyAddress(addr.address)}
+                title="Click to select, double-click to copy"
+                className={`text-[9px] px-2 py-1 rounded border transition-all flex items-center gap-1 ${
+                  btcAddress === addr.address
+                    ? 'bg-[color:var(--color-primary)] text-white border-[color:var(--color-primary)]'
+                    : 'bg-transparent text-[color:var(--color-muted)] border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]'
+                }`}
+              >
+                <span className="opacity-70">{addr.purpose === 'ordinals' ? '🥀' : '₿'}</span>
+                {copiedAddr === addr.address ? (
+                  <span className="text-[color:var(--color-success)]">Copied!</span>
+                ) : (
+                  <span>{addr.address.slice(0, 12)}...</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+        
         <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
         
         {btcValidation && (

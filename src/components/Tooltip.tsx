@@ -49,7 +49,7 @@ export function Tooltip({ text, id, children, position = 'top', delay = 200 }: T
     <div className="group relative inline-flex items-center">
       {children}
       <div 
-        className={`absolute ${getPositionClasses()} px-3 py-2 bg-black/90 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50`}
+        className={`absolute ${getPositionClasses()} px-3 py-2 bg-black/90 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-normal max-w-xs break-words pointer-events-none z-50`}
         style={{ transitionDelay: `${delay}ms` }}
       >
         {tooltipText}

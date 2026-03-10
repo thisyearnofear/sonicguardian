@@ -16,6 +16,7 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
   const editorRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
   const [activeHaps, setActiveHaps] = useState(0);
 
   useEffect(() => {
@@ -101,6 +102,7 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
         }
       } catch (error) {
         console.error('[StrudelEditor] Initialization failed:', error);
+        setInitError(error instanceof Error ? error.message : 'Failed to load Strudel engine');
       }
     };
 
@@ -191,11 +193,24 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
           style={{ minHeight: '200px' }}
         />
 
-        {!isInitialized && (
+        {!isInitialized && !initError && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl z-20">
             <div className="flex items-center gap-2 text-white text-sm">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               Loading Strudel Engine...
+            </div>
+          </div>
+        )}
+        {initError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl z-20">
+            <div className="flex flex-col items-center gap-2 text-center p-4">
+              <span className="text-[color:var(--color-error)] text-sm">⚠️ {initError}</span>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-3 py-1.5 rounded-lg bg-[color:var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+              >
+                Retry
+              </button>
             </div>
           </div>
         )}
