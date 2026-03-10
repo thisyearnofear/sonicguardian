@@ -35,6 +35,7 @@ import { WelcomeModal } from './WelcomeModal';
 import { Tooltip } from './Tooltip';
 import { ProtocolForm } from './ProtocolForm';
 import { TutorialTrigger, InteractiveTutorial } from './InteractiveTutorial';
+import { InferenceExplainer, INFERENCE_STEPS } from './InferenceExplainer';
 import { requestCrossChainProof, type StorageProof } from '@/lib/cross-chain';
 
 interface SonicGuardianProps {
@@ -75,6 +76,10 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [showPatternShowcase, setShowPatternShowcase] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  
+  // Inference Explainer State
+  const [showExplainer, setShowExplainer] = useState(false);
+  const [inferenceStep, setInferenceStep] = useState(0);
 
   // Cross-Chain Identity State
   const [isRequestingProof, setIsRequestingProof] = useState(false);
@@ -309,10 +314,32 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           return;
         }
 
-        const agentResponse = await generateStrudelCode(secretVibe, { useRealAI });
-        code = agentResponse.code;
-        chunks = [];
-        entropy = 0;
+        // Show inference explainer during AI generation
+        setShowExplainer(true);
+        setInferenceStep(0);
+
+        // Progress through inference steps
+        const stepTimer = setInterval(() => {
+          setInferenceStep((prev) => {
+            if (prev >= INFERENCE_STEPS.length - 1) {
+              clearInterval(stepTimer);
+              return prev;
+            }
+            return prev + 1;
+          });
+        }, 1500);
+
+        try {
+          const agentResponse = await generateStrudelCode(secretVibe, { useRealAI });
+          clearInterval(stepTimer);
+          setInferenceStep(INFERENCE_STEPS.length - 1);
+          code = agentResponse.code;
+          chunks = [];
+          entropy = 0;
+        } finally {
+          // Hide explainer after a short delay
+          setTimeout(() => setShowExplainer(false), 500);
+        }
       }
 
       setGeneratedCode(code);
@@ -906,6 +933,8 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     <p className="text-xl font-medium tracking-tight leading-snug">
                       {status}
                     </p>
+                    {/* Inference Explainer - Shows during AI generation */}
+                    <InferenceExplainer isVisible={showExplainer} currentStep={inferenceStep} />
                   </div>
                 ) : (
                   <div className="space-y-4">
