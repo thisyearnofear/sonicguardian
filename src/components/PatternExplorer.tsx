@@ -1,505 +1,234 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel';
+import { engine, STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel';
 import { StrudelVisualizer } from './StrudelVisualizer';
-import { generateSecurePattern, mutatePattern } from '@/lib/pattern-generator';
-import { Tooltip } from './Tooltip';
-
-interface PatternExplorerProps {
-  onPatternSelect?: (code: string) => void;
-}
 
 interface FeatureDemo {
   name: string;
-  description: string;
+  vibe: string;
   code: string;
-  category: 'rhythm' | 'harmony' | 'transformation' | 'effect';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: 'rhythm' | 'bass' | 'melodic' | 'harmonic' | 'ambient' | 'complex';
+  features: string[];
 }
 
-const FEATUREDEMOS: FeatureDemo[] = [
-  // === RHYTHM FEATURES ===
-  {
-    name: 'Basic Rhythms',
-    description: 'Simple repeating patterns using * notation',
-    code: `s("bd*4").gain(0.9)`,
-    category: 'rhythm',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Syncopation',
-    description: 'Off-beat patterns with rests (~)',
-    code: `s("bd[~ ~][~ bd]")`,
-    category: 'rhythm',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Nested Patterns',
-    description: 'Patterns within patterns for complex rhythms',
-    code: `s("bd[~ sd][sd ~]")`,
-    category: 'rhythm',
-    difficulty: 'intermediate',
-  },
-  {
-    name: 'Polyrhythms',
-    description: 'Multiple rhythms playing at different speeds',
-    code: `stack(
-  s("bd*3").slow(3),
-  s("sd*4").slow(4),
-  s("hh*5").slow(5)
-).cpm(100)`,
-    category: 'rhythm',
-    difficulty: 'advanced',
-  },
-  {
-    name: 'Euclidean Rhythms',
-    description: 'Mathematically distributed beats',
-    code: `s("bd[~ ~][~ ~]")`,
-    category: 'rhythm',
-    difficulty: 'intermediate',
-  },
-  
-  // === HARMONY FEATURES ===
-  {
-    name: 'Scale Patterns',
-    description: 'Notes from a musical scale',
-    code: `n("c4 d4 e4 f4 g4").s("sine")`,
-    category: 'harmony',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Chord Progressions',
-    description: 'I-V-vi-IV pop progression',
-    code: `note("<c3 e3 g3 b3> <g3 b3 d4 f4> <a3 c4 e4 g4> <f3 a3 c4 e4>").s("gm_pad_sweep").slow(4).room(0.8)`,
-    category: 'harmony',
-    difficulty: 'intermediate',
-  },
-  {
-    name: 'Jazz Harmony',
-    description: 'ii-V-I turnaround in D minor',
-    code: `note("<[d3,f3,a3,c4] [g3,b3,d4,f4] [c3,e3,g3,b3]>").s("piano").slow(2).room(0.6)`,
-    category: 'harmony',
-    difficulty: 'advanced',
-  },
-  {
-    name: 'Arpeggios',
-    description: 'Broken chords in patterns',
-    code: `n("c3 e3 g3 c4").pattern("<c3 g3 e3 c4>").s("supersaw").fast(4)`,
-    category: 'harmony',
-    difficulty: 'intermediate',
-  },
-  
-  // === TRANSFORMATION FEATURES ===
-  {
-    name: 'Time Stretching',
-    description: 'Slow down patterns with slow()',
-    code: `n("c4 e4 g4").s("triangle").slow(4).room(0.8)`,
-    category: 'transformation',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Speed Up',
-    description: 'Accelerate patterns with fast()',
-    code: `s("hh*8").gain(0.4).fast(2)`,
-    category: 'transformation',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Pattern Rotation',
-    description: 'Rotate through variations with <> ',
-    code: `s("<bd*4 bd[~ bd] bd*2>")`,
-    category: 'transformation',
-    difficulty: 'intermediate',
-  },
-  {
-    name: 'Probabilistic Events',
-    description: 'Random chance with ? operator',
-    code: `n("c4?0.5 d4?0.5 e4?0.5 g4?0.5").s("sine").slow(2)`,
-    category: 'transformation',
-    difficulty: 'advanced',
-  },
-  {
-    name: 'Conditional Patterns',
-    description: 'sometimes() applies changes randomly',
-    code: `s("bd*4").sometimes("<>").gain(0.9)`,
-    category: 'transformation',
-    difficulty: 'advanced',
-  },
-  
-  // === EFFECT FEATURES ===
-  {
-    name: 'Filter Automation',
-    description: 'Moving low-pass filter with <> ',
-    code: `note("c2 [~ c3]").s("sawtooth").lpf(<400 800 1200>).lpq(20)`,
-    category: 'effect',
-    difficulty: 'intermediate',
-  },
-  {
-    name: 'Distortion',
-    description: 'Add grit with distort()',
-    code: `s("bd*4").distort(2.5).gain(0.9)`,
-    category: 'effect',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Reverb',
-    description: 'Space and depth with room()',
-    code: `n("c4 e4 g4").s("pad").slow(4).room(0.85).gain(0.5)`,
-    category: 'effect',
-    difficulty: 'beginner',
-  },
-  {
-    name: 'Bitcrush',
-    description: 'Lo-fi texture with crush()',
-    code: `stack(
-  s("bd ~").crush(8),
-  n("I vi").sound("piano").crush(10)
-).cpm(85)`,
-    category: 'effect',
-    difficulty: 'intermediate',
-  },
-];
-
-const CATEGORYFILTERS = [
-  { id: 'all', label: 'All', icon: '🎵' },
-  { id: 'rhythm', label: 'Rhythm', icon: '🥁' },
-  { id: 'harmony', label: 'Harmony', icon: '🎹' },
-  { id: 'transformation', label: 'Transform', icon: '⚡' },
-  { id: 'effect', label: 'Effects', icon: '🎛️' },
-];
-
-const DIFFICULTYCOLORS = {
-  beginner: 'bg-green-500/20 text-green-400 border-green-500/30',
-  intermediate: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  advanced: 'bg-red-500/20 text-red-400 border-red-500/30',
-};
+interface PatternExplorerProps {
+  onPatternSelect?: (code: string, name: string) => void;
+}
 
 export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeDemo, setActiveDemo] = useState<FeatureDemo | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [activeHaps, setActiveHaps] = useState<any[]>([]);
   const [showCode, setShowCode] = useState<string | null>(null);
   const [currentLibraryPage, setCurrentLibraryPage] = useState(0);
-  
-  // Calculate current patterns to show based on page
-  const currentLibraryPatterns = React.useMemo(() => {
-    return STRUDEL_PATTERN_LIBRARY.slice(
-      currentLibraryPage * 4,
-      currentLibraryPage * 4 + 4
-    );
-  }, [currentLibraryPage]);
 
-  // Setup visualizer callback
-  useEffect(() => {
-    setDrawCallback((haps: any[]) => {
-      setActiveHaps(haps.filter((h: any) => h.isActive?.(performance.now() / 1000)));
-    });
-    return () => setDrawCallback(null);
-  }, []);
+  // Filter patterns by category
+  const filteredPatterns = React.useMemo(() => {
+    if (selectedCategory === 'all') return STRUDEL_PATTERN_LIBRARY;
+    return STRUDEL_PATTERN_LIBRARY.filter(p => p.category === selectedCategory);
+  }, [selectedCategory]);
 
   const handlePlayDemo = async (demo: FeatureDemo) => {
-    if (isPlaying && activeDemo === demo) {
-      stopStrudel();
+    if (activeDemo?.name === demo.name && isPlaying) {
+      engine.stop();
       setIsPlaying(false);
-      setActiveDemo(null);
-    } else {
-      stopStrudel();
-      setActiveDemo(demo);
-      const success = await playStrudelCode(demo.code);
-      setIsPlaying(success);
-      if (onPatternSelect) onPatternSelect(demo.code);
+      return;
+    }
+
+    if (isPlaying) {
+      engine.stop();
+    }
+
+    setActiveDemo(demo);
+    setIsPlaying(true);
+    const ok = await engine.play(demo.code);
+    if (!ok) setIsPlaying(false);
+  };
+
+  const handleSelect = (demo: FeatureDemo) => {
+    if (onPatternSelect) {
+      onPatternSelect(demo.code, demo.name);
     }
   };
 
-  const handleRemix = async () => {
-    if (!activeDemo) return;
-    const remixed = mutatePattern(activeDemo.code);
-    stopStrudel();
-    setActiveDemo({ ...activeDemo, code: remixed, name: `${activeDemo.name} (Remix)` });
-    const success = await playStrudelCode(remixed);
-    setIsPlaying(success);
-  };
-
-  const filteredDemos = selectedCategory === 'all'
-    ? FEATUREDEMOS
-    : FEATUREDEMOS.filter(d => d.category === selectedCategory);
+  const categories = ['all', 'rhythm', 'bass', 'melodic', 'harmonic', 'ambient', 'complex'];
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
+    <div className="flex flex-col h-full bg-black/40 rounded-3xl overflow-hidden border border-white/5">
       {/* Header */}
-      <div className="text-center space-y-4">
-        <h2 className="text-4xl font-bold tracking-tight text-gradient">
-          🎼 Strudel Pattern Explorer
-        </h2>
-        <p className="text-sm text-[color:var(--color-muted)] max-w-2xl mx-auto">
-          Interactive showcase of Strudel's live coding capabilities. 
-          Click any pattern to hear it, see real-time visualization, and explore the code.
-        </p>
-      </div>
-
-      {/* Category Filters */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {CATEGORYFILTERS.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setSelectedCategory(filter.id)}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all flex items-center gap-2 ${
-              selectedCategory === filter.id
-                ? 'bg-[color:var(--color-primary)] text-white shadow-lg shadow-[color:var(--color-primary)]/30'
-                : 'glass text-[color:var(--color-muted)] hover:bg-[color:var(--color-primary)]/10'
-            }`}
-          >
-            <span>{filter.icon}</span>
-            {filter.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Active Player */}
-      {activeDemo && (
-        <div className="glass rounded-3xl p-6 border border-[color:var(--color-primary)]/30 space-y-4 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-[color:var(--color-success)] animate-pulse' : 'bg-[color:var(--color-muted)]'}`} />
-                <span className="text-sm font-bold text-[color:var(--color-primary)]">
-                  {activeDemo.name}
-                </span>
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${DIFFICULTYCOLORS[activeDemo.difficulty]}`}>
-                {activeDemo.difficulty}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handlePlayDemo(activeDemo)}
-                className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
-                  isPlaying
-                    ? 'bg-[color:var(--color-error)] text-white'
-                    : 'bg-[color:var(--color-primary)] text-white'
-                }`}
-              >
-                {isPlaying ? '⏹ Stop' : '▶ Play'}
-              </button>
-              <button
-                onClick={handleRemix}
-                className="px-4 py-2 rounded-lg bg-[color:var(--color-accent)] text-white font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all"
-              >
-                🎲 Remix
-              </button>
-            </div>
+      <div className="p-6 border-b border-white/5 bg-white/5">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black uppercase tracking-tighter text-white">Pattern <span className="text-[color:var(--color-primary)]">Explorer</span></h2>
+            <p className="text-[10px] text-[color:var(--color-muted)] font-bold uppercase tracking-widest mt-1">Discover the building blocks of Sonic Identity</p>
           </div>
-
-          {/* Visualizer */}
-          <StrudelVisualizer 
-            isActive={isPlaying} 
-            getActiveHaps={() => activeHaps}
-            height={100}
-            className="rounded-xl"
-          />
-
-          {/* Code Display */}
-          <div className="relative">
-            <button
-              onClick={() => setShowCode(showCode === activeDemo.code ? null : activeDemo.code)}
-              className="absolute top-2 right-2 px-3 py-1 rounded bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-white/20 transition-all"
-            >
-              {showCode === activeDemo.code ? '🙈 Hide' : '👁️ Show'} Code
-            </button>
-            {showCode === activeDemo.code && (
-              <pre className="bg-black/80 rounded-xl p-4 overflow-x-auto text-xs font-mono text-[color:var(--color-foreground)] border border-white/10">
-                <code>{activeDemo.code}</code>
-              </pre>
+          <div className="flex items-center gap-2">
+            {isPlaying && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[color:var(--color-primary)]/10 border border-[color:var(--color-primary)]/20">
+                <span className="w-1.5 h-1.5 bg-[color:var(--color-primary)] rounded-full animate-pulse" />
+                <span className="text-[8px] font-bold text-[color:var(--color-primary)] uppercase">Engine Active</span>
+              </div>
             )}
           </div>
-
-          <p className="text-xs text-[color:var(--color-muted)] italic">
-            💡 {activeDemo.description}
-          </p>
         </div>
-      )}
 
-      {/* Demo Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDemos.map((demo, index) => (
-          <div
-            key={index}
-            className={`glass rounded-2xl p-5 border transition-all hover:scale-[1.02] cursor-pointer ${
-              activeDemo?.code === demo.code
-                ? 'border-[color:var(--color-primary)] shadow-lg shadow-[color:var(--color-primary)]/20'
-                : 'border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/50'
-            }`}
-            onClick={() => handlePlayDemo(demo)}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="text-base font-bold text-[color:var(--color-foreground)]">
-                {demo.name}
-              </h3>
-              <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${DIFFICULTYCOLORS[demo.difficulty]}`}>
-                {demo.difficulty}
-              </span>
-            </div>
-
-            <p className="text-xs text-[color:var(--color-muted)] mb-4 line-clamp-2">
-              {demo.description}
-            </p>
-
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wider font-bold">
-                {demo.category}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlayDemo(demo);
-                }}
-                className="px-3 py-1.5 rounded-lg bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] font-bold text-[10px] uppercase tracking-wider hover:bg-[color:var(--color-primary)]/30 transition-all flex items-center gap-1"
-              >
-                {activeDemo?.code === demo.code && isPlaying ? '⏹ Stop' : '▶ Play'}
-              </button>
-            </div>
-          </div>
-        ))}
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${
+                selectedCategory === cat 
+                ? 'bg-[color:var(--color-primary)] text-white shadow-lg shadow-[color:var(--color-primary)]/20' 
+                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Pattern Library Section */}
-      <div className="space-y-6 pt-8 border-t border-[color:var(--color-border)]">
-        <div className="text-center space-y-2">
-          <h3 className="text-2xl font-bold text-gradient">📚 Complete Pattern Library</h3>
-          <p className="text-xs text-[color:var(--color-muted)]">
-            Full compositions showcasing multiple features combined
-          </p>
-        </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        {/* Active Demo Area */}
+        {activeDemo ? (
+          <div className="glass p-6 rounded-2xl border border-[color:var(--color-primary)]/30 bg-gradient-to-br from-[color:var(--color-primary)]/5 to-transparent relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-6xl italic pointer-events-none select-none uppercase">
+              {activeDemo.category}
+            </div>
 
-        {/* Progressive Disclosure Controls */}
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={() => setCurrentLibraryPage(prev => Math.max(0, prev - 1))}
-            disabled={currentLibraryPage === 0}
-            className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
-              currentLibraryPage === 0
-                ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
-                : 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] hover:bg-[color:var(--color-primary)]/30'
-            }`}
-          >
-            ◀ Previous
-          </button>
-          <span className="px-4 py-2 rounded-xl bg-white/10 text-[color:var(--color-muted)] font-bold text-xs uppercase tracking-wider">
-            Page {currentLibraryPage + 1} of {Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4)}
-          </span>
-          <button
-            onClick={() => setCurrentLibraryPage(prev => Math.min(Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4) - 1, prev + 1))}
-            disabled={currentLibraryPage >= Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4) - 1}
-            className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
-              currentLibraryPage >= Math.ceil(STRUDEL_PATTERN_LIBRARY.length / 4) - 1
-                ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
-                : 'bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] hover:bg-[color:var(--color-primary)]/30'
-            }`}
-          >
-            Next ▶
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {currentLibraryPatterns.map((pattern, index) => (
-            <div
-              key={index}
-              className="glass rounded-2xl p-5 border border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/50 transition-all animate-in slide-in-from-left-4 duration-500"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h4 className="text-base font-bold text-[color:var(--color-foreground)]">
-                    {pattern.name}
-                  </h4>
-                  <p className="text-xs text-[color:var(--color-muted)] mt-1">
-                    {pattern.vibe}
-                  </p>
+            <div className="flex flex-col md:flex-row gap-6 relative z-10">
+              <div className="flex-1 space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-0.5 rounded bg-[color:var(--color-primary)] text-[8px] font-black uppercase text-white">Active</span>
+                  <h3 className="text-lg font-black text-white uppercase tracking-tight">{activeDemo.name}</h3>
                 </div>
-                <span className="px-2 py-1 rounded bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] text-[9px] font-bold uppercase tracking-wider">
-                  {pattern.category}
-                </span>
-              </div>
-
-              {pattern.features && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {pattern.features.slice(0, 3).map((feature, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 rounded bg-white/5 text-[color:var(--color-muted)] text-[8px] font-medium"
-                    >
-                      {feature}
-                    </span>
+                <p className="text-xs text-white/60 italic leading-relaxed">"{activeDemo.vibe}"</p>
+                <div className="flex flex-wrap gap-2">
+                  {activeDemo.features.map(f => (
+                    <span key={f} className="text-[8px] font-bold text-white/40 bg-white/5 px-2 py-1 rounded border border-white/10"># {f}</span>
                   ))}
                 </div>
-              )}
+                
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => handlePlayDemo(activeDemo)}
+                    className={`flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${
+                      isPlaying 
+                      ? 'bg-[color:var(--color-error)] text-white hover:opacity-90' 
+                      : 'bg-white text-black hover:scale-[1.02]'
+                    }`}
+                  >
+                    {isPlaying ? (
+                      <><span className="w-2 h-2 bg-white rounded-sm" /> Stop Engine</>
+                    ) : (
+                      <><span className="w-2 h-2 bg-black rounded-full" /> Play Demo</>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleSelect(activeDemo)}
+                    className="px-6 py-3 rounded-xl bg-[color:var(--color-primary)] text-white font-black uppercase tracking-widest text-[10px] hover:opacity-90 transition-all shadow-lg shadow-[color:var(--color-primary)]/20"
+                  >
+                    Use this Pattern
+                  </button>
+                </div>
+              </div>
 
-              <button
-                onClick={async () => {
-                  stopStrudel();
-                  setActiveDemo({
-                    name: pattern.name,
-                    description: pattern.vibe,
-                    code: pattern.code,
-                    category: pattern.category as any,
-                    difficulty: 'intermediate',
-                  });
-                  const success = await playStrudelCode(pattern.code);
-                  setIsPlaying(success);
-                  if (onPatternSelect) onPatternSelect(pattern.code);
-                }}
-                className="w-full py-2.5 rounded-xl bg-[color:var(--color-foreground)] text-[color:var(--background)] font-bold text-xs uppercase tracking-wider hover:scale-[1.02] transition-all"
-              >
-                ▶ Play Pattern
-              </button>
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Live Visualizer</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-black text-[color:var(--color-primary)] uppercase tracking-widest">
+                      {engine.getActiveHapsCount()} Events
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Visualizer */}
+                <StrudelVisualizer
+                  isActive={isPlaying}
+                  height={100}
+                  className="rounded-xl"
+                />
+
+                <div className="p-4 rounded-xl bg-black/60 border border-white/5 font-mono text-[10px] text-blue-400/80 max-h-32 overflow-y-auto relative group/code">
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(activeDemo.code)}
+                    className="absolute top-2 right-2 opacity-0 group-hover/code:opacity-100 transition-opacity p-1.5 bg-white/10 rounded hover:bg-white/20"
+                  >
+                    📋
+                  </button>
+                  {activeDemo.code}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-48 border-2 border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center text-center p-8 bg-white/[0.02]">
+            <div className="text-3xl mb-4 opacity-20">🎼</div>
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Select a pattern below to explore its sonic structure</p>
+          </div>
+        )}
+
+        {/* Pattern Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPatterns.map(pattern => (
+            <div 
+              key={pattern.name}
+              className={`p-5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
+                activeDemo?.name === pattern.name 
+                ? 'bg-[color:var(--color-primary)]/10 border-[color:var(--color-primary)]/40 shadow-xl' 
+                : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/[0.08]'
+              }`}
+              onClick={() => setActiveDemo(pattern as any)}
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-xs">
+                  {pattern.category === 'rhythm' && '🥁'}
+                  {pattern.category === 'bass' && '🎸'}
+                  {pattern.category === 'melodic' && '🎹'}
+                  {pattern.category === 'harmonic' && '🎻'}
+                  {pattern.category === 'ambient' && '🌌'}
+                  {pattern.category === 'complex' && '🚀'}
+                </div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayDemo(pattern as any);
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                    activeDemo?.name === pattern.name && isPlaying
+                    ? 'bg-[color:var(--color-error)] text-white scale-110 shadow-lg'
+                    : 'bg-white text-black hover:scale-110'
+                  }`}
+                >
+                  {activeDemo?.name === pattern.name && isPlaying ? '■' : '▶'}
+                </button>
+              </div>
+              <h4 className="text-[11px] font-black text-white uppercase tracking-tight mb-1 group-hover:text-[color:var(--color-primary)] transition-colors">{pattern.name}</h4>
+              <p className="text-[9px] text-white/40 line-clamp-2 italic leading-relaxed">"{pattern.vibe}"</p>
+              
+              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[8px] font-black text-[color:var(--color-primary)]/60 uppercase tracking-widest">{pattern.category}</span>
+                <div className="flex gap-1">
+                  {pattern.features.slice(0, 2).map(f => (
+                    <div key={f} className="w-1.5 h-1.5 rounded-full bg-white/10" />
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
         </div>
-
-        {/* Empty State */}
-        {currentLibraryPatterns.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-xs text-[color:var(--color-muted)]">
-              No more patterns to show. Use the navigation buttons above to explore all patterns.
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Educational Footer */}
-      <div className="glass rounded-3xl p-8 border border-[color:var(--color-border)] space-y-6">
-        <h3 className="text-xl font-bold text-gradient">🎓 About Strudel</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <h4 className="text-sm font-bold text-[color:var(--color-primary)]">What is Strudel?</h4>
-            <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Strudel is a web-based live coding environment for music, porting the TidalCycles 
-              pattern language to JavaScript. It uses <strong>mini notation</strong> - a concise 
-              syntax for expressing complex rhythmic and melodic patterns.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="text-sm font-bold text-[color:var(--color-primary)]">Mini Notation</h4>
-            <ul className="text-xs text-[color:var(--color-muted)] space-y-1">
-              <li>• <code className="bg-white/10 px-1 rounded">*4</code> - Repeat 4 times</li>
-              <li>• <code className="bg-white/10 px-1 rounded">[~ x]</code> - Rest then hit</li>
-              <li>• <code className="bg-white/10 px-1 rounded">&lt;x y&gt;</code> - Rotate between x and y</li>
-              <li>• <code className="bg-white/10 px-1 rounded">x?0.5</code> - 50% chance to play</li>
-              <li>• <code className="bg-white/10 px-1 rounded">/3</code> - Triplets</li>
-            </ul>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="text-sm font-bold text-[color:var(--color-primary)]">Why Musical DNA?</h4>
-            <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Sonic Guardian uses Strudel patterns as cryptographic seeds. The same pattern 
-              always generates the same DNA hash, making it perfect for zero-knowledge 
-              verification while being memorable and emotionally resonant.
-            </p>
-          </div>
+      {/* Footer / Stats */}
+      <div className="p-4 border-t border-white/5 bg-black/20 flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-white/20">
+        <span>Strudel Pattern Library v1.2</span>
+        <div className="flex gap-4">
+          <span>{STRUDEL_PATTERN_LIBRARY.length} Patterns</span>
+          <span>{categories.length - 1} Categories</span>
         </div>
       </div>
     </div>

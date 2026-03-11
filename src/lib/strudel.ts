@@ -23,16 +23,27 @@ class StrudelEngine {
   private static instance: StrudelEngine;
   private status: EngineStatus = 'idle';
   private replInstance: any = null;
+  private analyser: AnalyserNode | null = null;
+  private dataArray: Uint8Array | null = null;
   private initPromise: Promise<void> | null = null;
   private drawCb: ((haps: any[], time: number) => void) | null = null;
   private animationFrameId: number | null = null;
   private lastHaps: any[] = [];
+  private currentCpm: number = 120;
 
   // Valid sample names (based on actual sample files)
   private validSamples = ['bd', 'sd', 'hh', 'hc', 'ho', 'cp', '808', '909'];
 
   // Filter code to only use valid sample names
   private sanitizeCode(code: string): string {
+    // Extract CPM if present to track cycle progress accurately
+    const cpmMatch = code.match(/\.cpm\((\d+)\)/);
+    if (cpmMatch) {
+      this.currentCpm = parseInt(cpmMatch[1]);
+    } else {
+      this.currentCpm = 120; // Default Strudel CPM
+    }
+
     // Replace invalid sample references with valid ones
     return code
       .replace(/\.s\(["'](?:piano|fm|gm_pad|x)[^"']*["']\)/g, '.s("bd")')
@@ -78,10 +89,27 @@ class StrudelEngine {
           )
         ]);
 
-        // 3. Instantiate REPL
+        // 3. Instantiate REPL & Setup Analyser
         const ctx = getAudioContext();
+        
+        // Setup Analyser for real-time visualization
+        this.analyser = ctx.createAnalyser();
+        this.analyser.fftSize = 256;
+        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        
+        // Connect to destination to ensure we can monitor output
+        // Note: webaudioOutput usually connects directly, but we can wrap it
+        this.analyser.connect(ctx.destination);
+
         this.replInstance = repl({
-          defaultOutput: webaudioOutput,
+          defaultOutput: (params: any) => {
+            const out = webaudioOutput(params);
+            // Connect the Strudel output to our analyser
+            if (out && typeof out.connect === 'function' && this.analyser) {
+              out.connect(this.analyser);
+            }
+            return out;
+          },
           getTime: () => ctx.currentTime,
           transpiler,
         });
@@ -109,13 +137,15 @@ class StrudelEngine {
     if (this.animationFrameId) return;
 
     const loop = () => {
-      if (this.drawCb && this.replInstance?.scheduler) {
+      if (this.replInstance?.scheduler) {
         const time = getAudioContext().currentTime;
         // Accurate scheduling window for visualizer
         const haps = this.replInstance.scheduler.getHaps ? 
           this.replInstance.scheduler.getHaps(time - 0.05, time + 0.15) : [];
         
-        this.drawCb(haps, time);
+        if (this.drawCb) {
+          this.drawCb(haps, time);
+        }
         this.lastHaps = haps;
       }
       this.animationFrameId = requestAnimationFrame(loop);
@@ -158,12 +188,35 @@ class StrudelEngine {
     return this.status;
   }
 
+  public getAnalyserData(): Uint8Array | null {
+    if (this.analyser && this.dataArray) {
+      this.analyser.getByteFrequencyData(this.dataArray);
+      return this.dataArray;
+    }
+    return null;
+  }
+
+  /**
+   * Returns current cycle progress (0.0 to 1.0)
+   */
+  public getCycleProgress(): number {
+    if (!this.isPlaying()) return 0;
+    const time = getAudioContext().currentTime;
+    const bps = this.currentCpm / 60;
+    const beats = time * bps;
+    return beats % 1.0;
+  }
+
   public setDrawCallback(callback: ((haps: any[], time: number) => void) | null): void {
     this.drawCb = callback;
   }
 
-  public getActiveHapsCount(time: number): number {
-    return this.lastHaps.filter(h => h.isActive?.(time)).length;
+  public getActiveHaps(time: number = getAudioContext().currentTime): any[] {
+    return this.lastHaps.filter(h => h.isActive?.(time));
+  }
+
+  public getActiveHapsCount(time: number = getAudioContext().currentTime): number {
+    return this.getActiveHaps(time).length;
   }
 
   public cleanup(): void {

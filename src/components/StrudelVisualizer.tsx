@@ -1,23 +1,22 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { engine } from '@/lib/strudel';
 
 interface StrudelVisualizerProps {
   isActive: boolean;
   height?: number;
   className?: string;
-  getActiveHaps?: () => any[];
 }
 
 /**
- * Reusable canvas-based visualizer for Strudel patterns
- * Shows active haps (events) as horizontal bars with color coding
+ * Enhanced visualizer for Strudel patterns.
+ * Combines real-time audio frequency data with scheduled musical events.
  */
 export function StrudelVisualizer({ 
   isActive, 
   height = 120,
-  className = '',
-  getActiveHaps 
+  className = ''
 }: StrudelVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -37,62 +36,93 @@ export function StrudelVisualizer({
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    // Fade out effect - clear with semi-transparent background
+    // Fade out effect
     const clearCanvas = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
       ctx.fillRect(0, 0, rect.width, height);
     };
 
-    // Draw a single hap (event) as a horizontal bar
-    const drawHap = (hap: any, time: number) => {
+    const drawSpectrum = (data: Uint8Array) => {
+      const barWidth = (rect.width / data.length) * 2.5;
+      let x = 0;
+
+      for (let i = 0; i < data.length; i++) {
+        const barHeight = (data[i] / 255) * height * 0.8;
+        
+        // Dynamic color based on frequency
+        const hue = (i / data.length) * 360;
+        ctx.fillStyle = `hsla(${hue}, 70%, 50%, 0.3)`;
+        ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+
+        x += barWidth + 1;
+      }
+    };
+
+    const drawCycleProgress = (progress: number) => {
+      const y = height - 2;
+      const barWidth = rect.width * progress;
+      
+      // Background track
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(0, y, rect.width, 2);
+      
+      // Progress bar
+      ctx.fillStyle = 'var(--color-primary, #6366f1)';
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'var(--color-primary, #6366f1)';
+      ctx.fillRect(0, y, barWidth, 2);
+      ctx.shadowBlur = 0;
+    };
+
+    const drawHap = (hap: any) => {
       const value = hap.value;
       const note = value?.note || value?.n || 60;
       
-      // Convert note to frequency if it's a string
       let freq = typeof note === 'number' ? note : 60;
       if (typeof note === 'string') {
         freq = noteToFrequency(note);
       }
 
-      // Map frequency to vertical position (lower notes at bottom)
-      const minFreq = 65;  // C2
-      const maxFreq = 1046; // C6
+      const minFreq = 65;
+      const maxFreq = 1046;
       const normalizedFreq = Math.log(freq / minFreq) / Math.log(maxFreq / minFreq);
-      const y = height - (normalizedFreq * height);
+      const y = height - (normalizedFreq * height * 0.7) - 20;
       
-      const barHeight = 6;
+      const barHeight = 4;
       const barWidth = rect.width;
 
-      // Color based on frequency (hue spectrum)
       const hue = (Math.log(freq) * 50) % 360;
-      const saturation = isActive ? 70 : 30;
-      const lightness = isActive ? 60 : 40;
+      const opacity = isActive ? 0.8 : 0.2;
       
-      ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${isActive ? 0.9 : 0.4})`;
+      ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${opacity})`;
       ctx.fillRect(0, y - barHeight / 2, barWidth, barHeight);
 
-      // Add glow effect for active haps
       if (isActive) {
-        ctx.shadowColor = `hsla(${hue}, 70%, 60%, 0.8)`;
-        ctx.shadowBlur = 10;
-        ctx.fillRect(0, y - barHeight / 2, barWidth * 0.3, barHeight);
+        ctx.shadowColor = `hsla(${hue}, 80%, 60%, 0.6)`;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(0, y - barHeight / 2, barWidth * 0.4, barHeight);
         ctx.shadowBlur = 0;
       }
     };
 
-    // Animation loop
     const animate = () => {
       clearCanvas();
 
-      if (isActive && getActiveHaps) {
-        const haps = getActiveHaps();
+      if (isActive) {
+        // 1. Draw Real-time Spectrum
+        const spectrumData = engine.getAnalyserData();
+        if (spectrumData) {
+          drawSpectrum(spectrumData);
+        }
+
+        // 2. Draw Cycle Progress
+        const progress = engine.getCycleProgress();
+        drawCycleProgress(progress);
+
+        // 3. Draw Active Haps
+        const haps = engine.getActiveHaps();
         setHapCount(haps.length);
-        
-        haps.forEach((hap: any) => {
-          if (hap.isActive?.(performance.now() / 1000)) {
-            drawHap(hap, performance.now() / 1000);
-          }
-        });
+        haps.forEach(drawHap);
       } else {
         setHapCount(0);
       }
@@ -107,7 +137,7 @@ export function StrudelVisualizer({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isActive, height, getActiveHaps]);
+  }, [isActive, height]);
 
   // Helper: Convert musical note to frequency
   function noteToFrequency(note: string): number {

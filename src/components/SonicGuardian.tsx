@@ -64,7 +64,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [previewPlayingId, setPreviewPlayingId] = useState<string | null>(null);
   const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const [useSecureGeneration, setUseSecureGeneration] = useState(true);
-  const [activeHaps, setActiveHaps] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [progressIndicator, setProgressIndicator] = useState<any>(null);
   const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
@@ -127,18 +126,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     return () => { stopStrudel(); };
   }, []);
 
-  useEffect(() => {
-    // Set up visual feedback callback
-    setDrawCallback((haps: any[], time: number) => {
-      // Filter to only active haps (currently playing)
-      const active = haps.filter((h: any) => h.isActive(time));
-      setActiveHaps(active);
-    });
-
-    return () => {
-      setDrawCallback(null);
-    };
-  }, []);
 
   useEffect(() => {
     const theme = getCurrentTheme();
@@ -521,24 +508,22 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     if (previewPlayingId === id) {
       await stopStrudel();
       setPreviewPlayingId(null);
-      setActiveHaps([]);
       return;
     }
     
     if (previewPlayingId) {
       await stopStrudel();
     }
-    
-    setActiveHaps([]);
+
     setPreviewPlayingId(id);
     setStatus(`Playing preview: ${id}...`);
-    
+
     const ok = await playStrudelCode(patternCode);
     if (!ok) {
       setPreviewPlayingId(null);
-      setActiveHaps([]);
       setStatus('❌ Audio engine busy or initialization failed. Try clicking again.');
     }
+
   };
 
   const handleSuggestIdea = async () => {
@@ -811,7 +796,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     </button>
                   </div>
 
-                  <div className={`bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border shadow-2xl relative group transition-all duration-150 ${previewPlayingId === selectedPatternId && activeHaps.length > 0
+                  <div className={`bg-black/80 rounded-xl p-6 font-mono text-xs text-blue-400 border shadow-2xl relative group transition-all duration-150 ${previewPlayingId === selectedPatternId && engine.getActiveHapsCount() > 0
                     ? 'border-[color:var(--color-primary)] shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.3)] scale-[1.01]'
                     : 'border-blue-500/20'
                     }`}>
@@ -824,16 +809,16 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                     </button>
 
                     {/* Activity indicator */}
-                    {previewPlayingId === selectedPatternId && activeHaps.length > 0 && (
+                    {previewPlayingId === selectedPatternId && engine.getActiveHapsCount() > 0 && (
                       <div className="absolute top-3 left-3 flex items-center gap-2">
                         <span className="w-2 h-2 bg-[color:var(--color-primary)] rounded-full animate-pulse" />
                         <span className="text-[8px] text-[color:var(--color-primary)] font-bold uppercase tracking-wider">
-                          {activeHaps.length} event{activeHaps.length !== 1 ? 's' : ''}
+                          {engine.getActiveHapsCount()} event{engine.getActiveHapsCount() !== 1 ? 's' : ''}
                         </span>
                       </div>
                     )}
 
-                    <code className={`whitespace-pre-wrap break-all leading-relaxed tracking-wider block ${previewPlayingId === selectedPatternId && activeHaps.length > 0 ? 'mt-6' : ''
+                    <code className={`whitespace-pre-wrap break-all leading-relaxed tracking-wider block ${previewPlayingId === selectedPatternId && engine.getActiveHapsCount() > 0 ? 'mt-6' : ''
                       }`}>
                       {STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedPatternId)?.code.split(/(\(|\)|\.|\"|\')/).map((part, i) => {
                         if (['(', ')', '.'].includes(part)) return <span key={i} className="opacity-40">{part}</span>;

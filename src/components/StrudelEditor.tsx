@@ -12,12 +12,23 @@ interface StrudelEditorProps {
 
 export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: StrudelEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const editorRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  const [activeHaps, setActiveHaps] = useState(0);
+  const [cycleProgress, setCycleProgress] = useState(0);
+
+  useEffect(() => {
+    let progressInterval: number;
+    if (isPlaying) {
+      progressInterval = window.setInterval(() => {
+        setCycleProgress(engine.getCycleProgress());
+      }, 50);
+    } else {
+      setCycleProgress(0);
+    }
+    return () => clearInterval(progressInterval);
+  }, [isPlaying]);
 
   useEffect(() => {
     if (!containerRef.current || editorRef.current) return;
@@ -31,21 +42,6 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
         const { getAudioContext, webaudioOutput } = await import('@strudel/webaudio');
         const { transpiler } = await import('@strudel/transpiler');
 
-        // Setup canvas for visual feedback
-        const canvas = canvasRef.current;
-        let ctx: CanvasRenderingContext2D | null = null;
-        
-        if (canvas) {
-          const dpr = window.devicePixelRatio || 1;
-          const rect = canvas.getBoundingClientRect();
-          canvas.width = rect.width * dpr;
-          canvas.height = rect.height * dpr;
-          ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.scale(dpr, dpr);
-          }
-        }
-
         const editor = new StrudelMirror({
           defaultOutput: webaudioOutput,
           getTime: () => getAudioContext().currentTime,
@@ -54,37 +50,10 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
           initialCode: initialCode,
           readOnly,
           drawTime: [-0.1, 0.4],
-          // Visual feedback callback
-          onDraw: (haps: any[], time: number) => {
-            const activeCount = haps.filter((h: any) => h.isActive?.(time)).length;
-            setActiveHaps(activeCount);
-
-            if (canvas && ctx) {
-              const rect = canvas.getBoundingClientRect();
-              const w = rect.width;
-              const h = rect.height;
-              
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-              ctx.fillRect(0, 0, w, h);
-              
-              haps.filter(h => h.isActive?.(time)).forEach((hap: any) => {
-                const note = hap.value?.note || hap.value?.n || 60;
-                const freq = typeof note === 'number' ? note : 60;
-                const y = h - ((freq % 48) / 48) * h;
-                const hue = (freq * 5) % 360;
-                if (ctx) {
-                  ctx.fillStyle = `hsla(${hue}, 80%, 60%, 0.8)`;
-                  ctx.fillRect(0, y - 2, w, 4);
-                }
-              });
-            }
-          },
+          // Visual feedback callback - minimal state updates here as engine handles it
+          onDraw: () => {},
           onToggle: (started: boolean) => {
             setIsPlaying(started);
-            if (!started) {
-              setActiveHaps(0);
-              if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
           },
         });
 
@@ -163,7 +132,7 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
           {isPlaying && (
             <span className="flex items-center gap-1.5 text-[8px] text-[color:var(--color-success)]">
               <span className="w-1.5 h-1.5 bg-[color:var(--color-success)] rounded-full animate-pulse" />
-              LIVE • {activeHaps} event{activeHaps !== 1 ? 's' : ''}
+              LIVE • CYCLE {Math.floor(cycleProgress * 100)}%
             </span>
           )}
         </div>
@@ -173,31 +142,33 @@ export function StrudelEditor({ initialCode, onCodeChange, readOnly = false }: S
             <button
               onClick={handlePlay}
               disabled={!isInitialized}
-              className="px-3 py-1.5 rounded-lg bg-[color:var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 rounded-lg bg-[color:var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              ▶ Play
+              <span className="w-2 h-2 bg-white rounded-full" />
+              Play Pattern
             </button>
           ) : (
             <button
               onClick={handleStop}
-              className="px-3 py-1.5 rounded-lg bg-[color:var(--color-error)] text-white text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+              className="relative px-4 py-1.5 rounded-lg bg-[color:var(--color-error)] text-white text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all flex items-center gap-2 overflow-hidden"
             >
-              ■ Stop
+              <div 
+                className="absolute inset-0 bg-white/20 pointer-events-none transition-all duration-75"
+                style={{ width: `${cycleProgress * 100}%` }}
+              />
+              <span className="relative z-10 w-2 h-2 bg-white rounded-sm" />
+              <span className="relative z-10">Stop Engine</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="relative">
-        <canvas
-          ref={canvasRef}
-          className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 opacity-60"
-          style={{ mixBlendMode: 'screen', height: '200px' }}
-        />
+      <div className="relative group">
+        <div className={`absolute -inset-0.5 bg-gradient-to-r from-[color:var(--color-primary)] to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200 ${isPlaying ? 'animate-pulse opacity-30' : ''}`} />
         
         <div 
           ref={containerRef}
-          className="strudel-editor-container rounded-xl overflow-hidden border border-[color:var(--color-border)] bg-black/90 relative"
+          className="strudel-editor-container rounded-xl overflow-hidden border border-[color:var(--color-border)] bg-black/90 relative z-10"
           style={{ minHeight: '200px' }}
         />
 
