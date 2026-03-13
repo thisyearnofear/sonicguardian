@@ -34,7 +34,7 @@ export function GiftApp() {
       await loginWithWebAuthn();
       const userInfo = await getUserInfo();
       setUser(userInfo);
-      setStatus('Welcome back, ' + (userInfo.name || userInfo.email));
+      setStatus('Welcome back, ' + (userInfo?.name || userInfo?.email || 'User'));
     } catch (error) {
       console.error(error);
       setStatus('Login failed. Please try again.');
