@@ -94,6 +94,9 @@ class StrudelEngine {
         
         // Setup Analyser for real-time visualization
         this.analyser = ctx.createAnalyser();
+        if (!this.analyser) {
+          throw new Error('Failed to create audio analyser');
+        }
         this.analyser.fftSize = 256;
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
         

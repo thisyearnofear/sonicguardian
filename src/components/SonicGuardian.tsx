@@ -16,7 +16,7 @@ import { getCurrentTheme, setTheme } from '@/lib/theme';
 import { SonicVisualizer } from '@/lib/visualizer';
 import { Header } from './Header';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
-import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel';
+import { playStrudelCode, stopStrudel, setDrawCallback, STRUDEL_PATTERN_LIBRARY, engine } from '@/lib/strudel';
 import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, decryptData } from '@/lib/crypto';
 import { uploadToIPFS, downloadFromIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
