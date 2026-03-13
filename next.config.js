@@ -28,8 +28,9 @@ const nextConfig = {
   // Production source maps for debugging
   productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
-    // ProvidePlugin for h function - helps with CodeMirror using h from preact
     const webpack = require('webpack');
+
+    // ProvidePlugin for h function - helps with CodeMirror using h from preact
     config.plugins.push(
       new webpack.ProvidePlugin({
         h: ['preact/compat', 'h'],

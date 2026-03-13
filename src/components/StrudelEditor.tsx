@@ -1,8 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { h } from 'preact';
 import { Tooltip } from './Tooltip';
 import { engine } from '@/lib/strudel';
+
+// Make h available globally for @strudel/codemirror
+if (typeof window !== 'undefined') {
+  (window as any).h = h;
+}
 
 interface StrudelEditorProps {
   initialCode: string;
