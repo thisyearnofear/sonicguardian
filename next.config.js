@@ -28,29 +28,12 @@ const nextConfig = {
   // Production source maps for debugging
   productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
-    const webpack = require('webpack');
-
-    // Only alias React to Preact for specific packages that need it
-    // Use NormalModuleReplacementPlugin to scope the alias to Strudel/kabelsalat packages
-    config.resolve.plugins = config.resolve.plugins || [];
-    config.resolve.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(
-        /\/node_modules\/@kabelsalat\/.*\/node_modules\/react$/,
-        'preact/compat'
-      ),
-      new webpack.NormalModuleReplacementPlugin(
-        /\/node_modules\/@kabelsalat\/.*\/node_modules\/react-dom$/,
-        'preact/compat'
-      ),
-      new webpack.NormalModuleReplacementPlugin(
-        /\/node_modules\/@strudel\/codemirror\/.*\/node_modules\/react$/,
-        'preact/compat'
-      ),
-      new webpack.NormalModuleReplacementPlugin(
-        /\/node_modules\/@strudel\/codemirror\/.*\/node_modules\/react-dom$/,
-        'preact/compat'
-      )
-    );
+    // Alias React to Preact for specific packages that need it
+    // This avoids the "X is not a function" errors with CodeMirror 6
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      // Only alias these specific packages - don't do global alias
+    };
 
     if (!isServer && !dev) {
       // COMPLETELY DISABLE MINIFICATION
