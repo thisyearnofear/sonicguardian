@@ -28,12 +28,17 @@ const nextConfig = {
   // Production source maps for debugging
   productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
-    // Alias React to Preact for specific packages that need it
-    // This avoids the "X is not a function" errors with CodeMirror 6
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Only alias these specific packages - don't do global alias
-    };
+    const webpack = require('webpack');
+
+    // Use ProvidePlugin to inject preact/compat where react is expected
+    // This helps with the "h is not a function" error in CodeMirror
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        h: ['preact/compat', 'h'],
+        React: ['preact/compat'],
+        ReactDOM: ['preact/compat'],
+      })
+    );
 
     if (!isServer && !dev) {
       // COMPLETELY DISABLE MINIFICATION
