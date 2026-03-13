@@ -30,15 +30,28 @@ const nextConfig = {
   webpack: (config, { isServer, dev }) => {
     const webpack = require('webpack');
 
-    // Use ProvidePlugin to inject preact/compat where react is expected
-    // This helps with the "h is not a function" error in CodeMirror
-    config.plugins.push(
-      new webpack.ProvidePlugin({
-        h: ['preact/compat', 'h'],
-        React: ['preact/compat'],
-        ReactDOM: ['preact/compat'],
-      })
-    );
+    // Only alias React to Preact for client-side bundles
+    // This helps with libraries that use React but expect h to be available (like @strudel/codemirror)
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'react': 'preact/compat',
+        'react-dom': 'preact/compat',
+        'react/jsx-runtime': 'preact/compat',
+        'react/jsx-dev-runtime': 'preact/compat',
+      };
+
+      // Use ProvidePlugin to inject preact/compat where react is expected
+      // This helps with the "h is not a function" error in CodeMirror
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          h: ['preact/compat', 'h'],
+          React: ['preact/compat'],
+          ReactDOM: ['preact/compat'],
+          'react/jsx-runtime': ['preact/compat'],
+        })
+      );
+    }
 
     if (!isServer && !dev) {
       // COMPLETELY DISABLE MINIFICATION
