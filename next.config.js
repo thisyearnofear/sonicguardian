@@ -28,6 +28,14 @@ const nextConfig = {
   // Production source maps for debugging
   productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
+    // Preact alias for Strudel/kabelsalat compatibility
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      react: 'preact/compat',
+      'react-dom': 'preact/compat',
+      'react/jsx-runtime': 'preact/jsx-runtime',
+    };
+
     if (!isServer && !dev) {
       // COMPLETELY DISABLE MINIFICATION
       // CodeMirror 6 and Strudel are incompatible with webpack minification
