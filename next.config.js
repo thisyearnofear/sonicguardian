@@ -28,13 +28,29 @@ const nextConfig = {
   // Production source maps for debugging
   productionBrowserSourceMaps: true,
   webpack: (config, { isServer, dev }) => {
-    // Preact alias for Strudel/kabelsalat compatibility
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      react: 'preact/compat',
-      'react-dom': 'preact/compat',
-      'react/jsx-runtime': 'preact/jsx-runtime',
-    };
+    const webpack = require('webpack');
+
+    // Only alias React to Preact for specific packages that need it
+    // Use NormalModuleReplacementPlugin to scope the alias to Strudel/kabelsalat packages
+    config.resolve.plugins = config.resolve.plugins || [];
+    config.resolve.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /\/node_modules\/@kabelsalat\/.*\/node_modules\/react$/,
+        'preact/compat'
+      ),
+      new webpack.NormalModuleReplacementPlugin(
+        /\/node_modules\/@kabelsalat\/.*\/node_modules\/react-dom$/,
+        'preact/compat'
+      ),
+      new webpack.NormalModuleReplacementPlugin(
+        /\/node_modules\/@strudel\/codemirror\/.*\/node_modules\/react$/,
+        'preact/compat'
+      ),
+      new webpack.NormalModuleReplacementPlugin(
+        /\/node_modules\/@strudel\/codemirror\/.*\/node_modules\/react-dom$/,
+        'preact/compat'
+      )
+    );
 
     if (!isServer && !dev) {
       // COMPLETELY DISABLE MINIFICATION
