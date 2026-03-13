@@ -130,3 +130,36 @@ async function getPrivateKey(provider: IProvider): Promise<string> {
 export function isConnected(): boolean {
   return web3auth?.connected ?? false;
 }
+
+/**
+ * Get user info from Web3Auth
+ */
+export async function getUserInfo(): Promise<{ email?: string; name?: string } | null> {
+  if (!web3auth) {
+    await initWeb3Auth();
+  }
+  if (!web3auth) {
+    throw new Error("Web3Auth not initialized");
+  }
+  try {
+    return await web3auth.getUserInfo();
+  } catch (error) {
+    console.error("Failed to get user info:", error);
+    return null;
+  }
+}
+
+/**
+ * Get the provider
+ */
+export function getProvider(): IProvider | null {
+  return web3auth?.provider ?? null;
+}
+
+/**
+ * Login with WebAuthn (uses social login under the hood)
+ * Maps to socialLogin for now
+ */
+export async function loginWithWebAuthn(): Promise<SocialLoginResult> {
+  return socialLogin('google');
+}
