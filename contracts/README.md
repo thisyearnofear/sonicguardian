@@ -20,7 +20,7 @@ Zero-knowledge guardian system for Bitcoin recovery using sonic patterns.
 **Features:**
 - Register guardians with Pedersen commitments
 - Verify recovery using ZK proofs
-- Authorize Bitcoin recovery with acoustic signatures
+- Authorize Bitcoin recovery via ECDSA signature proof (ZK, pattern never revealed)
 - Privacy-preserving (pattern never revealed on-chain)
 
 **Functions:**

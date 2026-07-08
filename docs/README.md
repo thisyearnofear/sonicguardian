@@ -16,7 +16,7 @@
 
 ### Getting Started
 - **[Quick Start](../QUICKSTART.md)** - TL;DR for the project
-- **[README](../README.md)** - Overview & hackathon submission
+- **[README](../README.md)** - Project overview & privacy architecture
 
 ### Technical Documentation
 - **[Architecture](./ARCHITECTURE.md)** - System design & privacy guarantees
@@ -35,7 +35,7 @@
 
 ## 🎯 Quick Navigation
 
-### For Hackathon Judges
+### Quick Start
 1. **[QUICKSTART.md](../QUICKSTART.md)** - Project overview
 2. **[Pattern Explorer](../src/components/PatternExplorer.tsx)** - Interactive demos
 3. **[Contract Status](../contracts/DEPLOYMENT_STATUS.md)** - Deployment info

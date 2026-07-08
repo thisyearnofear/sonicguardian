@@ -93,8 +93,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const { 
     isConnected, 
     registerGuardian, 
-    verifyRecovery, 
-    authorizeBtcRecovery, 
     getCommitment,
     authorizeWithAcousticSignature,
     verifyAcousticProof 

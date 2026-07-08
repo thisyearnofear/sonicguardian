@@ -1,92 +1,69 @@
-# Sonic Guardian - Quick Start Guide
+# Sonic Guardian — Quick Start
 
-> "Your creative expression is now your digital signature."
-
-**Sonic Identity Protocol — musical patterns as creative expression on Starknet.**
+> *A privacy-preserving recovery and access factor: prove you know a memorable generated secret — a musical pattern — without ever revealing it on-chain.*
 
 ---
 
-## 🏆 Hackathon Submission
+## Quick Links
 
-**Tracks:** Privacy + Bitcoin
-**Status:** ✅ Account Deployed | ✅ Contract Deployed
-
-### Quick Links
+- **Live App:** `pnpm dev` → http://localhost:3000
+- **Contract:** [`0x02b680ba...` on Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
+- **Account TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6af661b642fc60b8beddba6b9b397134c476e)
 - **Pattern Explorer:** Click "🎓 Explore 16+ Strudel Features" in-app
-- **Contract:** [0x02b680ba... on Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-- **Account TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)
-- **Deployment Docs:** [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md)
+- **Formal Application:** [Proof of Privacy Cohort 01](https://proof.starknet.io)
 
 ---
 
 ## TL;DR
 
-1. **User enters a musical vibe** (e.g., "dark industrial techno")
-2. **AI translates to Strudel code** (Venice AI) — Creative expression tool
-3. **DNA extracted & committed** to Starknet (Pedersen hash) — ZK proof of authorship
-4. **Verify Identity = Replay the pattern** — Prove you created it anytime
+1. **User enters a musical vibe** (e.g., "dark industrial techno") or uses random 256-bit entropy
+2. **AI generates deterministic Strudel code** (Venice AI — same vibe always produces the same code)
+3. **Pattern is hashed client-side** (SHA-256 → Pedersen commitment stores on Starknet)
+4. **Verify by replaying** — replay the pattern, generate an ECDSA signature with the hash as your private key, and the contract confirms authorship **without ever seeing the pattern**
 
 ---
 
 ## Demo Flow
 
-### 1. Mint Sonic Identity
-1. Enter a Bitcoin address to link to your identity
-2. Either:
-   - **Random Pattern Generator** (256-bit entropy, musical chunks)
-   - **Custom Vibe** ("fast dark techno")
-3. Click **Mint Identity**
-4. Hear your acoustic signature
-5. Commit your sonic identity to Starknet
+### 1. Register a Recovery Factor
+1. Connect your Starknet wallet
+2. Enter a Bitcoin address to link
+3. Either:
+   - **Random Pattern Generator** (256-bit entropy → musical chunks)
+   - **Custom Vibe** ("fast dark techno" → AI generates pattern code)
+4. Click **Mint Sonic Identity**
+5. Hear your pattern played back
+6. Click **🔒 Commit Identity to Starknet** — commits Pedersen commitment + acoustic public key on-chain
 
-### 2. Verify Authorship
+### 2. Verify Identity (ZK — No Pattern Revealed)
 1. Switch to **Verify Authorship** tab
 2. Enter your linked Bitcoin address
-3. Replay your musical pattern/chunks
+3. Replay your musical pattern or chunks
 4. Click **Verify Identity**
-5. If matched → authorship confirmed on-chain (ZK proof of knowledge)
+5. The contract receives an ECDSA signature (proving knowledge of the pattern's hash) and confirms authorship **without learning the pattern or its hash**
 
 ---
 
-## 🎼 Pattern Explorer (NEW!)
+## How It Works (No Buzzwords)
 
-Click **"🎓 Explore 16+ Strudel Features"** in the app to explore:
-
-- **Rhythm Patterns**: Basic rhythms, syncopation, polyrhythms, Euclidean
-- **Harmony**: Scales, chord progressions (I-V-vi-IV, ii-V-I), arpeggios
-- **Transformations**: `slow()`, `fast()`, rotation, probability
-- **Effects**: Filter automation, distortion, reverb, bitcrush
-
-Each demo is **interactive** - click play to hear it!
-
----
-
-## Technical Highlights
-
-| Feature | Implementation |
-|---------|---------------|
-| **AI Synthesis** | Venice AI → Strudel pattern code |
-| **DNA Extraction** | Fingerprint for pattern identity |
-| **ZK Commitment** | Pedersen hash on Starknet (Authorship proof) |
-| **Verification** | ZK proof of knowledge of your sonic pattern |
-| **Agent API** | REST + MCP for AI agents |
+| Step | What Happens | Where |
+|------|-------------|-------|
+| Pattern creation | Vibe → Strudel code (AI) or 256-bit entropy → musical chunks | Browser |
+| Hashing | SHA-256 of pattern features → deterministic fingerprint | Browser (client-side) |
+| Commitment | `Pedersen(hash, blinding_factor)` | Browser → Starknet |
+| Verification | ECDSA signature with hash as private key → contract checks against stored public key | Browser ↔ Starknet |
+| What's stored | Only commitment + public key | On-chain |
+| What's never stored | The pattern code, the hash, the blinding factor | — |
 
 ---
 
-## API Endpoints
+## Demo Flow
 
-### Generate Pattern
-```bash
-curl -X POST http://localhost:3000/api/agent/generate \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "dark industrial techno"}'
 ```
-
-### Extract DNA
-```bash
-curl -X POST http://localhost:3000/api/dna/extract \
-  -H "Content-Type: application/json" \
-  -d '{"code": "s(\"bd*4\").distort(2)"}'
+User Vibe → AI/Entropy → Strudel Code → SHA-256 Hash → Pedersen Commitment → Starknet
+                                                          ↓
+                                            ECDSA Signature (ZK Proof) → Verified
+                                            Pattern never revealed
 ```
 
 ---
@@ -112,11 +89,11 @@ pnpm dev
 
 | Doc | Purpose |
 |-----|---------|
-| [`README.md`](./README.md) | Overview & hackathon info |
+| [`README.md`](./README.md) | Privacy architecture & overview |
 | [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md) | Contract deployment status |
-| [`contracts/DEPLOYMENT.md`](./contracts/DEPLOYMENT.md) | Full deployment guide |
-| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Technical architecture |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Technical architecture & ZK flow |
 | [`docs/AGENTS.md`](./docs/AGENTS.md) | Agent API documentation |
+| [`docs/STRUDEL.md`](./docs/STRUDEL.md) | Pattern generation & library |
 
 ---
 
@@ -124,19 +101,9 @@ pnpm dev
 
 **Account:** `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` ✅ Deployed
 
-**Contract:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` ✅ Deployed
+**Contract:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` ✅ Deployed on Starknet Sepolia
 
 **Explorer:** [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) | [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-
-See [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md) for deployment details.
-
-| Layer | Technology |
-|-------|------------|
-| UI | Next.js 14, Three.js |
-| AI | Venice AI |
-| Audio | Strudel |
-| Chain | Starknet (Cairo) |
-| Wallet | WalletConnect |
 
 ---
 

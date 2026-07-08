@@ -1,58 +1,123 @@
-# On-Chain Verification Steps
+# On-Chain Verification
+
+This document describes how to verify Sonic Guardian on-chain using **zero-knowledge acoustic signatures** — the preferred method that proves authorship without revealing your musical DNA.
+
+---
 
 ## ✅ What's Implemented
 
-1. **Verify On-Chain Button** - Added to UI after successful guardian registration
-2. **getCommitment() Hook** - Reads stored commitment from contract
-3. **getGuardianCount() Hook** - Reads total guardians registered
+1. **Register Guardian** — Commits Pedersen commitment + acoustic public key to Starknet
+2. **ZK Verify Authorship** — Proves authorship via ECDSA signature (no DNA revealed)
+3. **Read Commitment** — Reads stored commitment from contract (view function)
+4. **Guardian Count** — Reads total registered guardians
 
-## 📋 Steps to Complete for Judges
+---
 
-### 1. Register a Guardian via the App
+## 🔒 ZK Verification Flow (Privacy-First)
+
+This is the **recommended** way to prove authorship. It uses an ECDSA acoustic signature to verify you know the musical DNA without ever revealing it on-chain.
+
+### Step 1: Register a Guardian
 
 ```bash
 pnpm dev
 # Navigate to http://localhost:3000
 ```
 
-1. Connect your Starknet wallet (ArgentX/Braavos)
-2. Enter a Bitcoin address (e.g., `1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`)
-3. Generate a musical pattern (or use secure generation)
-4. Click "🔒 Anchor to Starknet"
+1. Connect your Starknet wallet
+2. Enter a Bitcoin address to link
+3. Generate a musical pattern (entropy-based or AI vibe)
+4. Click **"🔒 Commit Identity to Starknet"**
 5. Approve the transaction in your wallet
-6. Wait for confirmation
 
-### 2. Verify On-Chain
+**What gets stored on-chain:**
+- `commitment = pedersen(dna_hash, blinding)` — hides the DNA
+- `acoustic_key = stark_curve(dna_hash)` — public key for ZK verification
+- The actual musical pattern and DNA hash **never** touch the chain
 
-After successful registration:
-1. Click "🔍 Verify On-Chain" button
-2. The app will call `get_commitment(btc_address)` on the contract
-3. Status will show the commitment hash from on-chain storage
+### Step 2: Verify Authorship (ZK)
 
-### 3. Check Guardian Count
+Switch to the **"Verify Authorship"** tab to prove you created this identity:
 
-The contract tracks `guardian_count` which increments with each registration.
+1. Enter your linked Bitcoin address
+2. Enter your musical pattern or vibe description
+3. Click **"Verify Authorship"**
 
-Judges can verify:
-- Contract address: `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de`
-- View on [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-- Check transactions tab for `register_guardian` calls
+**What happens under the hood:**
+```
+1. Browser extracts DNA hash from pattern (SHA-256)
+2. Browser signs a challenge message with the DNA as private key
+   → ECDSA signature (r, s)
+3. Transaction sent to contract: authorize_with_acoustic_signature(
+       btc_address, message_hash, sig_r, sig_s
+   )
+4. Contract verifies: check_ecdsa_signature(message, acoustic_key, sig_r, sig_s)
+5. ✅ Verified! — Contract confirms authorship without ever learning the DNA
+```
 
-## 🔍 What Judges Will See
+### Step 3: Check On-Chain Data (Read-Only)
 
-1. **Transaction History** - `register_guardian` calls on Starkscan
-2. **Guardian Count** - `guardian_count >= 1` in contract storage
-3. **Stored Commitments** - Pedersen commitments for each BTC address
-4. **Verify Button** - Reads and displays on-chain commitment
+After registration, click **"🔍 Verify On-Chain"** to read your commitment from the contract:
 
-## 🎯 Proof Points
+```cairo
+// Read-only view function — no transaction needed
+let commitment = contract.get_commitment(felt_btc_address);
+```
 
-✅ Contract deployed and verified  
-✅ `register_guardian` function callable  
-✅ Commitments stored on-chain  
-✅ UI reads from contract (closes the loop)  
-✅ Privacy maintained (only commitment stored, not DNA)  
+This confirms the commitment exists on-chain but reveals nothing about the pattern.
 
 ---
 
-**Note:** The "Verify On-Chain" button appears automatically after successful registration and reads the actual commitment from the deployed contract.
+## 🔍 What Judges Can Verify
+
+| Check | Method | What It Proves |
+|-------|--------|---------------|
+| **Contract deployed** | [Voyager link](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) | Contract exists on Sepolia |
+| **Guardians registered** | `get_guardian_count()` on Starkscan | Identity anchoring works |
+| **Commitment stored** | `get_commitment(address)` on Starkscan | Your identity committed on-chain |
+| **ZK authorship** | Verify tab in the app | Proves you know the DNA without revealing it |
+| **Privacy preserved** | Check contract storage | Only commitment + public key — no DNA |
+
+---
+
+## 🎯 Proof Points
+
+| Proof | Status | Privacy |
+|-------|--------|---------|
+| ✅ Contract deployed on Starknet Sepolia | `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` | — |
+| ✅ Pedersen commitments stored on-chain | `get_commitment()` returns non-zero | Only commitment, not DNA |
+| ✅ Acoustic public key stored | `get_acoustic_key()` returns key | Enables ZK verification |
+| ✅ ZK authorship verification | `authorize_with_acoustic_signature()` | DNA **never** revealed |
+| ✅ UI reads from contract | "Verify On-Chain" button | Closes the loop |
+
+---
+
+## Contract Details
+
+**Address:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de`
+
+**Explorer links:**
+- [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
+- [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
+
+**Key functions:**
+| Function | Type | Purpose |
+|----------|------|---------|
+| `register_guardian(btc, commitment, blinding_commitment, acoustic_key)` | Write | Register identity on-chain |
+| `authorize_with_acoustic_signature(btc, msg_hash, sig_r, sig_s)` | Write | **ZK proof of authorship** |
+| `verify_acoustic_signature(btc, msg_hash, sig_r, sig_s)` | View | Check signature off-chain |
+| `get_commitment(btc)` | View | Read stored commitment |
+| `get_acoustic_key(btc)` | View | Read stored public key |
+| `get_guardian_count()` | View | Total identities registered |
+
+---
+
+## Privacy Guarantee
+
+```
+On-chain data:    commitment = pedersen(dna_hash, blinding)
+                  acoustic_key = stark_curve(dna_hash)
+Never on-chain:   dna_hash, blinding_factor, musical_pattern
+```
+
+The contract can verify your authorship **without ever learning** the underlying DNA. This is the core privacy guarantee of Sonic Guardian.

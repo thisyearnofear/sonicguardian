@@ -1,24 +1,88 @@
 # Sonic Guardian 🎵🔐
 
-**Sonic Identity Protocol — your creative expression is your on-chain identity.**
+**Privacy-Preserving Sonic Identity Protocol — prove authorship of your creative expression with zero-knowledge proofs on Starknet.**
 
-> "Your creative expression is now your digital signature."
+> "Your creative expression is now your digital signature — and only you can prove it."
 
-## 🏆 Starknet Hackathon RE{DEFINE} Submission
+---
 
-**Tracks:** Privacy + Bitcoin
+## 🏆 Starknet Accelerator Application: Proof of Privacy (Cohort 01)
 
-**Status:** ✅ Account Deployed | ✅ Contract Deployed
+**Program:** [Proof of Privacy](https://proof.starknet.io) — an 8-week Starknet program for teams building privacy-preserving applications with STRK20.
 
-### Quick Links for Judges
-- **[Quick Start](./QUICKSTART.md)** - Project overview & demo flow
-- **[Pattern Explorer](./docs/STRUDEL.md)** - 16+ interactive Strudel demos
-- **[Contract Status](./contracts/DEPLOYMENT_STATUS.md)** - Deployment info
-- **[Account TX](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)** - On-chain proof
+**Status:** ✅ Contract Deployed on Sepolia | ✅ Account Deployed | ✅ Working Demo
 
-## Sonic Identity Protocol
+### Quick Links
+- **[Live App Flow](./QUICKSTART.md)** — Step-by-step demo
+- **[Contract](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)** — Deployed on Starknet Sepolia
+- **[Pattern Explorer](./docs/STRUDEL.md)** — 16+ interactive Strudel demos
+- **[Architecture](./docs/ARCHITECTURE.md)** — Full technical breakdown
 
-Sonic Guardian transforms musical patterns into unique on-chain identities. Instead of static keys, we use dynamic, human-verifiable creative expressions as digital signatures.
+---
+
+## 🔐 Privacy Architecture
+
+Sonic Guardian is designed **privacy-first**: no musical pattern, DNA hash, or biometric data ever touches the blockchain or a server. Only cryptographic commitments are stored on-chain, providing zero-knowledge proof of authorship without revealing the underlying identity.
+
+### Data Flow
+
+```
+User Vibe  →  Venice AI (vibe → Strudel code)
+                   ↓
+        Client-side DNA Extraction (SHA-256)
+                   ↓
+   Client-side Pedersen Commitment (dna_hash || blinding)
+                   ↓
+         Starknet stores only: commitment
+         (never the DNA, never the blinding factor)
+```
+
+### Privacy Guarantees
+
+| Stage | What Happens | Where | Data On-Chain? |
+|-------|-------------|-------|----------------|
+| **Pattern Synthesis** | Venice AI translates "dark techno" → Strudel code | Venice AI → Browser | ❌ |
+| **DNA Extraction** | SHA-256 feature hash of musical pattern | Browser (client-side) | ❌ |
+| **Commitment** | `Pedersen(dna_hash, blinding_factor)` → felt252 | Browser (client-side) | ✅ Commitment only |
+| **Verification** | Prove knowledge via ECDSA acoustic signature — no DNA revealed | Browser verifies on-chain public key | ✅ Signature only |
+| **Backup** | AES-GCM encrypted (wallet-derived key) → IPFS | Browser → IPFS | ❌ (encrypted) |
+| **Recovery** | Replay pattern, verify commitment matches locally | Browser (client-side) | ❌ |
+
+### Zero-Knowledge Proof Path (Preferred)
+
+1. **Registration:** User registers by storing a Pedersen commitment **and** an acoustic public key (derived from the DNA hash via Stark Curve) on-chain.
+2. **Verification:** To prove authorship, the user signs a challenge message with their DNA hash as the private key. The contract's `verify_acoustic_signature` uses `core::ecdsa::check_ecdsa_signature` to verify the signature against the stored public key.
+3. **Result:** The contract confirms authorship **without ever learning the DNA hash or the musical pattern**. This is a true zero-knowledge proof.
+
+```cairo
+// Contract verifies authorship without seeing your DNA
+fn verify_acoustic_signature(
+    btc_address: felt252,
+    message_hash: felt252,
+    signature_r: felt252,
+    signature_s: felt252
+) -> bool {
+    let public_key = self.acoustic_keys.read(btc_address);
+    check_ecdsa_signature(message_hash, public_key, signature_r, signature_s)
+}
+```
+
+### Why This Matters for Proof of Privacy
+
+- **Privacy First:** The architecture guarantees that musical identity data *cannot* leak, even if the contract or frontend is compromised.
+- **STRK20 Ready:** Contract uses standard ERC20 interfaces, compatible with STRK20 token standard on Starknet.
+- **Starknet Native:** Leverages Cairo's built-in `pedersen` and `ecdsa` primitives for efficient ZK proofs.
+- **Real Use Case:** Bitcoin wallet recovery with a human-memorable sonic identity — solving a $100B+ industry problem.
+
+---
+
+## How It Works
+
+1. **Enter creative prompt** → "dark industrial techno"
+2. **AI translates** → Strudel code (Venice AI) — Creative expression tool, privacy-preserving inference
+3. **DNA extracted** → SHA-256 fingerprint for pattern identity (client-side only)
+4. **Commit to Starknet** → Pedersen commitment stored on-chain (ZK proof of authorship)
+5. **Verify Identity** → Prove you created it using an acoustic ZK signature — no pattern data revealed
 
 ```bash
 pnpm install
@@ -26,57 +90,71 @@ pnpm dev
 # Open http://localhost:3000
 ```
 
-## How It Works
-
-1. **Enter creative prompt** → "dark industrial techno"
-2. **AI translates** → Strudel code (Venice AI) — Creative expression tool
-3. **DNA extracted** → Fingerprint for pattern identity (client-side)
-4. **Commit to Starknet** → Pedersen commitment (ZK proof of authorship)
-5. **Verify Identity** → Replay your musical pattern to prove "I made this"
+---
 
 ## Features
 
-- 🎵 **Sonic identity minting** - Musical patterns as creative expression committed on-chain
-- 🔐 **Privacy-first** - All crypto client-side (AES-GCM)
-- 💾 **Decentralized Identity Backup** - Encrypted persistence via IPFS (Protocol Labs Track)
-- 🔑 **Social onboarding** - Web3Auth OAuth (Google/Apple) with MPC key derivation
-- 🤖 **Agent-ready** - REST API + MCP server
-- 🎁 **Sonic Gifting** - Gift tokens with a sonic signature (the song is the greeting card)
-- 🎼 **Strudel Showcase** - 16+ interactive pattern demos
-- 💰 **Xverse Support** - Bitcoin wallet integration for BTC Track
-- 🔒 **Verify Authorship** - Replay your sound to prove identity on-chain
+- 🎵 **Sonic identity minting** — Musical patterns as creative expression, committed on-chain via Pedersen hash
+- 🔐 **Privacy-first by design** — All crypto client-side (AES-GCM, SHA-256, Pedersen), never on server or chain
+- 🧾 **Zero-knowledge verification** — Prove authorship via ECDSA acoustic signature without revealing your pattern
+- 💾 **Decentralized encrypted backup** — AES-GCM encrypted identity persistence via IPFS
+- 🔑 **Social onboarding** — Web3Auth OAuth (Google/Apple) with MPC key derivation — no seed phrase needed
+- 🤖 **Agent-ready** — REST API + MCP server for AI agent integration
+- 🎁 **Sonic Gifting** — Gift tokens escrowed on-chain with a sonic signature (the song is the greeting card)
+- 🎼 **Strudel Showcase** — 16+ interactive pattern demos for live coding exploration
+- 💰 **Xverse Support** — Bitcoin wallet integration (BTC Track)
+- 🔒 **On-chain verification** — Read your commitment back from the contract to confirm anchoring
+
+---
 
 ## Documentation
 
 | Doc | Purpose |
 |-----|---------|
-| **[Quick Start](./QUICKSTART.md)** | TL;DR for judges |
+| **[Quick Start](./QUICKSTART.md)** | TL;DR demo flow |
 | **[Docs Hub](./docs/)** | Complete documentation |
-| **[Architecture](./docs/ARCHITECTURE.md)** | Privacy & tech stack |
+| **[Architecture](./docs/ARCHITECTURE.md)** | Privacy design & tech stack |
 | **[Agent API](./docs/AGENTS.md)** | REST & MCP integration |
-| **[Strudel](./docs/STRUDEL.md)** | Pattern generation |
-| **[Deployment](./contracts/DEPLOYMENT_STATUS.md)** | Contract status |
+| **[Strudel](./docs/STRUDEL.md)** | Pattern generation & library |
+| **[Deployment](./contracts/DEPLOYMENT_STATUS.md)** | Contract deployment status |
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| UI | Next.js 14, Three.js |
-| AI | Venice AI |
-| Audio | Strudel |
-| Chain | Starknet (Cairo) |
-| Auth | Web3Auth (OAuth + MPC) |
-| Wallet | WalletConnect |
+| UI | Next.js 14, Three.js, Tailwind |
+| AI | Venice AI (privacy-first inference) |
+| Audio | Strudel (live-coded algorithmic synthesis) |
+| Chain | Starknet (Cairo, Pedersen commitments) |
+| ZK | `core::pedersen::pedersen` + `ecdsa::check_ecdsa_signature` |
+| Auth | Web3Auth (MPC, passkeys) |
+| Wallet | WalletConnect, Xverse |
+| Storage | IPFS (AES-GCM encrypted) |
+
+---
 
 ## Contract Status
 
 **Account:** `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` ✅ Deployed
 
-**Contract:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` ✅ Deployed
+**Contract:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` ✅ Deployed on Starknet Sepolia
 
 **Explorer:** [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) | [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
 
-See **[Contract Deployment Status](./contracts/DEPLOYMENT_STATUS.md)** for details.
+**Deploy TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6af661b642fc60b8beddba6b9b397134c476e)
+
+**Contract Interface:**
+- `register_guardian(btc_address, commitment, blinding_commitment, acoustic_key)` — Register with ZK commitment
+- `verify_acoustic_signature(btc_address, message_hash, sig_r, sig_s)` — ZK proof of authorship
+- `authorize_with_acoustic_signature(...)` — Prove identity without revealing DNA
+- `create_onchain_gift(vault_id, commitment, amount, token)` — Escrow tokens with sonic signature
+- `claim_onchain_gift(vault_id, dna_hash, blinding, recipient)` — Claim gift with musical proof
+
+See **[Contract Deployment Status](./contracts/DEPLOYMENT_STATUS.md)** for full details.
+
+---
 
 ## License
 

@@ -96,36 +96,6 @@ With Xverse connected, users can:
 
 ---
 
-## Hackathon Submission
-
-### Bitcoin Track Eligibility
-
-By supporting Xverse wallet, Sonic Guardian qualifies for:
-- **Bitcoin Track** - $9,675 USD in STRK tokens
-- **Xverse In-Kind Prize** - $5,500 (top 3 using Xverse)
-
-### Submission Requirements
-
-```markdown
-## Bitcoin Integration
-
-✅ Xverse Wallet Support
-- Users can connect with Xverse wallet
-- BTC ↔ STRK swap capability mentioned
-- Bitcoin-native UX for wallet connection
-
-✅ Starknet Integration
-- Contract deployed on Starknet Sepolia
-- Contract: 0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de
-
-✅ User Experience
-- Clear wallet connection flow
-- Xverse prominently featured in connect modal
-- Documentation for Xverse users
-```
-
----
-
 ## Testing Xverse Integration
 
 ### Manual Testing
@@ -164,5 +134,5 @@ For issues with Xverse integration:
 
 ---
 
-**Last Updated:** March 2, 2026  
-**Version:** 1.0.0
+**Last Updated:** July 8, 2026  
+**Version:** 1.2.0

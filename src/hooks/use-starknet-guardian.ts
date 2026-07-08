@@ -169,61 +169,6 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Legacy: Verify recovery proof (reveal DNA hash)
-     */
-    const verifyRecovery = async (
-        btcAddress: string,
-        dnaHash: string,
-        blinding: string
-    ): Promise<boolean> => {
-        try {
-            validateInputs(btcAddress, dnaHash, blinding);
-            if (!contract) throw new Error('Contract not initialized');
-
-            const feltBtcAddress = await hashStringToFelt(btcAddress);
-            const feltDnaHash = hexToFelt(dnaHash);
-            const feltBlinding = hexToFelt(blinding);
-
-            // @ts-ignore - Cairo view function
-            return await contract.verify_recovery(feltBtcAddress, feltDnaHash, feltBlinding);
-        } catch (error) {
-            console.error('Verification failed:', error);
-            return false;
-        }
-    };
-
-    /**
-     * Legacy: Authorize Bitcoin recovery (reveal DNA hash)
-     */
-    const authorizeBtcRecovery = async (
-        btcAddress: string,
-        dnaHash: string,
-        blinding: string
-    ) => {
-        validateInputs(btcAddress, dnaHash, blinding);
-        if (!contract) throw new Error('Contract not initialized');
-
-        try {
-            const feltBtcAddress = await hashStringToFelt(btcAddress);
-            const feltDnaHash = hexToFelt(dnaHash);
-            const feltBlinding = hexToFelt(blinding);
-
-            const result = await sendAsync([
-                contract.populate('authorize_btc_recovery', [
-                    feltBtcAddress,
-                    feltDnaHash,
-                    feltBlinding
-                ]),
-            ]);
-
-            return result;
-        } catch (error) {
-            console.error('Authorization failed:', error);
-            throw new BaseAPIError('Failed to authorize recovery', 'AUTHORIZATION_FAILED', 500);
-        }
-    };
-
-    /**
      * Get commitment for a Bitcoin address (read-only)
      */
     const getCommitment = async (btcAddress: string): Promise<string | null> => {
@@ -329,8 +274,6 @@ export function useStarknetGuardian() {
         address,
         status,
         registerGuardian,
-        verifyRecovery,
-        authorizeBtcRecovery,
         authorizeWithAcousticSignature,
         verifyAcousticProof,
         createOnChainGift,
