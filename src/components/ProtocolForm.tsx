@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { isValidBtcAddress } from '@/lib/crypto';
+import { DEMO_BTC_ADDRESS, isDemoBtcAddress } from '@/lib/demo-btc';
 import { Tooltip } from './Tooltip';
 import { useBitcoinWallet } from '@/hooks/use-bitcoin-wallet';
 
@@ -176,11 +177,31 @@ function RegistrationForm({
 }) {
   const btcValidation = validationStates.get('btc-address');
   const vibeValidation = validationStates.get('custom-vibe');
-  const { addresses, isConnected: isBtcConnected, connect: connectBtcWallet, disconnect: disconnectBtcWallet, isLoading: isBtcLoading, walletName } = useBitcoinWallet();
+  const {
+    addresses,
+    isConnected: isBtcConnected,
+    connect: connectBtcWallet,
+    disconnect: disconnectBtcWallet,
+    isLoading: isBtcLoading,
+    walletName,
+    error: btcWalletError,
+  } = useBitcoinWallet();
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
+  const usingDemoAddress = isDemoBtcAddress(btcAddress);
+
+  useEffect(() => {
+    if (!isBtcConnected || addresses.length === 0 || btcAddress.trim()) return;
+    const payment = addresses.find((a) => a.purpose === 'payment') ?? addresses[0];
+    setBtcAddress(payment.address);
+  }, [isBtcConnected, addresses, btcAddress, setBtcAddress]);
 
   const handleConnectBtcWallet = async () => {
     await connectBtcWallet();
+  };
+
+  const handleUseDemoAddress = () => {
+    setBtcAddress(DEMO_BTC_ADDRESS);
+    setStatus?.('Demo address loaded — for testing only, not for real funds.');
   };
 
   const handleDisconnectBtcWallet = () => {
@@ -214,10 +235,10 @@ function RegistrationForm({
         </p>
       </div>
 
-      <div className="relative group">
-        <div className="flex items-center justify-between mb-2">
+      <div className="relative group" id="btc-address-input">
+        <div className="flex items-center justify-between mb-1">
           <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] group-focus-within:text-[color:var(--color-accent)] transition-colors flex items-center gap-2">
-            Bitcoin Address to Link
+            Bitcoin Address to Protect
             <Tooltip id="bitcoin-address-validation">
               <span className="text-[color:var(--color-primary)] cursor-help">ⓘ</span>
             </Tooltip>
@@ -229,6 +250,7 @@ function RegistrationForm({
                 {walletName || 'Bitcoin Wallet'} Connected
               </span>
               <button
+                type="button"
                 onClick={handleDisconnectBtcWallet}
                 className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-error)] transition-colors"
                 title="Disconnect Wallet"
@@ -238,32 +260,88 @@ function RegistrationForm({
             </div>
           )}
         </div>
-        <div className="relative flex items-center">
-          <input
-            type="text"
-            value={btcAddress}
-            onChange={(e) => setBtcAddress(e.target.value)}
-            placeholder="bc1q... or 1... or 3..."
-            className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm pr-32"
-            disabled={isProcessing}
-          />
 
+        <p className="text-[9px] text-[color:var(--color-muted)] leading-relaxed mb-3">
+          Paste an address you already use, connect Xverse or Leather, or use a{' '}
+          <span className="text-[color:var(--color-foreground)]/70">demo address</span> to try the flow.
+          No funds required to mint.
+        </p>
+
+        <input
+          type="text"
+          value={btcAddress}
+          onChange={(e) => setBtcAddress(e.target.value)}
+          placeholder="bc1q... or 1... or 3..."
+          className="w-full bg-transparent border-b-2 border-[color:var(--color-border)] py-3 focus:border-[color:var(--color-accent)] focus:outline-none transition-all duration-500 font-mono text-sm"
+          disabled={isProcessing}
+        />
+
+        <div className="mt-3 flex flex-wrap gap-2">
           {!isBtcConnected && (
             <button
+              type="button"
               onClick={handleConnectBtcWallet}
               disabled={isBtcLoading}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 font-bold uppercase tracking-widest border border-orange-500/20 transition-all flex items-center gap-2"
+              className="text-[9px] px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 font-bold uppercase tracking-widest border border-orange-500/20 transition-all"
             >
-              {isBtcLoading ? '...' : '+ Bitcoin Wallet'}
+              {isBtcLoading ? 'Connecting…' : 'Connect Bitcoin Wallet'}
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleUseDemoAddress}
+            disabled={isProcessing || usingDemoAddress}
+            className="text-[9px] px-3 py-1.5 rounded-lg bg-[color:var(--color-primary)]/10 hover:bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] font-bold uppercase tracking-widest border border-[color:var(--color-primary)]/20 transition-all disabled:opacity-50"
+          >
+            {usingDemoAddress ? 'Demo Address Active' : 'Use Demo Address'}
+          </button>
+          <a
+            href="https://www.xverse.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[9px] px-3 py-1.5 rounded-lg text-[color:var(--color-muted)] hover:text-orange-400 font-bold uppercase tracking-widest border border-[color:var(--color-border)] hover:border-orange-500/30 transition-all"
+          >
+            Get Xverse →
+          </a>
         </div>
+
+        {btcWalletError && (
+          <p className="mt-2 text-[9px] text-[color:var(--color-warning)] leading-relaxed">
+            {btcWalletError}{' '}
+            <a
+              href="https://www.xverse.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-orange-400"
+            >
+              Install Xverse
+            </a>
+            {' · '}
+            <a
+              href="https://leather.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-orange-400"
+            >
+              Install Leather
+            </a>
+          </p>
+        )}
+
+        {usingDemoAddress && (
+          <div className="mt-2 p-2.5 rounded-lg border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/5">
+            <p className="text-[9px] text-[color:var(--color-warning)] leading-relaxed">
+              Demo mode — this address is for trying Sonic Guardian only. Do not send real Bitcoin here.
+            </p>
+          </div>
+        )}
 
         {isBtcConnected && addresses.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {addresses.map((addr) => (
               <button
                 key={addr.address}
+                type="button"
                 onClick={() => handleSelectBtcAddress(addr.address)}
                 onDoubleClick={() => handleCopyAddress(addr.address)}
                 title="Click to select, double-click to copy"
@@ -283,16 +361,16 @@ function RegistrationForm({
             ))}
           </div>
         )}
-        
+
         <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[color:var(--color-accent)] group-focus-within:w-full transition-all duration-700" />
-        
+
         {btcValidation && (
           <div className={`mt-1.5 text-[9px] flex items-center gap-2 ${
             btcValidation.type === 'error' ? 'text-[color:var(--color-error)]' :
             btcValidation.type === 'warning' ? 'text-[color:var(--color-warning)]' :
             'text-[color:var(--color-success)]'
           }`}>
-            <span className={`w-2 h-2 rounded-full ${
+            <span className={`w-2 h-2 rounded-full shrink-0 ${
               btcValidation.type === 'error' ? 'bg-[color:var(--color-error)]' :
               btcValidation.type === 'warning' ? 'bg-[color:var(--color-warning)]' :
               'bg-[color:var(--color-success)]'
@@ -471,9 +549,12 @@ function RecoveryForm({
       </div>
 
       <div className="relative group">
-        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-2 block">
-          Bitcoin Address to Verify
+        <label className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-muted)] mb-1 block">
+          Protected Bitcoin Address
         </label>
+        <p className="text-[9px] text-[color:var(--color-muted)] mb-2">
+          The address you used when minting this sonic identity.
+        </p>
         <input
           type="text"
           value={btcAddress}

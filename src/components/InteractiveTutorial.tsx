@@ -37,8 +37,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'bitcoin-address',
-    title: 'Your Bitcoin Address',
-    description: 'Enter the Bitcoin address you want to protect. This address will be anchored to Starknet using your musical pattern.',
+    title: 'Bitcoin Address to Protect',
+    description: 'Paste an address you want to protect, connect Xverse/Leather, or tap Use Demo Address to try without a wallet. Connect your Starknet wallet separately to commit on-chain.',
     elementId: 'btc-address-input',
     tooltipPosition: 'top',
     nextButtonText: 'Got it'

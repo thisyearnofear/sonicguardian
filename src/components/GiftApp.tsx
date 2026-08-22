@@ -8,7 +8,7 @@ import {
   getUserInfo,
   getProvider 
 } from '@/lib/web3auth';
-import { engine } from '@/lib/strudel';
+import { engine } from '@/lib/strudel-engine';
 import { StrudelVisualizer } from './StrudelVisualizer';
 import { Tooltip } from './Tooltip';
 import { generateStrudelCode } from '@/lib/ai-agent';

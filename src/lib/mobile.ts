@@ -491,23 +491,14 @@ export class MobileUtils {
    * Handle mobile viewport issues
    */
   static fixMobileViewport() {
-    // Prevent zoom on form inputs
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
-    }
-
-    // Fix iOS Safari viewport height issues
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
 
     setVh();
-    window.addEventListener('resize', setVh);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(setVh, 100);
-    });
+    window.addEventListener('resize', setVh, { passive: true });
+    window.addEventListener('orientationchange', setVh, { passive: true });
 
     return () => {
       window.removeEventListener('resize', setVh);
@@ -703,9 +694,4 @@ export const mobileStyles = `
   }
 `;
 
-// Inject mobile styles
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = mobileStyles;
-  document.head.appendChild(style);
-}
+// Styles live in globals.css — no runtime injection.

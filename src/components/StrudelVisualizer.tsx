@@ -1,12 +1,29 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { engine } from '@/lib/strudel';
+import { engine } from '@/lib/strudel-engine';
 
 interface StrudelVisualizerProps {
   isActive: boolean;
   height?: number;
   className?: string;
+}
+
+function noteToFrequency(note: string): number {
+  const noteMap: Record<string, number> = {
+    c: 0, 'c#': 1, db: 1, d: 2, 'd#': 3, eb: 3,
+    e: 4, f: 5, 'f#': 6, gb: 6, g: 7, 'g#': 8,
+    ab: 8, a: 9, 'a#': 10, bb: 10, b: 11,
+  };
+
+  const match = note.toLowerCase().match(/([a-g][#b]?)(\d+)/);
+  if (!match) return 440;
+
+  const [, noteName, octaveStr] = match;
+  const octave = parseInt(octaveStr, 10);
+  const semitone = noteMap[noteName] ?? 0;
+  const semitonesFromA4 = (octave - 4) * 12 + (semitone - 9);
+  return 440 * Math.pow(2, semitonesFromA4 / 12);
 }
 
 /**
@@ -138,26 +155,6 @@ export function StrudelVisualizer({
       }
     };
   }, [isActive, height]);
-
-  // Helper: Convert musical note to frequency
-  function noteToFrequency(note: string): number {
-    const noteMap: Record<string, number> = {
-      'c': 0, 'c#': 1, 'db': 1, 'd': 2, 'd#': 3, 'eb': 3,
-      'e': 4, 'f': 5, 'f#': 6, 'gb': 6, 'g': 7, 'g#': 8,
-      'ab': 8, 'a': 9, 'a#': 10, 'bb': 10, 'b': 11
-    };
-
-    const match = note.toLowerCase().match(/([a-g][#b]?)(\d+)/);
-    if (!match) return 440;
-
-    const [, noteName, octaveStr] = match;
-    const octave = parseInt(octaveStr);
-    const semitone = noteMap[noteName] ?? 0;
-    
-    // A4 = 440Hz, calculate from there
-    const semitonesFromA4 = (octave - 4) * 12 + (semitone - 9);
-    return 440 * Math.pow(2, semitonesFromA4 / 12);
-  }
 
   return (
     <div className={`relative ${className}`} style={{ height }}>

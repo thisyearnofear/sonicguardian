@@ -16,6 +16,13 @@ export interface APIError {
 
 export type APIResponse<T> = APISuccess<T> | APIError;
 
+/** Client IP from Next.js App Router request (no request.ip in Next 15+). */
+export function getClientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0]?.trim() || 'unknown';
+  return request.headers.get('x-real-ip') ?? 'unknown';
+}
+
 /**
  * Enhanced error handling for API responses
  */

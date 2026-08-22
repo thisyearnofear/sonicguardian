@@ -1,86 +1,81 @@
 # Sonic Guardian — Quick Start
 
-> *A privacy-preserving recovery and access factor: prove you know a memorable generated secret — a musical pattern — without ever revealing it on-chain.*
+> *A privacy-preserving recovery factor: prove you know a memorable musical secret without ever revealing it on-chain.*
 
 ---
 
 ## Quick Links
 
 - **Live App:** `pnpm dev` → http://localhost:3000
+- **Verify flow:** http://localhost:3000/verify (or **Mint | Verify** in the header)
 - **Contract:** [`0x02b680ba...` on Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-- **Account TX:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6af661b642fc60b8beddba6b9b397134c476e)
-- **Pattern Explorer:** Click "🎓 Explore 16+ Strudel Features" in-app
-- **Formal Application:** [Proof of Privacy Cohort 01](https://proof.starknet.io)
+- **Hackathon:** [`docs/HACKATHON.md`](./docs/HACKATHON.md) · [`strk20.json`](./strk20.json)
+- **Pattern Explorer:** Expand **Explore Strudel patterns** below the mint wizard
 
 ---
 
 ## TL;DR
 
-1. **User enters a musical vibe** (e.g., "dark industrial techno") or uses random 256-bit entropy
-2. **AI generates deterministic Strudel code** (Venice AI — same vibe always produces the same code)
-3. **Pattern is hashed client-side** (SHA-256 → Pedersen commitment stores on Starknet)
-4. **Verify by replaying** — replay the pattern, generate an ECDSA signature with the hash as your private key, and the contract confirms authorship **without ever seeing the pattern**
+1. **Create a secret** — random musical chunks (recommended), a library pattern, or an AI vibe
+2. **Link a Bitcoin address** — paste, connect wallet, or **Use Demo Address**
+3. **Generate & commit** — client-side hash → Pedersen commitment on Starknet
+4. **Verify anytime** at `/verify` — replay your secret; contract checks ZK signature, not your pattern
 
 ---
 
 ## Demo Flow
 
-### 1. Register a Recovery Factor
-1. Connect your Starknet wallet
-2. Enter a Bitcoin address to link
-3. Either:
-   - **Random Pattern Generator** (256-bit entropy → musical chunks)
-   - **Custom Vibe** ("fast dark techno" → AI generates pattern code)
-4. Click **Mint Sonic Identity**
-5. Hear your pattern played back
-6. Click **🔒 Commit Identity to Starknet** — commits Pedersen commitment + acoustic public key on-chain
+### 1. Mint (3-step wizard)
 
-### 2. Verify Identity (ZK — No Pattern Revealed)
-1. Switch to **Verify Authorship** tab
-2. Enter your linked Bitcoin address
-3. Replay your musical pattern or chunks
-4. Click **Verify Identity**
-5. The contract receives an ECDSA signature (proving knowledge of the pattern's hash) and confirms authorship **without learning the pattern or its hash**
+Use **Mint** in the header. The wizard walks through:
+
+| Step | Action |
+|------|--------|
+| **Secret** | Choose **Random pattern** (recommended) or a curated library pattern |
+| **Link** | Paste BTC address, connect Xverse, or **Use Demo Address** |
+| **Commit** | **Generate Identity** → save recovery chunks → **Commit to Starknet** |
+
+Optional: expand **Private STRK stake** (mainnet + privacy wallet) before committing.
+
+**Judge demo:** tap **Run judge demo** on the home page — pre-fills random secret + demo BTC and generates your identity in one click.
+
+### 2. Verify (ZK — no pattern revealed)
+
+1. Open **[/verify](http://localhost:3000/verify)** or **Test recovery →** after a successful commit
+2. Paste your **recovery chunks** (or vibe / IPFS CID)
+3. Enter your linked Bitcoin address
+4. Click **Verify authorship**
+
+### 3. STRK20 (Hackathon — Mainnet)
+
+1. In mint step 3, expand **Private STRK stake (optional)**
+2. Switch wallet to **Starknet mainnet**; connect a privacy-enabled wallet (Ready)
+3. **Shield 0.1 STRK** and/or run a **private transfer**
+4. Copy recorded tx hashes into [`strk20.json`](./strk20.json)
 
 ---
 
-## How It Works (No Buzzwords)
+## How It Works
 
 | Step | What Happens | Where |
 |------|-------------|-------|
-| Pattern creation | Vibe → Strudel code (AI) or 256-bit entropy → musical chunks | Browser |
-| Hashing | SHA-256 of pattern features → deterministic fingerprint | Browser (client-side) |
-| Commitment | `Pedersen(hash, blinding_factor)` | Browser → Starknet |
-| Verification | ECDSA signature with hash as private key → contract checks against stored public key | Browser ↔ Starknet |
-| What's stored | Only commitment + public key | On-chain |
-| What's never stored | The pattern code, the hash, the blinding factor | — |
-
----
-
-## Demo Flow
-
-```
-User Vibe → AI/Entropy → Strudel Code → SHA-256 Hash → Pedersen Commitment → Starknet
-                                                          ↓
-                                            ECDSA Signature (ZK Proof) → Verified
-                                            Pattern never revealed
-```
+| Pattern creation | Entropy → chunks, or library / AI → Strudel code | Browser |
+| Hashing | SHA-256 → deterministic fingerprint | Browser |
+| Commitment | `Pedersen(hash, blinding)` | Browser → Starknet |
+| Verification | ECDSA signature; contract checks public key | Browser ↔ Starknet |
+| On-chain | Commitment + acoustic public key only | Starknet |
 
 ---
 
 ## Quick Setup
 
 ```bash
-# 1. Install
 pnpm install
-
-# 2. Configure
-cp .env.example .env.local
-# Edit .env.local with your keys
-
-# 3. Run
-pnpm dev
-# Open http://localhost:3000
+cp .env.example .env.local   # add API keys as needed
+pnpm dev                       # http://localhost:3000
+pnpm build                     # production (webpack — Strudel compat)
+pnpm typecheck                 # TypeScript 7 via @typescript/native
+pnpm test:e2e                  # instant navigation (Playwright)
 ```
 
 ---
@@ -90,20 +85,16 @@ pnpm dev
 | Doc | Purpose |
 |-----|---------|
 | [`README.md`](./README.md) | Privacy architecture & overview |
-| [`contracts/DEPLOYMENT_STATUS.md`](./contracts/DEPLOYMENT_STATUS.md) | Contract deployment status |
+| [`docs/HACKATHON.md`](./docs/HACKATHON.md) | Private Sprint checklist & judge demo script |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Technical architecture & ZK flow |
-| [`docs/AGENTS.md`](./docs/AGENTS.md) | Agent API documentation |
 | [`docs/STRUDEL.md`](./docs/STRUDEL.md) | Pattern generation & library |
+| [`AGENTS.md`](./AGENTS.md) | Next.js 16 agent notes |
 
 ---
 
-## Contract Status
+## Contract (Sepolia)
 
-**Account:** `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` ✅ Deployed
-
-**Contract:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` ✅ Deployed on Starknet Sepolia
-
-**Explorer:** [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de) | [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
+`0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` — [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
 
 ---
 

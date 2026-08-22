@@ -10,7 +10,11 @@
 
 **Program:** [Proof of Privacy](https://proof.starknet.io) — an 8-week Starknet program for teams building privacy-preserving applications with STRK20.
 
-**Status:** ✅ Contract Deployed on Sepolia | ✅ Account Deployed | ✅ Working Demo
+**Status:** ✅ Contract Deployed on Sepolia | ✅ STRK20 Wallet API wired | ⬜ 3 mainnet pool txs
+
+### Hackathon (Private Sprint — deadline Aug 31, 2026)
+- **[Hackathon checklist](./docs/HACKATHON.md)** — mainnet txs, demo video, deploy
+- **[`strk20.json`](./strk20.json)** — panel scoring file (fill tx hashes after mainnet runs)
 
 ### Quick Links
 - **[Live App Flow](./QUICKSTART.md)** — Step-by-step demo
@@ -94,16 +98,14 @@ pnpm dev
 
 ## Features
 
-- 🎵 **Sonic identity minting** — Musical patterns as creative expression, committed on-chain via Pedersen hash
-- 🔐 **Privacy-first by design** — All crypto client-side (AES-GCM, SHA-256, Pedersen), never on server or chain
-- 🧾 **Zero-knowledge verification** — Prove authorship via ECDSA acoustic signature without revealing your pattern
-- 💾 **Decentralized encrypted backup** — AES-GCM encrypted identity persistence via IPFS
-- 🔑 **Social onboarding** — Web3Auth OAuth (Google/Apple) with MPC key derivation — no seed phrase needed
-- 🤖 **Agent-ready** — REST API + MCP server for AI agent integration
-- 🎁 **Sonic Gifting** — Gift tokens escrowed on-chain with a sonic signature (the song is the greeting card)
-- 🎼 **Strudel Showcase** — 16+ interactive pattern demos for live coding exploration
-- 💰 **Xverse Support** — Bitcoin wallet integration (BTC Track)
-- 🔒 **On-chain verification** — Read your commitment back from the contract to confirm anchoring
+- 🎵 **3-step mint wizard** — Secret → Link BTC address → Generate & commit on Starknet
+- 🔐 **Privacy-first** — All crypto client-side; only commitments on-chain
+- 🧾 **Zero-knowledge verification** — `/verify` route with acoustic ECDSA proof
+- 🛡️ **STRK20 integration** — Optional private STRK stake via Starknet Wallet API
+- ⚡ **Instant navigation** — Next.js 16 Cache Components + per-route loading shells
+- 📱 **Mobile-first** — Safe areas, touch targets, bottom-sheet modals
+- 🎼 **Strudel showcase** — Pattern library + optional live editor
+- 💰 **Xverse** — Bitcoin wallet for identifier linking
 
 ---
 
@@ -111,12 +113,11 @@ pnpm dev
 
 | Doc | Purpose |
 |-----|---------|
-| **[Quick Start](./QUICKSTART.md)** | TL;DR demo flow |
-| **[Docs Hub](./docs/)** | Complete documentation |
+| **[Quick Start](./QUICKSTART.md)** | TL;DR demo flow & judge demo |
+| **[Hackathon](./docs/HACKATHON.md)** | Private Sprint checklist |
 | **[Architecture](./docs/ARCHITECTURE.md)** | Privacy design & tech stack |
-| **[Agent API](./docs/AGENTS.md)** | REST & MCP integration |
 | **[Strudel](./docs/STRUDEL.md)** | Pattern generation & library |
-| **[Deployment](./contracts/DEPLOYMENT_STATUS.md)** | Contract deployment status |
+| **[AGENTS.md](./AGENTS.md)** | Next.js 16 agent notes |
 
 ---
 
@@ -124,14 +125,13 @@ pnpm dev
 
 | Layer | Technology |
 |-------|------------|
-| UI | Next.js 14, Three.js, Tailwind |
-| AI | Venice AI (privacy-first inference) |
-| Audio | Strudel (live-coded algorithmic synthesis) |
-| Chain | Starknet (Cairo, Pedersen commitments) |
-| ZK | `core::pedersen::pedersen` + `ecdsa::check_ecdsa_signature` |
-| Auth | Web3Auth (MPC, passkeys) |
-| Wallet | WalletConnect, Xverse |
-| Storage | IPFS (AES-GCM encrypted) |
+| UI | Next.js 16, React 19, Tailwind |
+| AI | Venice AI (optional vibe → Strudel) |
+| Audio | Strudel (lazy-loaded, webpack build) |
+| Chain | Starknet Sepolia (Cairo, Pedersen + ECDSA) |
+| Privacy pool | STRK20 Wallet API (starknet.js 10.4) |
+| Wallet | Argent, Braavos, Xverse, WalletConnect |
+| Tests | Playwright + `@next/playwright` instant() |
 
 ---
 

@@ -1,24 +1,11 @@
-'use client';
-
-import dynamic from 'next/dynamic';
-
-const SonicGuardian = dynamic(() => import('@/components/SonicGuardian'), {
-  ssr: false,
-});
+import { Suspense } from 'react';
+import { HomeApp } from '@/components/HomeApp';
+import { AppLoadingShell } from '@/components/AppLoadingShell';
 
 export default function Home() {
-  const handleRecoverySuccess = (hash: string) => {
-    console.log('Recovery successful with hash:', hash);
-  };
-
-  const handleRecoveryFailure = () => {
-    console.log('Recovery failed');
-  };
-
   return (
-    <SonicGuardian
-      onRecovery={handleRecoverySuccess}
-      onFailure={handleRecoveryFailure}
-    />
+    <Suspense fallback={<AppLoadingShell />}>
+      <HomeApp />
+    </Suspense>
   );
 }

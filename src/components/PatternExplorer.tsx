@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { engine, STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel';
+import { engine } from '@/lib/strudel-engine';
+import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import { StrudelVisualizer } from './StrudelVisualizer';
 
 interface FeatureDemo {

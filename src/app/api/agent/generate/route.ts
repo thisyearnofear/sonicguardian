@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { generateStrudelCode, sonicAgent } from '@/lib/ai-agent';
-import { rateLimiter, createAPIResponse, createAPIError, validators, validateEnvironment } from '@/lib/api';
+import { rateLimiter, createAPIResponse, createAPIError, validators, validateEnvironment, getClientIp } from '@/lib/api';
 
 /**
  * AI Agent Generation API Route
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Validate environment first
     validateEnvironment();
 
-    const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
+    const clientIP = getClientIp(request);
     if (!rateLimiter.isAllowed(clientIP)) {
       return createAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
     }
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Validate environment first
     validateEnvironment();
 
-    const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
+    const clientIP = getClientIp(request);
     if (!rateLimiter.isAllowed(clientIP)) {
       return createAPIError('Rate limit exceeded', 'RATE_LIMIT_EXCEEDED', 429);
     }

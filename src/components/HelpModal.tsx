@@ -72,7 +72,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     <div>
                       <h4 className="font-bold text-[color:var(--color-text)]">Anchor to Starknet</h4>
                       <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                        Connect wallet, enter your Bitcoin address, and commit. Only a Pedersen commitment is stored on-chain (privacy preserved).
+                        Connect Starknet wallet, paste or demo a Bitcoin address to protect, then commit. Only a Pedersen commitment is stored on-chain (privacy preserved).
                       </p>
                     </div>
                   </div>

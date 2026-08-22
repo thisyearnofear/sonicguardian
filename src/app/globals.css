@@ -1,9 +1,8 @@
+@import './strudel-editor.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-@import './strudel-editor.css';
 
 :root {
   --background: #ffffff;
@@ -18,8 +17,9 @@
   --color-border: #e2e8f0;
   --box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --border-radius: 16px;
-  --font-sans: 'Outfit', sans-serif;
-  --font-mono: 'Space Mono', monospace;
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+  --vh: 1vh;
 
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.5);
@@ -70,6 +70,109 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .touch-target {
+    @apply min-h-11 min-w-11 inline-flex items-center justify-center;
+  }
+
+  .input-mobile {
+    @apply min-h-11 text-base py-3 px-4 rounded-lg border bg-transparent w-full;
+    border-color: var(--color-border);
+  }
+
+  .input-mobile:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.15);
+  }
+
+  .btn-primary {
+    @apply touch-target min-h-12 w-full rounded-xl font-bold uppercase tracking-widest text-xs;
+    @apply bg-[color:var(--color-foreground)] text-[color:var(--background)];
+    @apply active:scale-[0.98] transition-transform disabled:opacity-50;
+  }
+
+  .nav-pill {
+    @apply px-3 sm:px-4 py-1.5 rounded-[10px] text-xs font-semibold transition-all;
+    color: var(--color-muted);
+  }
+
+  .nav-pill-active {
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  }
+
+  .field-label {
+    @apply text-xs font-semibold text-[color:var(--color-muted)] mb-2 block;
+  }
+
+  .card-select {
+    @apply p-4 rounded-xl border text-left transition-all active:scale-[0.99];
+    border-color: var(--color-border);
+  }
+
+  .card-select-active {
+    border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  }
+
+  .status-banner {
+    @apply p-4 rounded-xl border text-sm;
+  }
+
+  .status-banner-neutral {
+    border-color: var(--color-border);
+    background: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+  }
+
+  .status-banner-success {
+    border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  }
+
+  .status-banner-error {
+    border-color: color-mix(in srgb, var(--color-error) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  }
+
+  .status-banner-warning {
+    border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+  }
+
+  .status-banner-pending {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  }
+
+  .page-shell {
+    @apply px-4 sm:px-6;
+    padding-top: calc(3.25rem + env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .bottom-sheet {
+    @apply fixed inset-x-0 bottom-0 z-[100] max-h-[92dvh] overflow-y-auto rounded-t-3xl;
+    @apply border-t border-[color:var(--color-border)] bg-[color:var(--background)] shadow-2xl;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .skeleton-shimmer {
+    background-color: color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
 }
 
 /* Glassmorphism */
@@ -369,6 +472,11 @@ body {
 }
 
 /* Animations */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @keyframes confetti {
   0% { transform: translateY(0) rotate(0deg); }
   100% { transform: translateY(100vh) rotate(720deg); }

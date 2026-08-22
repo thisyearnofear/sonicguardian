@@ -68,7 +68,7 @@ export function useBitcoinWallet(): UseBitcoinWalletResult {
       } else if (response.status === 'error') {
         // Handle specific error cases
         if (response.error?.message?.includes('no wallet provider')) {
-          setError('No Bitcoin wallet found. Please install Xverse or Leather wallet.');
+          setError('No Bitcoin wallet found. Paste an address below, use Demo address, or install Xverse or Leather.');
         } else {
           setError(response.error?.message || 'Connection rejected or failed');
         }
@@ -83,7 +83,7 @@ export function useBitcoinWallet(): UseBitcoinWalletResult {
       console.error('Bitcoin wallet connection error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to Bitcoin wallet';
       if (errorMessage.includes('no wallet provider')) {
-        setError('No Bitcoin wallet found. Please install Xverse or Leather wallet.');
+        setError('No Bitcoin wallet found. Paste an address below, use Demo address, or install Xverse or Leather.');
       } else {
         setError(errorMessage);
       }

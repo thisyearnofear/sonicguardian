@@ -26,32 +26,44 @@ export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps)
   if (!isOpen && !isAnimating) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div
+      className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center transition-all duration-300 ${
+        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden />
 
-      {/* Modal Content */}
-      <div className={`relative w-full max-w-md bg-[color:var(--background)] rounded-3xl border border-[color:var(--color-border)] shadow-2xl transition-all duration-300 transform ${isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}>
-        <div className="p-8 space-y-8">
-          {/* Header */}
-          <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-bold tracking-tight">Connect Wallet</h2>
-            <p className="text-sm text-[color:var(--color-muted)]">Select your preferred Starknet wallet</p>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="connect-wallet-title"
+        className={`relative w-full sm:max-w-md bg-[color:var(--background)] border border-[color:var(--color-border)] shadow-2xl transition-all duration-300 transform ${
+          isOpen ? 'translate-y-0 sm:scale-100' : 'translate-y-full sm:translate-y-4 sm:scale-95'
+        } rounded-t-3xl sm:rounded-3xl max-h-[92dvh] overflow-y-auto`}
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="p-5 sm:p-8 space-y-6">
+          <div className="w-10 h-1 rounded-full bg-[color:var(--color-border)] mx-auto sm:hidden" />
+
+          <div className="space-y-2 text-center sm:text-left">
+            <h2 id="connect-wallet-title" className="text-xl sm:text-2xl font-bold tracking-tight">
+              Connect Wallet
+            </h2>
+            <p className="text-sm text-[color:var(--color-muted)]">
+              Starknet wallet to commit on-chain
+            </p>
           </div>
 
-          {/* Connectors */}
-          <div className="grid gap-3">
+          <div className="grid gap-2 sm:gap-3">
             {connectors.map((connector) => (
               <button
                 key={connector.id}
+                type="button"
                 onClick={() => {
                   connect({ connector });
                   onClose();
                 }}
-                className="w-full group flex items-center justify-between px-6 py-4 rounded-2xl bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-primary)]/10 border border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/30 transition-all active:scale-[0.98]"
+                className="touch-target w-full flex items-center justify-between px-4 sm:px-6 py-4 rounded-2xl bg-[color:var(--color-foreground)]/5 hover:bg-[color:var(--color-primary)]/10 border border-[color:var(--color-border)] hover:border-[color:var(--color-primary)]/30 transition-all active:scale-[0.98]"
               >
                 <div className="flex items-center gap-4">
                   {/* Icon Placeholder (or actual icons if available in connector) */}
@@ -81,8 +93,9 @@ export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps)
               </div>
 
               <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-                Connect a <span className="font-bold text-white/90">Bitcoin wallet</span> to anchor your sonic identity.
-                Supports both <span className="font-bold text-white/90">Xverse</span> and <span className="font-bold text-white/90">Leather</span> wallets.
+                <span className="font-bold text-white/90">Starknet</span> signs your on-chain commitment.
+                For the <span className="font-bold text-white/90">Bitcoin address</span> field in the mint form, paste an address, use Demo mode, or connect{' '}
+                <span className="font-bold text-white/90">Xverse</span> / <span className="font-bold text-white/90">Leather</span> separately.
               </p>
 
               <div className="flex gap-2 flex-wrap">
@@ -108,12 +121,12 @@ export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps)
             </div>
           </div>
 
-          {/* Footer */}
-          <button 
+          <button
+            type="button"
             onClick={onClose}
-            className="w-full py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors"
+            className="touch-target w-full py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted)]"
           >
-            Close Window
+            Close
           </button>
         </div>
       </div>

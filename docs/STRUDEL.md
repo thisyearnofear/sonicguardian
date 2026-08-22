@@ -52,7 +52,7 @@ Click **"🎓 Explore 16+ Strudel Features"** in the app.
 
 ## Pattern Library
 
-We maintain **20+ curated patterns** in `src/lib/strudel.ts`:
+We maintain **20+ curated patterns** in `src/lib/strudel-patterns.ts`:
 
 ### Categories
 - **Rhythm & Percussion** (4 patterns)
@@ -168,26 +168,21 @@ const dna = await extractSonicDNA(code, { captureSemantics: true });
 
 ---
 
-## Visualizer
+## Playback (thin embed)
 
-Located: `src/components/StrudelVisualizer.tsx`
+We intentionally **do not** ship `@strudel/codemirror` / StrudelMirror inside Next.js — that path fights Preact `h` injection and webpack minification.
 
-### Features
-- **Canvas-based** - Real-time frequency display
-- **Color-coded** - Notes mapped to hue spectrum
-- **Active hap tracking** - Shows currently playing events
-- **Reusable** - Used in Pattern Explorer and GiftApp
+Instead:
 
-### Usage
-```tsx
-import { StrudelVisualizer } from './StrudelVisualizer';
+1. **Edit** — plain textarea (`StrudelEditor.tsx`)
+2. **Play** — `@strudel/web` `initStrudel` + `evaluate` / `hush` (`src/lib/strudel-engine.ts`, lazy-loaded via `strudel-lazy.ts`)
+3. **Hash** — `extractSonicDNA` on the code string only (no audio required)
 
-<StrudelVisualizer 
-  isActive={isPlaying}
-  getActiveHaps={() => activeHaps}
-  height={120}
-/>
-```
+DNA / ZK recovery does not depend on the live editor.
+
+### Visualizer
+
+`StrudelVisualizer.tsx` — canvas spectrum + cycle pulse while playing. Best-effort; audio is optional for the crypto path.
 
 ---
 
@@ -195,10 +190,12 @@ import { StrudelVisualizer } from './StrudelVisualizer';
 
 | File | Purpose |
 |------|---------|
-| `src/lib/strudel.ts` | Core Strudel utilities, pattern library |
+| `src/lib/strudel-patterns.ts` | Pattern library + validation (no audio) |
+| `src/lib/strudel-engine.ts` | `@strudel/web` playback engine |
+| `src/lib/strudel-lazy.ts` | Dynamic import wrapper for Turbopack-friendly main bundle |
 | `src/lib/pattern-generator.ts` | Cryptographic pattern generation |
 | `src/lib/dna.ts` | DNA extraction from patterns |
-| `src/components/StrudelEditor.tsx` | Live code editor with visualizer |
+| `src/components/StrudelEditor.tsx` | Textarea pattern editor + play/stop |
 | `src/components/StrudelVisualizer.tsx` | Reusable visualizer component |
 | `src/components/PatternExplorer.tsx` | Interactive feature showcase |
 
@@ -207,9 +204,10 @@ import { StrudelVisualizer } from './StrudelVisualizer';
 ## Resources
 
 - **[Strudel Docs](https://strudel.cc/)** - Official documentation
+- **[Using Strudel in your project](https://strudel.cc/technical-manual/project-start/)** - Prefer `@strudel/web` / embed over deep REPL bundling
 - **[TidalCycles](https://tidalcycles.org/)** - Original pattern language
 - **[Mini Notation](https://strudel.cc/learn/)** - Pattern syntax reference
 
 ---
 
-**Last Updated:** March 2, 2026
+**Last Updated:** August 22, 2026

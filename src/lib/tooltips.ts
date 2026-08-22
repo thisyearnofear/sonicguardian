@@ -88,7 +88,7 @@ export const TOOLTIP_DEFINITIONS: TooltipDefinition[] = [
   // Security
   {
     id: 'bitcoin-address-validation',
-    text: 'We validate Bitcoin addresses to ensure they follow the correct format (bc1q for SegWit, 1 for legacy, 3 for P2SH). Invalid addresses cannot receive funds.',
+    text: 'Paste a Bitcoin address you want to protect, or connect Xverse/Leather. For demos only, use the Demo address button — no wallet or funds required.',
     category: 'security'
   },
   {
