@@ -1,14 +1,17 @@
 'use client';
 
+import React from 'react';
+
 interface PageHeroProps {
   title: string;
   subtitle: string;
   badge?: string;
   compact?: boolean;
   onHelp?: () => void;
+  actions?: React.ReactNode;
 }
 
-export function PageHero({ title, subtitle, badge, compact, onHelp }: PageHeroProps) {
+export function PageHero({ title, subtitle, badge, compact, onHelp, actions }: PageHeroProps) {
   return (
     <header className={`text-center max-w-2xl relative w-full ${compact ? 'mb-4 space-y-2' : 'mb-6 space-y-3'}`}>
       {badge && (
@@ -26,6 +29,7 @@ export function PageHero({ title, subtitle, badge, compact, onHelp }: PageHeroPr
       <p className="text-sm sm:text-base text-[color:var(--color-muted)] max-w-lg mx-auto leading-relaxed">
         {subtitle}
       </p>
+      {actions && <div className="flex flex-wrap items-center justify-center gap-2 pt-1">{actions}</div>}
       {onHelp && (
         <button
           type="button"

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { isValidBtcAddress } from '@/lib/crypto';
 import { StatusBanner } from './StatusBanner';
+import { FlowState } from './FlowState';
 
 interface ValidationState {
   isValid: boolean;
@@ -36,6 +37,30 @@ export function VerifyPanel({
   const btcValidation = validationStates.get('btc-address');
   const verified = status?.includes('Verified') ?? false;
 
+  if (verified) {
+    return (
+      <div className="glass rounded-[var(--border-radius)] p-4 sm:p-8 w-full max-w-2xl mx-auto space-y-6">
+        <FlowState
+          variant="success"
+          icon="✅"
+          title="Authorship verified"
+          description="Your zero-knowledge proof matched the on-chain acoustic public key. Your pattern was never revealed."
+        />
+        {status && <StatusBanner message={status} />}
+        <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
+          <Link
+            href="/"
+            prefetch
+            className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors"
+            data-testid="nav-to-mint"
+          >
+            ← Back to minting
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="glass rounded-[var(--border-radius)] p-4 sm:p-8 w-full max-w-2xl mx-auto space-y-6">
       <div>
@@ -58,6 +83,15 @@ export function VerifyPanel({
         <label htmlFor="recovery-secret" className="field-label">
           Your recovery secret
         </label>
+        {!recoveryVibe.trim() && !btcAddress.trim() ? (
+          <FlowState
+            variant="empty"
+            icon="🔑"
+            title="Enter what you saved at mint time"
+            description="Paste your musical recovery chunks, vibe phrase, or IPFS backup CID below."
+            className="mb-4 py-4"
+          />
+        ) : null}
         <input
           id="recovery-secret"
           type="text"

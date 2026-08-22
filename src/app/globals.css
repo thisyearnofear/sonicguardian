@@ -150,6 +150,28 @@ body {
     background: color-mix(in srgb, var(--color-primary) 6%, transparent);
   }
 
+  .flow-state {
+    @apply p-6 rounded-2xl border;
+    border-color: var(--color-border);
+    background: color-mix(in srgb, var(--color-foreground) 2%, transparent);
+  }
+
+  .flow-state-success {
+    border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  }
+
+  .flow-state-pending {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  }
+
+  .flow-state-icon {
+    @apply w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mx-auto;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+  }
+
   .page-shell {
     @apply px-4 sm:px-6;
     padding-top: calc(3.25rem + env(safe-area-inset-top));

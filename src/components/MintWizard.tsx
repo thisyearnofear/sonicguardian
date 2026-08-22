@@ -8,6 +8,7 @@ import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import type { MusicalChunk } from '@/lib/entropy-encoder';
 import { Tooltip } from './Tooltip';
 import { useBitcoinWallet } from '@/hooks/use-bitcoin-wallet';
+import { FlowState } from './FlowState';
 import dynamic from 'next/dynamic';
 
 const StrudelEditor = dynamic(
@@ -409,29 +410,43 @@ export function MintWizard(props: MintWizardProps) {
       {wizardStep === 3 && (
         <div className="space-y-5 animate-in fade-in duration-300">
           {!dnaHash ? (
-            <div className="p-4 rounded-xl border border-[color:var(--color-primary)]/30 bg-[color:var(--color-primary)]/5 text-center space-y-4">
-              <p className="text-sm text-[color:var(--color-muted)]">
-                Ready to generate your identity from your chosen secret.
-              </p>
+            <FlowState
+              variant="empty"
+              icon="✨"
+              title="Ready to generate"
+              description="Your secret and Bitcoin address are set. Generate your identity fingerprint — recovery chunks appear here."
+            >
               <button
                 type="button"
                 onClick={onGenerate}
                 disabled={isProcessing}
-                className="w-full py-4 rounded-xl bg-[color:var(--color-primary)] text-white font-bold uppercase text-xs tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full max-w-xs mx-auto py-3.5 rounded-xl bg-[color:var(--color-primary)] text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isProcessing ? (
-                  <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating…</>
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Generating…
+                  </>
                 ) : (
-                  'Generate Identity'
+                  'Generate identity'
                 )}
               </button>
-            </div>
+            </FlowState>
           ) : (
             <>
-              <div className="p-4 rounded-xl border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/5">
-                <p className="text-[9px] font-bold uppercase text-[color:var(--color-success)] mb-2">Identity fingerprint</p>
-                <p className="font-mono text-[10px] break-all text-[color:var(--color-muted)]">{dnaHash.slice(0, 32)}…</p>
-              </div>
+              {onChainStatus === 'success' ? (
+                <FlowState
+                  variant="success"
+                  icon="🔒"
+                  title="Identity anchored"
+                  description="Your Pedersen commitment is on Starknet. Save your recovery chunks — you'll need them to verify."
+                />
+              ) : (
+                <div className="p-4 rounded-xl border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/5">
+                  <p className="text-xs font-semibold text-[color:var(--color-success)] mb-2">Identity fingerprint</p>
+                  <p className="font-mono text-[10px] break-all text-[color:var(--color-muted)]">{dnaHash.slice(0, 32)}…</p>
+                </div>
+              )}
 
               {musicalChunks.length > 0 && (
                 <div className="space-y-2">

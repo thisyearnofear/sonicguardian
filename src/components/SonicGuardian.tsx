@@ -42,6 +42,8 @@ import { TutorialTrigger, InteractiveTutorial } from './InteractiveTutorial';
 import { InferenceExplainer, INFERENCE_STEPS } from './InferenceExplainer';
 import { PageHero } from './PageHero';
 import { StatusBanner } from './StatusBanner';
+import { JudgeDemoButton } from './JudgeDemoButton';
+import { DEMO_BTC_ADDRESS } from '@/lib/demo-btc';
 
 interface SonicGuardianProps {
   onRecovery?: (hash: string) => void;
@@ -75,6 +77,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [selectedLibraryPattern, setSelectedLibraryPattern] = useState<string | null>(null);
   const [showExplanations, setShowExplanations] = useState(false);
   const [showVisualizer, setShowVisualizer] = useState(false);
+  const [judgeDemoPending, setJudgeDemoPending] = useState(false);
   
   // Inference Explainer State
   const [showExplainer, setShowExplainer] = useState(false);
@@ -316,6 +319,30 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     }
   };
 
+  useEffect(() => {
+    if (!judgeDemoPending) return;
+    if (wizardStep !== 3 || secretMode !== 'random' || btcAddress !== DEMO_BTC_ADDRESS) return;
+    setJudgeDemoPending(false);
+    void handleGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when prefilled state is ready
+  }, [judgeDemoPending, wizardStep, secretMode, btcAddress]);
+
+  const handleJudgeDemo = () => {
+    setSecretMode('random');
+    setSelectedLibraryPattern(null);
+    setBtcAddress(DEMO_BTC_ADDRESS);
+    setWizardStep(3);
+    setShowWelcome(false);
+    setJudgeDemoPending(true);
+    setStatus('Judge demo — generating random identity with demo BTC address…');
+  };
+
+  const handleWelcomeStart = () => {
+    setSecretMode('random');
+    setSelectedLibraryPattern(null);
+    setWizardStep(1);
+  };
+
   const handleCodeChange = async (newCode: string) => {
     setGeneratedCode(newCode);
     const newDna = await extractSonicDNA(newCode);
@@ -481,6 +508,13 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           title="Sonic Guardian"
           subtitle="Turn a musical secret into a zero-knowledge identity. Prove authorship anytime — without revealing your pattern."
           onHelp={() => setShowHelp(true)}
+          actions={
+            <JudgeDemoButton
+              onRun={handleJudgeDemo}
+              loading={judgeDemoPending || isProcessing}
+              disabled={isProcessing}
+            />
+          }
         />
 
         <div className="w-full max-w-6xl grid grid-cols-1 gap-8 items-start">
@@ -659,7 +693,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
 
       {/* Welcome Modal */}
-      {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+      {showWelcome && (
+        <WelcomeModal onClose={() => setShowWelcome(false)} onStart={handleWelcomeStart} />
+      )}
 
       {/* Interactive Tutorial */}
       <InteractiveTutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
