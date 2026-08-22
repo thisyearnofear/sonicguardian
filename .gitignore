@@ -67,3 +67,7 @@ contracts/Scarb.lock
 # Temporary cloned repos for reference
 strudel-codeberg/
 strudel-repo/
+
+# MCP server package
+packages/mcp-server/dist/
+packages/mcp-server/node_modules/

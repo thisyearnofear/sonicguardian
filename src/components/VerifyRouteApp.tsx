@@ -16,6 +16,7 @@ export function VerifyRouteApp() {
   const [btcAddress, setBtcAddress] = useState('');
   const [recoveryVibe, setRecoveryVibe] = useState('');
   const [status, setStatus] = useState('');
+  const [verifiedDnaHash, setVerifiedDnaHash] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [validationStates, setValidationStates] = useState<
     Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>
@@ -118,6 +119,7 @@ export function VerifyRouteApp() {
       await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
 
       setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
+      setVerifiedDnaHash(finalDnaHash);
       sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, finalDnaHash);
     } catch (error) {
       console.error(error);
@@ -137,7 +139,7 @@ export function VerifyRouteApp() {
         <PageHero
           compact
           title="Verify authorship"
-          subtitle="Replay your secret to prove you know it — without putting the pattern on-chain."
+          subtitle="Prove human authority over a sonic identity — then optionally authorize recovery privately via the STRK20 pool."
         />
 
         <VerifyPanel
@@ -149,6 +151,7 @@ export function VerifyRouteApp() {
           validationStates={validationStates}
           onVerify={handleRecovery}
           status={status || undefined}
+          verifiedDnaHash={verifiedDnaHash || undefined}
         />
       </main>
     </div>

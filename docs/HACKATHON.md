@@ -31,6 +31,41 @@ Pool on Voyager: [0x040337…812a](https://voyager.online/contract/0x040337b1af3
 
 ---
 
+## Differentiation: Private Recovery Oracle
+
+Sonic Guardian is **not** a shield UI clone. The core innovation:
+
+1. **Human sonic ZK** — prove authorship without revealing the pattern (acoustic ECDSA)
+2. **STRK20 private recovery** — `RecoveryInvokeHelper` anonymizer calls `authorize_with_acoustic_signature` inside the pool
+3. **Agent validation (ERC-8004)** — MCP tools read chain status and verify ZK signatures without receiving patterns
+
+### Deploy RecoveryInvokeHelper (mainnet)
+
+```bash
+cd contracts && scarb build
+# Declare + deploy RecoveryInvokeHelper (no constructor args)
+# Set in .env.local:
+# NEXT_PUBLIC_RECOVERY_HELPER_MAINNET=0x...
+# NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS=0x...  # mainnet when ready
+```
+
+After deploy, verify flow shows **Authorize via STRK20 pool** — a 3-action STRK20 tx:
+withdraw → open note → `privacy_invoke` → Sonic Guardian authorize.
+
+### MCP server (agent demo)
+
+```bash
+pnpm mcp:build
+pnpm mcp:dev
+# Cursor: add packages/mcp-server/mcp.config.json
+```
+
+Tools: `sonic_guardian_chain_status`, `sonic_guardian_verify_zk`, `sonic_guardian_agent_manifest`
+
+HTTP API: `GET/POST /api/agent/chain` — `{ "action": "status", "btcAddress": "..." }`
+
+---
+
 ## Recommended judge demo (3 minutes)
 
 1. **Run judge demo** — one tap pre-fills random secret + demo BTC and generates identity (~15s)

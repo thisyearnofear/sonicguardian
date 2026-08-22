@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { isValidBtcAddress } from '@/lib/crypto';
 import { StatusBanner } from './StatusBanner';
 import { FlowState } from './FlowState';
+import dynamic from 'next/dynamic';
+
+const PrivateRecoveryPanel = dynamic(
+  () => import('./PrivateRecoveryPanel').then((m) => m.PrivateRecoveryPanel),
+  { ssr: false },
+);
 
 interface ValidationState {
   isValid: boolean;
@@ -21,6 +27,7 @@ export interface VerifyPanelProps {
   validationStates: Map<string, ValidationState>;
   onVerify: () => void;
   status?: string;
+  verifiedDnaHash?: string;
 }
 
 export function VerifyPanel({
@@ -32,6 +39,7 @@ export function VerifyPanel({
   validationStates,
   onVerify,
   status,
+  verifiedDnaHash,
 }: VerifyPanelProps) {
   const recoveryValidation = validationStates.get('recovery-phrase');
   const btcValidation = validationStates.get('btc-address');
@@ -47,6 +55,9 @@ export function VerifyPanel({
           description="Your zero-knowledge proof matched the on-chain acoustic public key. Your pattern was never revealed."
         />
         {status && <StatusBanner message={status} />}
+        {verifiedDnaHash && btcAddress && (
+          <PrivateRecoveryPanel btcAddress={btcAddress} dnaHash={verifiedDnaHash} />
+        )}
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
           <Link
             href="/"

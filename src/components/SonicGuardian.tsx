@@ -506,7 +506,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
           compact={hasVisited}
           badge={hasVisited ? undefined : 'Privacy-first · Starknet'}
           title="Sonic Guardian"
-          subtitle="Turn a musical secret into a zero-knowledge identity. Prove authorship anytime — without revealing your pattern."
+          subtitle="Turn a musical secret into private human authority on Starknet. Prove authorship with ZK — authorize recovery through the STRK20 pool."
           onHelp={() => setShowHelp(true)}
           actions={
             <JudgeDemoButton

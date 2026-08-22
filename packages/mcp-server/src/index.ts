@@ -12,14 +12,17 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { HttpServerTransport } from '@modelcontextprotocol/sdk/server/http.js';
 import { 
   CallToolRequestSchema, 
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema 
 } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import {
+  agentValidationManifest,
+  chainGuardianStatus,
+  chainVerifyAcousticZk,
+} from './chain-tools.js';
 
 // Guardian state (in production, this would be a database)
 interface GuardianRecord {
@@ -216,6 +219,38 @@ class SonicGuardianMCPServer {
       return {
         tools: [
           {
+            name: 'sonic_guardian_chain_status',
+            description:
+              'Read on-chain guardian status for a Bitcoin address (commitment, acoustic key). No musical pattern required.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                btcAddress: { type: 'string', description: 'Bitcoin address (bc1q..., 1..., 3...)' },
+              },
+              required: ['btcAddress'],
+            },
+          },
+          {
+            name: 'sonic_guardian_verify_zk',
+            description:
+              'Verify acoustic ZK authorship on Starknet. Agent supplies messageHash and signature (r,s) — never the musical pattern.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                btcAddress: { type: 'string' },
+                messageHash: { type: 'string', description: 'Felt hash that was signed' },
+                signatureR: { type: 'string' },
+                signatureS: { type: 'string' },
+              },
+              required: ['btcAddress', 'messageHash', 'signatureR', 'signatureS'],
+            },
+          },
+          {
+            name: 'sonic_guardian_agent_manifest',
+            description: 'ERC-8004-style validation adapter manifest for Sonic Guardian.',
+            inputSchema: { type: 'object', properties: {} },
+          },
+          {
             name: 'sonic_guardian_register',
             description: 'Register a Bitcoin address with a musical pattern as a guardian. The musical pattern serves as the recovery key.',
             inputSchema: {
@@ -305,10 +340,32 @@ class SonicGuardianMCPServer {
 
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
+      const { name } = request.params;
+      const args = (request.params.arguments ?? {}) as Record<string, unknown>;
 
       try {
         switch (name) {
+          case 'sonic_guardian_chain_status': {
+            const result = await chainGuardianStatus(args.btcAddress as string);
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+          }
+
+          case 'sonic_guardian_verify_zk': {
+            const result = await chainVerifyAcousticZk(
+              args.btcAddress as string,
+              args.messageHash as string,
+              args.signatureR as string,
+              args.signatureS as string,
+            );
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+          }
+
+          case 'sonic_guardian_agent_manifest': {
+            return {
+              content: [{ type: 'text', text: JSON.stringify(agentValidationManifest(), null, 2) }],
+            };
+          }
+
           case 'sonic_guardian_register': {
             const result = await registerGuardian(
               args.btcAddress as string,
@@ -369,10 +426,7 @@ class SonicGuardianMCPServer {
           }
 
           case 'sonic_guardian_list': {
-            const allGuardians = Array.from(guardians.entries()).map(([addr, record]) => ({
-              btcAddress: addr,
-              ...record
-            }));
+            const allGuardians = Array.from(guardians.values());
             return {
               content: [
                 {
@@ -466,14 +520,11 @@ class SonicGuardianMCPServer {
 
   async run(mode: 'stdio' | 'http' = 'stdio', port?: number) {
     if (mode === 'http') {
-      const transport = new HttpServerTransport({ port: port || 3000 });
-      await this.server.connect(transport);
-      console.error(`Sonic Guardian MCP Server running on http://localhost:${port || 3000}`);
-    } else {
-      const transport = new StdioServerTransport();
-      await this.server.connect(transport);
-      console.error('Sonic Guardian MCP Server running on stdio');
+      console.error('HTTP mode not supported in this build — use stdio (default).');
     }
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+    console.error('Sonic Guardian MCP Server running on stdio');
   }
 }
 
