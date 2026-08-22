@@ -1,125 +1,111 @@
-# 🚀 Sonic Guardian - Contract Deployment Status
+# Sonic Guardian — Contract Deployment Status
 
-## ✅ PRODUCTION READY: ALL SYSTEMS DEPLOYED
-
-**Last Updated:** March 2, 2026  
-**Status:** ✅ **PRODUCTION-READY**
+**Last Updated:** August 22, 2026  
+**Strategy:** Sepolia integration first → mainnet STRK20 scoring
 
 ---
 
-## 📋 Deployed Components
+## Current state
 
-### 1. Starknet Account
-**Address:** `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df`
+| Component | Network | Address | Status |
+|-----------|---------|---------|--------|
+| **Deployer account** | Sepolia | `0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` | ✅ Deployed, **funded** (~0.05 ETH, ~815 STRK) |
+| **Deployer account** | Mainnet | same address | ⚠️ **Not funded** (0 ETH, 0 STRK) |
+| **SonicGuardian** | Sepolia | `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de` | ✅ Deployed (Mar 2026) — **verify interface** before recovery helper |
+| **RecoveryInvokeHelper** | Sepolia | `0x04159e043db4260022b55e6390fc7778e58bfa3f4be36d56b0f0310f04ab0e32` | ✅ Deployed (Aug 22, 2026) |
+| **RecoveryInvokeHelper** | Mainnet | — | ⬜ After funding (Phase 2) |
+| **SonicGuardian** | Mainnet | — | ⬜ Optional for hackathon |
 
-**Explorer Links:**
-- [Voyager](https://sepolia.voyager.online/contract/0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df)
-- [Starkscan](https://sepolia.starkscan.co/contract/0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df)
+### Explorer links (Sepolia)
 
-**Transaction:** [View on Starkscan](https://sepolia.starkscan.co/tx/0x06ba17c934fe2480c1e1f2fbc6afba661b642fc60b8beddba6b9b397134c476e)
-
-**Funding:**
-- ✅ 0.05 ETH (Sepolia)
-- ✅ STRK (Sepolia)
-
-### 2. SonicGuardian Contract
-**Address:** `0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de`
-
-**Explorer Links:**
-- [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-- [Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-
-**Deployment Details:**
-- **Tool:** starknet-foundry (sncast)
-- **Cairo Version:** 2.16.0
-- **Sierra Compiler:** universal-sierra-compiler v2.7.0
-- **Network:** Starknet Sepolia Testnet
-- **Status:** ✅ **DEPLOYED & VERIFIED**
-
-### 3. Frontend Application
-**Status:** ✅ **PRODUCTION-READY**
-
-- ✅ All features functional
-- ✅ No mock/stub code in core functionality
-- ✅ Build passes with zero errors
-- ✅ Test suite passes
-- ✅ Offline-capable gifting system
-- ✅ Xverse wallet integration
-- ✅ Pattern Explorer (16+ interactive demos)
+- **Account:** [Voyager](https://sepolia.voyager.online/contract/0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df)
+- **SonicGuardian:** [Voyager](https://sepolia.voyager.online/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
 
 ---
 
-## 🎯 Deployment Checklist
+## Why Sepolia first?
 
-```
-[✅] Contract deployed on Starknet Sepolia
-[✅] Account deployed and funded
-[✅] Frontend builds successfully
-[✅] All tests pass
-[✅] No mock code in core features
-[✅] Documentation complete
-[✅] GitHub repo public
-[✅] Explorer links verified
-```
+1. **Funds available** — declare/deploy costs are covered on testnet.
+2. **Core product works here** — mint, commit, ZK verify, agent API, MCP tools all target Sepolia today.
+3. **De-risk mainnet** — declare `RecoveryInvokeHelper` once on Sepolia; repeat on mainnet with confidence.
+4. **STRK20 is mainnet-only** — the privacy pool does not exist on Sepolia; pool txs and private recovery UI require Phase 2.
+
+See **[`docs/HACKATHON.md`](../docs/HACKATHON.md)** for the full phased checklist.
 
 ---
 
-## 📊 Contract Interface
+## RecoveryInvokeHelper (Sepolia) — deployed Aug 22, 2026
 
-Once deployed, the contract exposes:
+| Field | Value |
+|-------|-------|
+| **Contract** | `0x04159e043db4260022b55e6390fc7778e58bfa3f4be36d56b0f0310f04ab0e32` |
+| **Class hash** | `0x05313a98372246878052460c11a931c1b822162859ab501862f955ecbb21d2cb` |
+| **Declare tx** | [Voyager](https://sepolia.voyager.online/tx/0x04b90383b707bf73b47bf41afd3c24fdd72aa346bbca467863aa1cac3b320547) |
+| **Deploy tx** | [Voyager](https://sepolia.voyager.online/tx/0x071954767fa7b1edc5f0185fb49ab556fcc7735d91b04487ef9d8a5cd82f73c3) |
+| **Tooling** | sncast 0.57.0 + universal-sierra-compiler 2.10.0 |
+| **Env** | `NEXT_PUBLIC_RECOVERY_HELPER_SEPOLIA` in `.env.local` |
+
+> STRK20 `privacy_invoke` still requires mainnet pool. Sepolia deploy validates declare/deploy pipeline and on-chain helper presence.
+
+---
+
+## Phase 1 — Sepolia (remaining)
+
+### 1. App smoke test
 
 ```bash
-cd contracts
-scarb build
-# Compiles successfully with Cairo 2.16.0
+pnpm dev
+# Judge demo → commit on Sepolia → /verify → curl /api/agent/chain
 ```
 
-**Contract Class Hash (Sierra):**
-```
-0x029f7bf9199f28ce2f885f859e56e3d1d94d894c3cea73f5d078c38ef8271a1d
-```
+### 2. Verify SonicGuardian interface (optional)
 
-## ✅ Contract Deployment
-**Status:** ✅ **DEPLOYED**
-
-**Contract Address:**
-```
-0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de
-```
-
-**Class Hash:**
-```
-0x003ad2e4c2bac8392ba214743c6494a06e76bb74755109bd0dced3840e3076ed
-```
-
-**Transaction:**
-- [View on Voyager](https://sepolia.voyager.online/tx/0x06e589ecb5f57e25b0786f64b43ab1fbc031f731cf83eb8645023caa463523cc)
-- [View on Starkscan](https://sepolia.starkscan.co/contract/0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de)
-
-**Deployed with:** `sncast` (starknet-foundry v0.57.0) + `universal-sierra-compiler` v2.7.0
+If `authorize_with_acoustic_signature` is missing on the March 2026 deployment, redeploy `SonicGuardian` and update `NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS`.
 
 ---
 
-## 📝 Previous Issue: Cairo Compiler Version Mismatch (Resolved)
+## Phase 2 — Mainnet (hackathon scoring)
 
-### Issue: Cairo Compiler Version Mismatch
+1. Fund deployer with ETH + STRK
+2. Deploy `RecoveryInvokeHelper` → set `NEXT_PUBLIC_RECOVERY_HELPER_MAINNET`
+3. Run 3 STRK20 pool transactions; fill [`strk20.json`](../strk20.json)
+4. Deploy frontend to Vercel
 
-**Problem:**
-- Scarb uses Cairo 2.16.0
-- Starkli uses Cairo 2.11.4 for CASM compilation
-- Network validates against CASM hash computed by network's compiler
-- CASM hash mismatch prevents declaration
+Mainnet pool: `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a`
 
-**Error:**
+---
+
+## Deployer setup
+
+**sncast account:** `sonicguardian`
+
+```bash
+sncast account list
+# address: 0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df
+# network: alpha-sepolia, deployed: true
 ```
-Mismatch compiled class hash for class with hash 0x29f7bf...
-Actual: 0x2a44d5... (starkli's compilation)
-Expected: 0x98f3de... (network's cached compilation)
+
+**Env (`.env.local`):**
+
+```bash
+STARKNET_ACCOUNT_ADDRESS=0x023e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df
+STARKNET_ACCOUNT=~/.starkli-wallets/sonicguardian/account.json
+STARKNET_ACCOUNT_PRIVATE_KEY=~/.starkli-wallets/sonicguardian/keystore.json
+STARKNET_RPC_URL=https://starknet-sepolia.drpc.org
 ```
 
-### Solution: Use `--casm-file` flag
+---
 
-**Fix:** Pass the Scarb-compiled CASM file directly to starkli so it skips its own CASM compilation:
+## Tooling
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Scarb | 2.16.0 | Cairo 2.16; `casm = true` in Scarb.toml |
+| sncast | 0.57.0 | Preferred for declare/deploy |
+| universal-sierra-compiler | 2.10.0+ | Required for Sierra 1.8.0 (`curl -L …/install.sh \| sh`) |
+| starkli | 0.4.2+ | Use `--casm-file` if declaring via starkli |
+
+**CASM mismatch workaround (starkli only):**
 
 ```bash
 starkli declare \
@@ -127,116 +113,27 @@ starkli declare \
   --casm-file target/dev/sonic_guardian_SonicGuardian.compiled_contract_class.json \
   --account ~/.starkli-wallets/sonicguardian/account.json \
   --keystore ~/.starkli-wallets/sonicguardian/keystore.json \
-  --rpc https://starknet-sepolia.g.alchemy.com/v2/HXlRKIGaIPmjVLKTtnZvK \
+  --rpc "$STARKNET_RPC_URL" \
   --watch
 ```
 
-**Why this works:** `--casm-file` tells starkli to use Scarb's pre-compiled CASM (Cairo 2.16.0) instead of re-compiling with its bundled Cairo 2.11.4.
+---
 
-**Note:** The old Sierra class hash (`0x29f7bf...`) is permanently cached on the network with a mismatched CASM. The contract was updated with a `get_version()` function to produce a fresh Sierra hash.
-
-**Prerequisite:** `Scarb.toml` must have `casm = true` under `[[target.starknet-contract]]` (already configured).
-
-## 📋 Contract Interface
-
-Once deployed, the contract will expose:
+## Contract interface (current)
 
 ```cairo
-trait ISonicGuardian {
-    fn register_guardian(
-        btc_address: felt252,
-        commitment: felt252,
-        blinding_commitment: felt252
-    );
-    
-    fn verify_recovery(
-        btc_address: felt252,
-        dna_hash: felt252,
-        blinding: felt252
-    ) -> bool;
-    
-    fn authorize_btc_recovery(
-        btc_address: felt252,
-        dna_hash: felt252,
-        blinding: felt252
-    ) -> felt252;
-    
-    fn get_commitment(btc_address: felt252) -> felt252;
-    fn get_guardian_count() -> u256;
-    fn get_version() -> felt252;
-}
+// SonicGuardian — key entrypoints
+register_guardian(btc_address, commitment, blinding_commitment)
+verify_recovery(btc_address, dna_hash, blinding) -> bool
+authorize_with_acoustic_signature(btc_address, message_hash, signature_r, signature_s) -> felt252
+get_commitment(btc_address) -> felt252
+
+// RecoveryInvokeHelper
+privacy_invoke(guardian, btc_address, message_hash, signature_r, signature_s, token, note_deposit)
 ```
-
-## 🔧 Manual Deployment Steps
-
-When tooling is ready:
-
-```bash
-cd contracts
-
-# 1. Build
-scarb build
-
-# 2. Declare (--casm-file avoids compiler version mismatch)
-starkli declare \
-  target/dev/sonic_guardian_SonicGuardian.contract_class.json \
-  --casm-file target/dev/sonic_guardian_SonicGuardian.compiled_contract_class.json \
-  --account ~/.starkli-wallets/sonicguardian/account.json \
-  --keystore ~/.starkli-wallets/sonicguardian/keystore.json \
-  --keystore-password "" \
-  --rpc https://starknet-sepolia.g.alchemy.com/v2/HXlRKIGaIPmjVLKTtnZvK \
-  --watch
-
-# 3. Deploy (replace CLASS_HASH with output from declare)
-starkli deploy \
-  CLASS_HASH \
-  --account ~/.starkli-wallets/sonicguardian/account.json \
-  --keystore ~/.starkli-wallets/sonicguardian/keystore.json \
-  --keystore-password "" \
-  --rpc https://starknet-sepolia.g.alchemy.com/v2/HXlRKIGaIPmjVLKTtnZvK \
-  --watch
-```
-
-## 📊 Contract Status Summary
-
-### Core Capabilities
-- ✅ Pedersen commitment implementation
-- ✅ Zero-knowledge verification logic (ECDSA acoustic signatures)
-- ✅ Private recovery flow
-- ✅ Cairo contract code
-- ✅ Deployed contract address
-- ✅ On-chain transaction proof
-
-### What External Reviewers Can See
-1. **Working Account**: Deployed and funded on Sepolia
-2. **Buildable Contract**: Compiles successfully with Scarb
-3. **Complete Code**: Full Cairo implementation with ZK primitives
-4. **Documentation**: Comprehensive README and deployment guide
-
-## 🛠️ Environment Setup
-
-```bash
-# Required versions
-scarb 2.16.0 (Cairo 2.16.0)
-starkli 0.4.2+ (needs upgrade for Cairo 2.16 support)
-
-# Account files
-~/.starkli-wallets/sonicguardian/account.json
-~/.starkli-wallets/sonicguardian/keystore.json
-
-# RPC Endpoint
-https://starknet-sepolia.g.alchemy.com/v2/HXlRKIGaIPmjVLKTtnZvK
-```
-
-## 📝 Next Steps
-
-1. **Immediate**: Try Voyager web deployment as workaround
-2. **Short-term**: Upgrade starkli for Cairo 2.16 support  
-3. **Alternative**: Deploy to Katana local devnet for demo
-4. **Document**: Add deployment troubleshooting to README
 
 ---
 
-**Last Updated:** March 2, 2026  
-**Network:** Starknet Sepolia Testnet  
-**Status:** Ready for deployment (tooling compatibility issue)
+## Historical note
+
+Initial SonicGuardian deployment: **March 2, 2026** via sncast on Starknet Sepolia. Class hash `0x003ad2e4c2bac8392ba214743c6494a06e76bb74755109bd0dced3840e3076ed`. Deploy tx on [Voyager](https://sepolia.voyager.online/tx/0x06e589ecb5f57e25b0786f64b43ab1fbc031f731cf83eb8645023caa463523cc).

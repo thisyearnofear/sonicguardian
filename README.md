@@ -10,10 +10,11 @@
 
 **Program:** [Proof of Privacy](https://proof.starknet.io) — an 8-week Starknet program for teams building privacy-preserving applications with STRK20.
 
-**Status:** ✅ Contract Deployed on Sepolia | ✅ STRK20 Wallet API wired | ⬜ 3 mainnet pool txs
+**Status:** ✅ Sepolia deployed & funded | ✅ Sepolia RecoveryInvokeHelper | ⬜ 3 mainnet pool txs
 
 ### Hackathon (Private Sprint — deadline Aug 31, 2026)
-- **[Hackathon checklist](./docs/HACKATHON.md)** — mainnet txs, demo video, deploy
+- **[Hackathon checklist](./docs/HACKATHON.md)** — **Sepolia first**, then mainnet STRK20 scoring
+- **[Deployment status](./contracts/DEPLOYMENT_STATUS.md)** — phased deploy plan
 - **[`strk20.json`](./strk20.json)** — panel scoring file (fill tx hashes after mainnet runs)
 
 ### Quick Links

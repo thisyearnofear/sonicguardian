@@ -1,7 +1,8 @@
 {
   "transactions": [],
   "contracts": [
-    "0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de"
+    "0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de",
+    "0x04159e043db4260022b55e6390fc7778e58bfa3f4be36d56b0f0310f04ab0e32"
   ],
   "demo_video": "",
   "demo_url": "https://sonicguardian.vercel.app"
