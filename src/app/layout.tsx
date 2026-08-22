@@ -1,8 +1,10 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { Outfit, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientOnlyStarknetProvider } from "@/components/ClientOnlyStarknetProvider";
 import { MobileViewport } from "@/components/MobileViewport";
+import { createSiteMetadata } from "@/lib/metadata";
+import { GITHUB_URL, HACKATHON_URL, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -17,20 +19,25 @@ const spaceMono = Space_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Sonic Guardian | ZK-Acoustic Privacy",
-  description: "Privacy-preserving sonic identity on Starknet",
-  icons: {
-    icon: "/favicon.svg",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Sonic Guardian",
-  },
-  formatDetection: {
-    telephone: false,
-  },
+export const metadata = createSiteMetadata();
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: SITE_NAME,
+  description: SITE_DESCRIPTION,
+  url: SITE_URL,
+  applicationCategory: "SecurityApplication",
+  operatingSystem: "Web",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  featureList: [
+    "Zero-knowledge sonic identity",
+    "STRK20 private recovery authority",
+    "Bitcoin recovery authorization",
+    "Agent validation via MCP and chain API",
+  ],
+  sameAs: [GITHUB_URL, HACKATHON_URL],
+  slogan: SITE_TAGLINE,
 };
 
 export const viewport: Viewport = {
@@ -52,6 +59,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfit.variable} ${spaceMono.variable}`}>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
