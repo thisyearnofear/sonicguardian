@@ -1,23 +1,22 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { extractSonicDNA, SonicDNA } from '@/lib/dna';
 import { generateStrudelCode } from '@/lib/ai-agent';
 import { generateAudio } from '@/lib/audio';
 import {
   sessionManager,
   preferencesManager,
-  isAudioEnabled,
-  setAudioEnabled,
   isRealAIEnabled,
   setRealAIEnabled
 } from '@/lib/storage';
 import { getCurrentTheme, setTheme } from '@/lib/theme';
-import { SonicVisualizer } from '@/lib/visualizer';
 import { Header } from './Header';
 import { useStarknetGuardian } from '../hooks/use-starknet-guardian';
+import { useMintValidation } from '@/hooks/use-mint-validation';
+import { useDebouncedCallback } from '@/hooks/use-debounce';
 import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
-import { playStrudelCode, stopStrudel } from '@/lib/strudel-lazy';
+import { stopStrudel } from '@/lib/strudel-lazy';
 import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature } from '@/lib/crypto';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
@@ -31,26 +30,35 @@ import {
 } from '@/lib/entropy-encoder';
 import dynamic from 'next/dynamic';
 import { MintWizard, type SecretMode } from './MintWizard';
-const StrudelLabs = dynamic(
-  () => import('./StrudelLabs').then((m) => m.StrudelLabs),
-  { ssr: false },
-);
-import { HelpModal } from './HelpModal';
-import { WelcomeModal } from './WelcomeModal';
-import { Tooltip } from './Tooltip';
-import { TutorialTrigger, InteractiveTutorial } from './InteractiveTutorial';
+import { VisualizerPanel } from './VisualizerPanel';
 import { InferenceExplainer, INFERENCE_STEPS } from './InferenceExplainer';
 import { PageHero } from './PageHero';
 import { StatusBanner } from './StatusBanner';
 import { JudgeDemoButton } from './JudgeDemoButton';
 import { DEMO_BTC_ADDRESS } from '@/lib/demo-btc';
 
-interface SonicGuardianProps {
-  onRecovery?: (hash: string) => void;
-  onFailure?: () => void;
-}
+const StrudelLabs = dynamic(
+  () => import('./StrudelLabs').then((m) => m.StrudelLabs),
+  { ssr: false },
+);
+const HelpModal = dynamic(
+  () => import('./HelpModal').then((m) => m.HelpModal),
+  { ssr: false },
+);
+const WelcomeModal = dynamic(
+  () => import('./WelcomeModal').then((m) => m.WelcomeModal),
+  { ssr: false },
+);
+const InteractiveTutorial = dynamic(
+  () => import('./InteractiveTutorial').then((m) => m.InteractiveTutorial),
+  { ssr: false },
+);
+const TutorialTrigger = dynamic(
+  () => import('./InteractiveTutorial').then((m) => m.TutorialTrigger),
+  { ssr: false },
+);
 
-export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianProps) {
+export default function SonicGuardian() {
   const [secretVibe, setSecretVibe] = useState('');
   const [btcAddress, setBtcAddress] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
@@ -61,15 +69,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [blinding, setBlinding] = useState('');
   const [status, setStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [useRealAI, setUseRealAI] = useState(false);
   const [audioEnabled, setAudioState] = useState(true);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('dark');
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [progressIndicator, setProgressIndicator] = useState<any>(null);
-  const [tooltips, setTooltips] = useState<Map<string, any>>(new Map());
-  const [validationStates, setValidationStates] = useState<Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>>(new Map());
   const [hasVisited, setHasVisited] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
@@ -83,10 +85,11 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   const [showExplainer, setShowExplainer] = useState(false);
   const [inferenceStep, setInferenceStep] = useState(0);
 
-  const visualizerContainerRef = useRef<HTMLDivElement>(null);
-  const visualizerRef = useRef<SonicVisualizer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
+  const tooltipsRef = useRef<Map<string, { destroy: () => void }>>(new Map());
+
+  const validationStates = useMintValidation(btcAddress, secretVibe, secretMode);
 
   const { 
     isConnected, 
@@ -95,7 +98,6 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   } = useStarknetGuardian();
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   
@@ -130,113 +132,38 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
   }, []);
 
   useEffect(() => {
-    // Initialize mobile detection
     const deviceInfo = MobileUtils.getDeviceInfo();
-    setIsMobile(deviceInfo.isMobile);
-
-    // Initialize mobile utilities if on mobile
-    if (deviceInfo.isMobile) {
-      // Optimize form inputs for mobile
-      if (formContainerRef.current) {
-        MobileUtils.optimizeFormInputs(formContainerRef.current);
-      }
-
-      // Set up progress indicator
-      const progress = MobileUtils.createProgressIndicator(document.body);
-      setProgressIndicator(progress);
-
-      // Add contextual help tooltips
-      const btcInput = document.querySelector('input[placeholder*="bc1q"]') as HTMLElement;
-      if (btcInput) {
-        const tooltip = MobileUtils.createTooltip(
-          btcInput,
-          'Paste or connect a Bitcoin address to protect with your sonic identity.',
-          'top'
-        );
-        setTooltips(prev => new Map(prev.set('btc-address', tooltip)));
-      }
+    if (deviceInfo.isMobile && formContainerRef.current) {
+      MobileUtils.optimizeFormInputs(formContainerRef.current);
     }
 
-    // Fix mobile viewport issues
+    const btcInput = document.querySelector('input[placeholder*="bc1q"]') as HTMLElement | null;
+    if (btcInput) {
+      const tooltip = MobileUtils.createTooltip(
+        btcInput,
+        'Paste or connect a Bitcoin address to protect with your sonic identity.',
+        'top',
+      );
+      tooltipsRef.current.set('btc-address', tooltip);
+    }
+
     const cleanupViewport = MobileUtils.fixMobileViewport();
 
     return () => {
-      visualizerRef.current?.dispose();
       cleanupViewport();
-      if (progressIndicator) {
-        progressIndicator.destroy();
-      }
-      tooltips.forEach(tooltip => tooltip.destroy());
+      tooltipsRef.current.forEach((tooltip) => tooltip.destroy());
+      tooltipsRef.current.clear();
     };
-  }, [currentTheme]);
+  }, []);
 
-  // Real-time validation for Bitcoin address
-  useEffect(() => {
-    if (btcAddress.trim() === '') {
-      setValidationStates(prev => new Map(prev.set('btc-address', {
-        isValid: true,
-        message: 'Paste, connect, or use Demo address — no wallet required to try',
-        type: 'success'
-      })));
-      return;
+  const playAudio = useCallback((type: Parameters<typeof generateAudio>[1]) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
+    generateAudio(audioContextRef.current, type);
+  }, []);
 
-    if (!isValidBtcAddress(btcAddress)) {
-      setValidationStates(prev => new Map(prev.set('btc-address', {
-        isValid: false,
-        message: 'Invalid Bitcoin address format. Please enter a valid bc1q, 1, or 3 address.',
-        type: 'error'
-      })));
-    } else {
-      setValidationStates(prev => new Map(prev.set('btc-address', {
-        isValid: true,
-        message: 'Valid Bitcoin address format',
-        type: 'success'
-      })));
-    }
-  }, [btcAddress]);
-
-  // Real-time validation for custom vibe (advanced AI mode)
-  useEffect(() => {
-    if (secretMode === 'vibe' && secretVibe.trim() !== '') {
-      if (secretVibe.trim().length < 10) {
-        setValidationStates(prev => new Map(prev.set('custom-vibe', {
-          isValid: false,
-          message: 'Describe your vibe in at least 10 characters',
-          type: 'warning'
-        })));
-      } else if (secretVibe.trim().length > 200) {
-        setValidationStates(prev => new Map(prev.set('custom-vibe', {
-          isValid: false,
-          message: 'Keep the vibe under 200 characters',
-          type: 'warning'
-        })));
-      } else {
-        setValidationStates(prev => new Map(prev.set('custom-vibe', {
-          isValid: true,
-          message: 'Good vibe description for AI synthesis',
-          type: 'success'
-        })));
-      }
-    } else {
-      setValidationStates(prev => new Map(prev.set('custom-vibe', {
-        isValid: true,
-        message: secretMode === 'random' ? 'Using secure random generation' : 'Select a library pattern or use random mode',
-        type: 'success'
-      })));
-    }
-  }, [secretVibe, secretMode]);
-
-  useEffect(() => {
-    if (!showVisualizer || !visualizerContainerRef.current) return;
-    visualizerRef.current = new SonicVisualizer({
-      container: visualizerContainerRef.current,
-      theme: currentTheme === 'dark' ? 'dark' : 'light',
-    });
-    return () => visualizerRef.current?.dispose();
-  }, [currentTheme, showVisualizer]);
-
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     setIsProcessing(true);
     setStatus('Generating your sonic identity...');
 
@@ -305,10 +232,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
         const blindingFactor = generateBlinding();
         setBlinding(blindingFactor);
         sessionManager.createSession(code, dna.hash, dna.salt, btcAddress || undefined, blindingFactor);
-        setShowOnboarding(false);
         if (!hasVisited) setShowTutorial(true);
-        visualizerRef.current?.updateDNASequence(dna.dna);
-        visualizerRef.current?.highlightParticles(Array.from({ length: 8 }, (_, i) => i));
         if (audioEnabled) playAudio('success');
       }
     } catch (error) {
@@ -317,17 +241,25 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [
+    secretMode,
+    selectedLibraryPattern,
+    secretVibe,
+    useRealAI,
+    btcAddress,
+    hasVisited,
+    audioEnabled,
+    playAudio,
+  ]);
 
   useEffect(() => {
     if (!judgeDemoPending) return;
     if (wizardStep !== 3 || secretMode !== 'random' || btcAddress !== DEMO_BTC_ADDRESS) return;
     setJudgeDemoPending(false);
     void handleGenerate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when prefilled state is ready
-  }, [judgeDemoPending, wizardStep, secretMode, btcAddress]);
+  }, [judgeDemoPending, wizardStep, secretMode, btcAddress, handleGenerate]);
 
-  const handleJudgeDemo = () => {
+  const handleJudgeDemo = useCallback(() => {
     setSecretMode('random');
     setSelectedLibraryPattern(null);
     setBtcAddress(DEMO_BTC_ADDRESS);
@@ -335,24 +267,33 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     setShowWelcome(false);
     setJudgeDemoPending(true);
     setStatus('Judge demo — generating random identity with demo BTC address…');
-  };
+  }, []);
 
-  const handleWelcomeStart = () => {
+  const handleWelcomeStart = useCallback(() => {
     setSecretMode('random');
     setSelectedLibraryPattern(null);
     setWizardStep(1);
-  };
+  }, []);
 
-  const handleCodeChange = async (newCode: string) => {
-    setGeneratedCode(newCode);
+  const extractDnaFromCode = useCallback(async (newCode: string) => {
     const newDna = await extractSonicDNA(newCode);
     if (newDna) {
       setDna(newDna);
       setDnaHash(newDna.hash);
     }
-  };
+  }, []);
 
-  const handleCommitToStarknet = async () => {
+  const debouncedExtractDna = useDebouncedCallback(extractDnaFromCode, 400);
+
+  const handleCodeChange = useCallback(
+    (newCode: string) => {
+      setGeneratedCode(newCode);
+      debouncedExtractDna(newCode);
+    },
+    [debouncedExtractDna],
+  );
+
+  const handleCommitToStarknet = useCallback(async () => {
     if (!dnaHash || !isConnected) return;
 
     if (!btcAddress) {
@@ -381,9 +322,9 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     } finally {
       setIsCommiting(false);
     }
-  };
+  }, [dnaHash, isConnected, btcAddress, blinding, registerGuardian]);
 
-  const handleDecentralizedBackup = async () => {
+  const handleDecentralizedBackup = useCallback(async () => {
     if (!generatedCode || !blinding || !btcAddress) {
       setStatus('⚠️ Please mint a sonic identity first.');
       return;
@@ -446,54 +387,26 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
     } finally {
       setIsBackingUp(false);
     }
-  };
+  }, [generatedCode, blinding, btcAddress, isConnected, account, dnaHash, audioEnabled, playAudio]);
 
-  const handlePlayback = async () => {
-    if (!generatedCode) return;
-
-    if (isAudioPlaying) {
-      await stopStrudel();
-      setIsAudioPlaying(false);
+  const handleVerifyOnChain = useCallback(async () => {
+    setStatus('Reading commitment from contract...');
+    const commitment = await getCommitment(btcAddress);
+    if (commitment && commitment !== '0') {
+      setStatus(`✅ On-chain verified! Commitment: ${commitment.slice(0, 10)}...`);
     } else {
-      setStatus('Initializing audio engine...');
-      setIsAudioPlaying(true);
-      const ok = await playStrudelCode(generatedCode);
-      if (!ok) {
-        setIsAudioPlaying(false);
-        setStatus('❌ Failed to start audio. Please try again.');
-      } else {
-        setStatus('Playing your sonic signature...');
-      }
+      setStatus('⚠️ No commitment found on-chain');
     }
-  };
+  }, [btcAddress, getCommitment]);
 
-  const handleSuggestIdea = async () => {
-    setStatus('Generating sonic ideas via Venice AI...');
-    setIsProcessing(true);
-    try {
-      const response = await generateStrudelCode(
-        'Give me one single evocative sentence describing a unique musical vibe or mood — no code, just a description.',
-        { useRealAI }
-      );
-      // The AI will return a vibe description, set it as the input
-      const idea = response.code.replace(/[`"']/g, '').trim();
-      setSecretVibe(idea);
-      setStatus('Idea loaded. Click Mint Sonic Identity to synthesize it.');
-    } catch {
-      setStatus('Could not generate idea. Try typing your own vibe.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  const handlePatternSelect = useCallback((_code: string, name: string) => {
+    setSecretMode('library');
+    setSelectedLibraryPattern(name);
+    setWizardStep(1);
+    setStatus(`Pattern "${name}" selected — complete the wizard to mint.`);
+  }, []);
 
-  const playAudio = (type: Parameters<typeof generateAudio>[1]) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    generateAudio(audioContextRef.current, type);
-  };
-
-
+  const visualizerTheme = currentTheme === 'dark' ? 'dark' : 'light';
 
   return (
     <div className="relative min-h-dvh bg-[color:var(--background)] selection:bg-[color:var(--color-primary)] selection:text-white pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-20 pb-[calc(5rem+env(safe-area-inset-bottom))]">
@@ -519,14 +432,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
 
         <div className="w-full max-w-6xl grid grid-cols-1 gap-8 items-start">
           {showVisualizer && (
-            <div className="w-full flex flex-col items-center">
-              <div
-                ref={visualizerContainerRef}
-                className="relative w-full h-[220px] sm:h-[280px] animate-float overflow-hidden rounded-2xl border border-[color:var(--color-border)]"
-              >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[color:var(--color-primary)] rounded-full blur-[100px] opacity-30" />
-              </div>
-            </div>
+            <VisualizerPanel theme={visualizerTheme} dnaSequence={dna?.dna} />
           )}
 
           <div className="w-full" ref={formContainerRef}>
@@ -555,15 +461,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
               onGenerate={handleGenerate}
               onCommit={handleCommitToStarknet}
               onCodeChange={handleCodeChange}
-              onVerifyOnChain={async () => {
-                setStatus('Reading commitment from contract...');
-                const commitment = await getCommitment(btcAddress);
-                if (commitment && commitment !== '0') {
-                  setStatus(`✅ On-chain verified! Commitment: ${commitment.slice(0, 10)}...`);
-                } else {
-                  setStatus('⚠️ No commitment found on-chain');
-                }
-              }}
+              onVerifyOnChain={handleVerifyOnChain}
               onDecentralizedBackup={handleDecentralizedBackup}
               isBackingUp={isBackingUp}
               backupCid={backupCid}
@@ -581,14 +479,7 @@ export default function SonicGuardian({ onRecovery, onFailure }: SonicGuardianPr
                 Explore Strudel patterns
               </summary>
               <div className="mt-4">
-                <StrudelLabs
-                  onPatternSelect={(_code, name) => {
-                    setSecretMode('library');
-                    setSelectedLibraryPattern(name);
-                    setWizardStep(1);
-                    setStatus(`Pattern "${name}" selected — complete the wizard to mint.`);
-                  }}
-                />
+                <StrudelLabs onPatternSelect={handlePatternSelect} />
               </div>
             </details>
 

@@ -5,12 +5,17 @@ import { hashStringToFelt, isValidBtcAddress } from '@/lib/crypto';
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS ||
   '0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de') as `0x${string}`;
 
+let _provider: RpcProvider | undefined;
+
 function getProvider(): RpcProvider {
-  const url =
-    process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC ||
-    process.env.STARKNET_RPC_URL ||
-    'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
-  return new RpcProvider({ nodeUrl: url });
+  if (!_provider) {
+    const url =
+      process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC ||
+      process.env.STARKNET_RPC_URL ||
+      'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
+    _provider = new RpcProvider({ nodeUrl: url });
+  }
+  return _provider;
 }
 
 export async function readGuardianOnChain(btcAddress: string) {
@@ -25,10 +30,9 @@ export async function readGuardianOnChain(btcAddress: string) {
   });
   const feltBtc = await hashStringToFelt(btcAddress);
 
-  const [commitment, acousticKey, guardianCount] = await Promise.all([
+  const [commitment, acousticKey] = await Promise.all([
     contract.get_commitment(feltBtc),
     contract.get_acoustic_key(feltBtc),
-    contract.get_guardian_count(),
   ]);
 
   const commitmentStr = commitment?.toString?.() ?? String(commitment);
@@ -39,7 +43,6 @@ export async function readGuardianOnChain(btcAddress: string) {
     registered,
     commitment: commitmentStr,
     acousticKey: acousticKey?.toString?.() ?? String(acousticKey),
-    guardianCount: Number(guardianCount?.low ?? guardianCount ?? 0),
     contract: CONTRACT_ADDRESS,
     network: 'sepolia',
   };

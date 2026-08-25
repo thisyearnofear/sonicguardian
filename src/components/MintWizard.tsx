@@ -236,7 +236,7 @@ function BtcAddressField({
   );
 }
 
-export function MintWizard(props: MintWizardProps) {
+export const MintWizard = React.memo(function MintWizard(props: MintWizardProps) {
   const {
     wizardStep,
     setWizardStep,
@@ -550,4 +550,4 @@ export function MintWizard(props: MintWizardProps) {
       </div>
     </div>
   );
-}
+});
