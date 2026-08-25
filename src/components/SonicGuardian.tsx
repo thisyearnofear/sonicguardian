@@ -45,18 +45,6 @@ const HelpModal = dynamic(
   () => import('./HelpModal').then((m) => m.HelpModal),
   { ssr: false },
 );
-const WelcomeModal = dynamic(
-  () => import('./WelcomeModal').then((m) => m.WelcomeModal),
-  { ssr: false },
-);
-const InteractiveTutorial = dynamic(
-  () => import('./InteractiveTutorial').then((m) => m.InteractiveTutorial),
-  { ssr: false },
-);
-const TutorialTrigger = dynamic(
-  () => import('./InteractiveTutorial').then((m) => m.TutorialTrigger),
-  { ssr: false },
-);
 
 export default function SonicGuardian() {
   const [secretVibe, setSecretVibe] = useState('');
@@ -73,7 +61,6 @@ export default function SonicGuardian() {
   const [audioEnabled, setAudioState] = useState(true);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('dark');
   const [hasVisited, setHasVisited] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [secretMode, setSecretMode] = useState<SecretMode>('random');
   const [selectedLibraryPattern, setSelectedLibraryPattern] = useState<string | null>(null);
@@ -99,7 +86,6 @@ export default function SonicGuardian() {
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
   const [showHelp, setShowHelp] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
   
   // Decentralized Backup State
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -108,12 +94,9 @@ export default function SonicGuardian() {
   const { account } = useAccount();
 
   useEffect(() => {
-    // Show welcome modal for first-time visitors
+    // Track visit for UX adjustments (e.g. compact hero)
     const hasVisited = localStorage.getItem('sonic_guardian_visited');
-    if (!hasVisited) {
-      setShowWelcome(true);
-      localStorage.setItem('sonic_guardian_visited', 'true');
-    } else {
+    if (hasVisited) {
       setHasVisited(true);
     }
   }, []);
@@ -232,7 +215,6 @@ export default function SonicGuardian() {
         const blindingFactor = generateBlinding();
         setBlinding(blindingFactor);
         sessionManager.createSession(code, dna.hash, dna.salt, btcAddress || undefined, blindingFactor);
-        if (!hasVisited) setShowTutorial(true);
         if (audioEnabled) playAudio('success');
       }
     } catch (error) {
@@ -262,17 +244,9 @@ export default function SonicGuardian() {
   const handleJudgeDemo = useCallback(() => {
     setSecretMode('random');
     setSelectedLibraryPattern(null);
-    setBtcAddress(DEMO_BTC_ADDRESS);
     setWizardStep(3);
-    setShowWelcome(false);
     setJudgeDemoPending(true);
     setStatus('Judge demo — generating random identity with demo BTC address…');
-  }, []);
-
-  const handleWelcomeStart = useCallback(() => {
-    setSecretMode('random');
-    setSelectedLibraryPattern(null);
-    setWizardStep(1);
   }, []);
 
   const extractDnaFromCode = useCallback(async (newCode: string) => {
@@ -419,7 +393,7 @@ export default function SonicGuardian() {
           compact={hasVisited}
           badge={hasVisited ? undefined : 'Privacy-first · Starknet'}
           title="Sonic Guardian"
-          subtitle="Turn a musical secret into private human authority on Starknet. Prove authorship with ZK — authorize recovery through the STRK20 pool."
+          subtitle="Replace your seed phrase with a musical secret. Prove it's yours — years later — without anyone knowing what the music was."
           onHelp={() => setShowHelp(true)}
           actions={
             <JudgeDemoButton
@@ -526,11 +500,6 @@ export default function SonicGuardian() {
           </button>
         </div>
 
-        {/* Interactive Tutorial Trigger */}
-        <TutorialTrigger onTrigger={() => {
-          setShowTutorial(true);
-        }} />
-
         {showExplanations && (
         <section className="mt-12 w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 px-2">
           <div className="p-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-foreground)]/[0.02]">
@@ -582,14 +551,6 @@ export default function SonicGuardian() {
 
       {/* Help Modal */}
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
-
-      {/* Welcome Modal */}
-      {showWelcome && (
-        <WelcomeModal onClose={() => setShowWelcome(false)} onStart={handleWelcomeStart} />
-      )}
-
-      {/* Interactive Tutorial */}
-      <InteractiveTutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 }

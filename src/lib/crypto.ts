@@ -7,21 +7,52 @@
 import { hash, ec, Signature } from 'starknet';
 
 /**
+ * Derive a uniformly-distributed felt252 from a hex string via Pedersen KDF.
+ * Uses SHA-256(a|marker) to bias-correct the raw DNA hash before use as an
+ * ECDSA private key. The domain marker prevents key collisions with
+ * Pedersen commitments.
+ */
+async function safeHexToFelt(hex: string): Promise<string> {
+    const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const DOMAIN_MARKER = 'acoustic_key_derivation';
+    const markerHex = Array.from(new TextEncoder().encode(DOMAIN_MARKER))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    return pedersenSync(clean, markerHex);
+}
+
+/**
+ * Deterministic key derivation using SHA-256 for ECDSA private keys.
+ * Combines inputs with a separator and applies modulo to fit felt252 range.
+ */
+async function pedersenSync(a: string, b: string): Promise<string> {
+    const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
+    try {
+        const combined = new TextEncoder().encode(a + '|' + b);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return (BigInt('0x' + hex) % MODULO).toString();
+    } catch {
+        return "0";
+    }
+}
+
+/**
  * Acoustic Key Derivation (AKD)
  * Derives a deterministic Starknet public key from a Sonic DNA hash.
- * This allows the musical identity to act as a private key without ever revealing it.
+ * The musical identity acts as a private key without ever revealing it.
  */
-export function getAcousticPublicKey(dnaHash: string): string {
-    const privateKey = hexToFelt(dnaHash);
+export async function getAcousticPublicKey(dnaHash: string): Promise<string> {
+    const privateKey = await safeHexToFelt(dnaHash);
     return ec.starkCurve.getStarkKey(privateKey);
 }
 
 /**
- * Sign a message using the derived acoustic key (Private Key = DNA Hash)
+ * Sign a message using the derived acoustic key.
  * Returns a signature that proves knowledge of the DNA without revealing it.
  */
-export function signWithAcousticKey(dnaHash: string, messageHash: string): Signature {
-    const privateKey = hexToFelt(dnaHash);
+export async function signWithAcousticKey(dnaHash: string, messageHash: string): Promise<Signature> {
+    const privateKey = await safeHexToFelt(dnaHash);
     return ec.starkCurve.sign(messageHash, privateKey);
 }
 

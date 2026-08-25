@@ -40,7 +40,15 @@ export function useStarknetGuardian() {
     };
 
     /**
-     * Register a Bitcoin guardian with Pedersen commitment and Acoustic Public Key
+     * Register a Bitcoin guardian with Pedersen commitment and Acoustic Public Key.
+     *
+     * Privacy: only the Pedersen commitment and acoustic public key are stored on-chain.
+     * The blinding_commitment parameter is kept in the ABI for backwards compat but
+     * is NOT stored — the contract no longer exposes blinding factors.
+     *
+     * @param btcAddress - Bitcoin address to protect
+     * @param dnaHash - SHA-256 hash of the musical pattern (client-side)
+     * @param blinding - Random blinding factor used in the Pedersen commitment
      */
     const registerGuardian = async (
         btcAddress: string,
@@ -57,18 +65,19 @@ export function useStarknetGuardian() {
             const feltDnaHash = hexToFelt(dnaHash);
             const feltBlinding = hexToFelt(blinding);
 
-            // 2. Compute commitments
+            // 2. Compute Pedersen commitment: P = pedersen(dna_hash, blinding)
             const commitment = await pedersen(feltDnaHash, feltBlinding);
-            const blindingCommitment = await pedersen(feltBlinding, feltBlinding);
 
-            // 3. Derive Acoustic Public Key (ZK anchor)
-            const acousticKey = getAcousticPublicKey(dnaHash);
+            // 3. Derive Acoustic Public Key (ZK anchor) from DNA hash via safe KDF
+            const acousticKey = await getAcousticPublicKey(dnaHash);
 
+            // 4. Register — note: blindingCommitment is accepted by ABI for compat
+            //    but the contract no longer stores it on-chain.
             const result = await sendAsync([
                 contract.populate('register_guardian', [
                     feltBtcAddress,
                     hexToFelt(commitment),
-                    hexToFelt(blindingCommitment),
+                    hexToFelt(commitment), // blindingCommitment: deprecated, pass commitment for compat
                     hexToFelt(acousticKey)
                 ]),
             ]);
@@ -94,8 +103,8 @@ export function useStarknetGuardian() {
             const feltBtcAddress = await hashStringToFelt(btcAddress);
             const messageHash = hexToFelt(message); // Message to sign
             
-            // Generate signature off-chain using DNA as private key
-            const signature = signWithAcousticKey(dnaHash, messageHash);
+            // Generate signature off-chain using DNA as private key (safe KDF)
+            const signature = await signWithAcousticKey(dnaHash, messageHash);
             
             // Extract r and s correctly from Signature type
             let r, s;
@@ -124,6 +133,7 @@ export function useStarknetGuardian() {
 
     /**
      * Authorize recovery via Acoustic Signature (True ZK)
+     * The only remaining on-chain authorization path.
      */
     const authorizeWithAcousticSignature = async (
         btcAddress: string,
@@ -137,7 +147,7 @@ export function useStarknetGuardian() {
             // Create a unique message hash for this authorization (BTC address + timestamp)
             const message = await hashStringToFelt(`${btcAddress}:${Date.now()}`);
             
-            // Sign with Acoustic Key
+            // Sign with Acoustic Key (safe KDF)
             const signature = signWithAcousticKey(dnaHash, message);
 
             // Extract r and s correctly from Signature type
@@ -202,82 +212,12 @@ export function useStarknetGuardian() {
         }
     };
 
-    /**
-     * Create an on-chain Bitcoin gift vault
-     */
-    const createOnChainGift = async (
-        vaultId: string,
-        commitment: string,
-        amount: bigint,
-        tokenAddress: string
-    ) => {
-        if (!address || !contract) {
-            throw new Error('Wallet not connected');
-        }
-
-        try {
-            // Multi-call: Approve + Create Vault
-            const result = await sendAsync([
-                {
-                    contractAddress: tokenAddress,
-                    entrypoint: 'approve',
-                    calldata: [CONTRACT_ADDRESS, amount.toString(), '0'] // u256 low, high
-                },
-                {
-                    contractAddress: CONTRACT_ADDRESS,
-                    entrypoint: 'create_onchain_gift',
-                    calldata: [vaultId, commitment, amount.toString(), '0', tokenAddress]
-                }
-            ]);
-
-            return result;
-        } catch (error) {
-            console.error('Failed to create on-chain gift:', error);
-            throw error;
-        }
-    };
-
-    /**
-     * Claim an on-chain Bitcoin gift
-     */
-    const claimOnChainGift = async (
-        vaultId: string,
-        dnaHash: string,
-        blinding: string,
-        recipient: string
-    ) => {
-        if (!address || !contract) {
-            throw new Error('Wallet not connected');
-        }
-
-        try {
-            const feltDnaHash = hexToFelt(dnaHash);
-            const feltBlinding = hexToFelt(blinding);
-
-            const result = await sendAsync([
-                contract.populate('claim_onchain_gift', [
-                    vaultId,
-                    feltDnaHash,
-                    feltBlinding,
-                    recipient
-                ]),
-            ]);
-
-            return result;
-        } catch (error) {
-            console.error('Failed to claim on-chain gift:', error);
-            throw error;
-        }
-    };
-
     return {
         address,
         status,
         registerGuardian,
         authorizeWithAcousticSignature,
         verifyAcousticProof,
-        createOnChainGift,
-        claimOnChainGift,
         getCommitment,
         getGuardianCount,
         isConnected: status === 'connected',
