@@ -3,12 +3,9 @@
 //! Design: Only a Pedersen commitment and a Stark Curve public key are stored on-chain.
 //! The blinding factor, DNA hash, and musical pattern never leave the browser.
 //!
-//! Deprecated entrypoints:
+//! Deprecated entrypoints (removed from contract but kept in ABI for backwards compat):
 //! - `verify_recovery` / `authorize_btc_recovery` — legacy, requires revealing DNA hash.
-//!   Kept for backwards compatibility; migrate to the ZK path.
 //! - `create_onchain_gift` / `claim_onchain_gift` — feature-creep removed.
-
-use starknet::ContractAddress;
 
 #[starknet::interface]
 trait ISonicGuardian<TContractState> {
@@ -42,7 +39,7 @@ trait ISonicGuardian<TContractState> {
 
 #[starknet::contract]
 mod SonicGuardian {
-    use starknet::{get_caller_address, get_block_timestamp};
+    use starknet::{get_caller_address, get_block_timestamp, ContractAddress};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use core::ecdsa::check_ecdsa_signature;
     use super::ISonicGuardian;
@@ -53,10 +50,10 @@ mod SonicGuardian {
         commitments: Map::<felt252, felt252>,
         // BTC address -> Acoustic Public Key (ZK-proof anchor on Stark Curve)
         acoustic_keys: Map::<felt252, felt252>,
-        // BTC address -> Starknet owner
+        // BTC address -> Starknet owner (caller who paid for registration)
         owners: Map::<felt252, ContractAddress>,
-        // Total guardians registered
-        guardian_count: u256,
+        // Total guardians registered (key 0 = global count)
+        guardian_count: Map::<felt252, u256>,
     }
 
     #[event]
@@ -66,7 +63,7 @@ mod SonicGuardian {
         AcousticAuthorized: AcousticAuthorized,
     }
 
-    #[derive(Drop)]
+    #[derive(Drop, starknet::Event)]
     struct GuardianRegistered {
         btc_address: felt252,
         owner: ContractAddress,
@@ -74,7 +71,7 @@ mod SonicGuardian {
         timestamp: u64,
     }
 
-    #[derive(Drop)]
+    #[derive(Drop, starknet::Event)]
     struct AcousticAuthorized {
         btc_address: felt252,
         verifier: ContractAddress,
@@ -87,7 +84,7 @@ mod SonicGuardian {
             ref self: ContractState,
             btc_address: felt252,
             commitment: felt252,
-            _blinding_commitment: felt252,
+            blinding_commitment: felt252,
             acoustic_key: felt252
         ) {
             let caller = get_caller_address();
@@ -97,8 +94,8 @@ mod SonicGuardian {
             self.acoustic_keys.write(btc_address, acoustic_key);
             self.owners.write(btc_address, caller);
 
-            let count = self.guardian_count.read();
-            self.guardian_count.write(count + 1);
+            let count = self.guardian_count.read(0);
+            self.guardian_count.write(0, count + 1);
 
             self.emit(GuardianRegistered {
                 btc_address,
@@ -150,7 +147,7 @@ mod SonicGuardian {
         }
 
         fn get_guardian_count(self: @ContractState) -> u256 {
-            self.guardian_count.read()
+            self.guardian_count.read(0)
         }
 
         fn get_version(self: @ContractState) -> felt252 {

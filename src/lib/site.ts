@@ -21,7 +21,6 @@ export const SITE_KEYWORDS = [
   'sonic identity',
   'Pedersen commitment',
   'agent validation',
-  'ERC-8004',
   'Proof of Privacy',
 ];
 

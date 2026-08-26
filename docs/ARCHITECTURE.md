@@ -78,7 +78,7 @@ fn verify_acoustic_signature(
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14, Three.js visualizer
+- **Frontend**: Next.js 16, React 19, Three.js visualizer
 - **AI**: Venice AI (privacy-first inference)
 - **Audio**: Strudel (live-coded synthesis)
 - **Blockchain**: Starknet (commitments, ZK signature verification)

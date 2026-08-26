@@ -102,7 +102,7 @@ Sonic Guardian is **not** a shield UI clone. The core innovation:
 
 1. **Human sonic ZK** — prove authorship without revealing the pattern (acoustic ECDSA)
 2. **STRK20 private recovery** — `RecoveryInvokeHelper` anonymizer calls `authorize_with_acoustic_signature` inside the pool
-3. **Agent validation (ERC-8004)** — MCP tools read chain status and verify ZK signatures without receiving patterns
+3. **Agent validation** — MCP tools read chain status and verify ZK signatures without receiving patterns
 
 ### RecoveryInvokeHelper flow (mainnet)
 

@@ -66,7 +66,7 @@ export async function verifyAcousticOnChain(
   );
 }
 
-/** ERC-8004-style agent manifest for Sonic Guardian validation adapter. */
+/** Agent manifest for Sonic Guardian validation adapter. */
 export function getAgentValidationManifest() {
   return {
     name: 'Sonic Guardian Validation Adapter',

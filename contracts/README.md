@@ -13,22 +13,34 @@ See [../DEPLOYMENT.md](../DEPLOYMENT.md) for full deployment guide.
 
 ## Contract Overview
 
-### SonicGuardian.cairo
+### lib.cairo
 
 Zero-knowledge guardian system for Bitcoin recovery using sonic patterns.
 
 **Features:**
-- Register guardians with Pedersen commitments
-- Verify recovery using ZK proofs
-- Authorize Bitcoin recovery via ECDSA signature proof (ZK, pattern never revealed)
+- Register guardians with Pedersen commitments and acoustic public keys
+- Verify authorship via ECDSA signature proof (ZK — pattern never revealed)
+- Authorize recovery via acoustic signature (ZK, pattern never revealed)
 - Privacy-preserving (pattern never revealed on-chain)
 
 **Functions:**
-- `register_guardian(btc_address, commitment, blinding_commitment)` - Register a new guardian
-- `verify_recovery(btc_address, dna_hash, blinding)` - Verify recovery proof
-- `authorize_btc_recovery(btc_address, dna_hash, blinding)` - Authorize recovery and get token
-- `get_commitment(btc_address)` - Get stored commitment
-- `get_guardian_count()` - Get total guardians registered
+- `register_guardian(btc_address, commitment, blinding_commitment, acoustic_key)` — Register a new guardian
+- `verify_acoustic_signature(btc_address, message_hash, signature_r, signature_s)` — ZK verify authorship (view)
+- `authorize_with_acoustic_signature(btc_address, message_hash, signature_r, signature_s)` — ZK authorize recovery
+- `get_commitment(btc_address)` — Get stored commitment (view)
+- `get_acoustic_key(btc_address)` — Get stored public key (view)
+- `get_guardian_count()` — Get total guardians registered (view)
+- `get_version()` — Get contract version (view)
+
+**Deprecated entrypoints** (removed from contract, kept in ABI for backwards compat):
+- `verify_recovery(btc_address, dna_hash, blinding)` — requires revealing DNA hash
+- `authorize_btc_recovery(btc_address, dna_hash, blinding)` — requires revealing DNA hash
+- `create_onchain_gift` / `claim_onchain_gift` — feature-creep removed
+- `get_vault_commitment` — gifting abandoned
+
+### recovery_helper.cairo
+
+STRK20 privacy pool anonymizer: privately invoke `authorize_with_acoustic_signature` inside the pool, atomic and unlinkable to the user.
 
 ## Development
 
@@ -52,28 +64,28 @@ scarb fmt
 ```
 User generates sonic pattern
     ↓
-Extract DNA hash from pattern
+Client extracts DNA hash (SHA-256)
     ↓
-Generate blinding factor
+Derive acoustic key pair: private_key = dna_hash → public_key = stark_curve(private_key)
     ↓
 Compute Pedersen commitment = pedersen(dna_hash, blinding)
     ↓
-Store commitment on Starknet (privacy preserved!)
+Store commitment + acoustic_key on Starknet (privacy preserved!)
     ↓
-Recovery: Provide dna_hash + blinding
+Recovery: Replay pattern → extract DNA → sign message with DNA as private key
     ↓
-Contract verifies: pedersen(dna_hash, blinding) == stored_commitment
+Contract verifies ECDSA signature against stored acoustic_key (no DNA revealed!)
     ↓
-If valid: Issue recovery authorization token
+If valid: Authorization confirmed
 ```
 
 ## Security
 
-- **Zero-knowledge**: Pattern never revealed on-chain
-- **Pedersen commitments**: Cryptographically secure hiding
-- **Blinding factors**: Prevent rainbow table attacks
+- **Zero-knowledge**: Pattern never revealed on-chain — only commitment + public key stored
+- **Pedersen commitments**: Cryptographically secure hiding with fresh blinding factor per registration
+- **Acoustic signatures**: DNA hash acts as ECDSA private key, proving authorship without revealing the pattern
 - **One-time registration**: Each BTC address can only register once
-- **Verifiable recovery**: Anyone can verify without revealing the pattern
+- **Plausible deniability**: Anyone can deny the pattern since only the commitment is on-chain
 
 ## Resources
 

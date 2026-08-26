@@ -114,7 +114,7 @@ export async function chainVerifyAcousticZk(
 export function agentValidationManifest() {
   return {
     name: 'Sonic Guardian',
-    description: 'Human sonic authorship validation for agents (ERC-8004 compatible)',
+    description: 'Human sonic authorship validation for agents',
     validationRegistry: 'starknet_acoustic_zk',
     tools: ['sonic_guardian_chain_status', 'sonic_guardian_verify_zk', 'sonic_guardian_agent_manifest'],
     privacy: 'Musical pattern never sent to MCP server — only messageHash and signature',

@@ -1,3 +1,14 @@
+/**
+ * Sonic Guardian ABI — v1.3.0-zk-only
+ *
+ * This matches the deployed contract at ISonicGuardian.
+ * Dead functions have been removed:
+ *   - verify_recovery (deprecated — requires DNA reveal)
+ *   - authorize_btc_recovery (deprecated — requires DNA reveal)
+ *   - create_onchain_gift / claim_onchain_gift (feature-creep removed)
+ *   - get_vault_commitment (gifting abandoned)
+ *   - IERC20 (unused in this contract)
+ */
 export const abi = [
     {
         "name": "ISonicGuardian",
@@ -16,17 +27,6 @@ export const abi = [
                 "state_mutability": "external"
             },
             {
-                "name": "verify_recovery",
-                "type": "function",
-                "inputs": [
-                    { "name": "btc_address", "type": "core::felt252" },
-                    { "name": "dna_hash", "type": "core::felt252" },
-                    { "name": "blinding", "type": "core::felt252" }
-                ],
-                "outputs": [{ "type": "core::bool" }],
-                "state_mutability": "view"
-            },
-            {
                 "name": "verify_acoustic_signature",
                 "type": "function",
                 "inputs": [
@@ -39,17 +39,6 @@ export const abi = [
                 "state_mutability": "view"
             },
             {
-                "name": "authorize_btc_recovery",
-                "type": "function",
-                "inputs": [
-                    { "name": "btc_address", "type": "core::felt252" },
-                    { "name": "dna_hash", "type": "core::felt252" },
-                    { "name": "blinding", "type": "core::felt252" }
-                ],
-                "outputs": [{ "type": "core::felt252" }],
-                "state_mutability": "external"
-            },
-            {
                 "name": "authorize_with_acoustic_signature",
                 "type": "function",
                 "inputs": [
@@ -59,30 +48,6 @@ export const abi = [
                     { "name": "signature_s", "type": "core::felt252" }
                 ],
                 "outputs": [{ "type": "core::felt252" }],
-                "state_mutability": "external"
-            },
-            {
-                "name": "create_onchain_gift",
-                "type": "function",
-                "inputs": [
-                    { "name": "vault_id", "type": "core::felt252" },
-                    { "name": "commitment", "type": "core::felt252" },
-                    { "name": "amount", "type": "core::integer::u256" },
-                    { "name": "token_address", "type": "core::starknet::contract_address" }
-                ],
-                "outputs": [],
-                "state_mutability": "external"
-            },
-            {
-                "name": "claim_onchain_gift",
-                "type": "function",
-                "inputs": [
-                    { "name": "vault_id", "type": "core::felt252" },
-                    { "name": "dna_hash", "type": "core::felt252" },
-                    { "name": "blinding", "type": "core::felt252" },
-                    { "name": "recipient", "type": "core::starknet::contract_address" }
-                ],
-                "outputs": [],
                 "state_mutability": "external"
             },
             {
@@ -100,13 +65,6 @@ export const abi = [
                 "state_mutability": "view"
             },
             {
-                "name": "get_vault_commitment",
-                "type": "function",
-                "inputs": [{ "name": "vault_id", "type": "core::felt252" }],
-                "outputs": [{ "type": "core::felt252" }],
-                "state_mutability": "view"
-            },
-            {
                 "name": "get_guardian_count",
                 "type": "function",
                 "inputs": [],
@@ -118,39 +76,6 @@ export const abi = [
                 "type": "function",
                 "inputs": [],
                 "outputs": [{ "type": "core::felt252" }],
-                "state_mutability": "view"
-            }
-        ]
-    },
-    {
-        "name": "IERC20",
-        "type": "interface",
-        "items": [
-            {
-                "name": "transfer",
-                "type": "function",
-                "inputs": [
-                    { "name": "recipient", "type": "core::starknet::contract_address" },
-                    { "name": "amount", "type": "core::integer::u256" }
-                ],
-                "outputs": [{ "type": "core::bool" }],
-                "state_mutability": "external"
-            },
-            {
-                "name": "approve",
-                "type": "function",
-                "inputs": [
-                    { "name": "spender", "type": "core::starknet::contract_address" },
-                    { "name": "amount", "type": "core::integer::u256" }
-                ],
-                "outputs": [{ "type": "core::bool" }],
-                "state_mutability": "external"
-            },
-            {
-                "name": "balance_of",
-                "type": "function",
-                "inputs": [{ "name": "account", "type": "core::starknet::contract_address" }],
-                "outputs": [{ "type": "core::integer::u256" }],
                 "state_mutability": "view"
             }
         ]
