@@ -262,7 +262,7 @@ function RegistrationForm({
         </div>
 
         <p className="text-[9px] text-[color:var(--color-muted)] leading-relaxed mb-3">
-          Paste an address you already use, connect Xverse or Leather, or use a{' '}
+          Paste a Bitcoin address, connect via the button below, or use a{' '}
           <span className="text-[color:var(--color-foreground)]/70">demo address</span> to try the flow.
           No funds required to mint.
         </p>
@@ -295,14 +295,6 @@ function RegistrationForm({
           >
             {usingDemoAddress ? 'Demo Address Active' : 'Use Demo Address'}
           </button>
-          <a
-            href="https://www.xverse.app/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[9px] px-3 py-1.5 rounded-lg text-[color:var(--color-muted)] hover:text-orange-400 font-bold uppercase tracking-widest border border-[color:var(--color-border)] hover:border-orange-500/30 transition-all"
-          >
-            Get Xverse →
-          </a>
         </div>
 
         {btcWalletError && (

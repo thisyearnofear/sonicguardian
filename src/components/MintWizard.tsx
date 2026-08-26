@@ -363,6 +363,11 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
                   className="w-full bg-transparent border-b border-[color:var(--color-border)] py-2 text-sm focus:outline-none focus:border-[color:var(--color-primary)]"
                 />
               )}
+              {secretMode === 'vibe' && (
+                <p className="text-xs text-[color:var(--color-muted)] mt-1.5">
+                  AI generates a pattern from your description — use something evocative for best results.
+                </p>
+              )}
               {secretMode === 'vibe' && vibeValidation && (
                 <p className="text-[9px] mt-1 text-[color:var(--color-muted)]">{vibeValidation.message}</p>
               )}

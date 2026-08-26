@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Tooltip } from './Tooltip';
 import { engine } from '@/lib/strudel-engine';
 import { StrudelVisualizer } from './StrudelVisualizer';
+import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
+import Link from 'next/link';
 
 interface StrudelEditorProps {
   initialCode: string;
@@ -86,14 +88,17 @@ export function StrudelEditor({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Tooltip
-            text="Edit your Strudel mini-notation pattern. Play uses @strudel/web — no embedded REPL."
-            position="bottom"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)] cursor-help">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-primary)] cursor-help">
               Sonic Pattern
             </span>
-          </Tooltip>
+            <Tooltip
+              text="Write simple music patterns: s('bd*4').cpm(120) for a kick loop. Browse 16 examples in the pattern explorer."
+              position="bottom"
+            >
+              <span className="text-[9px] px-2 py-0.5 rounded border border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors cursor-help">
+                ?
+              </span>
+            </Tooltip>
           {isPlaying && (
             <span className="flex items-center gap-1.5 text-[8px] text-[color:var(--color-success)]">
               <span className="w-1.5 h-1.5 bg-[color:var(--color-success)] rounded-full animate-pulse" />

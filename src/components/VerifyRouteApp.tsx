@@ -11,6 +11,7 @@ import { extractSonicDNA } from '@/lib/dna';
 import { downloadFromIPFS } from '@/lib/ipfs';
 import { deriveKeyFromSignature, decryptData, isValidBtcAddress } from '@/lib/crypto';
 import { sessionManager, isRealAIEnabled } from '@/lib/storage';
+import Link from 'next/link';
 
 export function VerifyRouteApp() {
   const [btcAddress, setBtcAddress] = useState('');

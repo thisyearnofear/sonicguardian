@@ -58,15 +58,21 @@ export function VerifyPanel({
         {verifiedDnaHash && btcAddress && (
           <PrivateRecoveryPanel btcAddress={btcAddress} dnaHash={verifiedDnaHash} />
         )}
-        <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
+        <div className="pt-2 border-t border-[color:var(--color-border)] text-center space-y-1">
           <Link
             href="/"
             prefetch
-            className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors"
+            className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors block"
             data-testid="nav-to-mint"
           >
             ← Back to minting
           </Link>
+          <p className="text-xs text-[color:var(--color-muted)]">
+            Haven't created an identity yet?{' '}
+            <Link href="/" prefetch className="text-[color:var(--color-primary)] hover:underline">
+              Create your first Sonic Guardian
+            </Link>
+          </p>
         </div>
       </div>
     );

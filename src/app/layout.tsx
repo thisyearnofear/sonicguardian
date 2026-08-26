@@ -81,6 +81,12 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-dvh">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-[200] px-4 py-2 bg-[color:var(--color-primary)] text-white rounded-lg text-sm font-bold"
+        >
+          Skip to content
+        </a>
         <MobileViewport>
           <ClientOnlyStarknetProvider>{children}</ClientOnlyStarknetProvider>
         </MobileViewport>

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { AppLoadingShell } from '@/components/AppLoadingShell';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const VerifyRouteApp = dynamic(
   () => import('@/components/VerifyRouteApp').then((m) => m.VerifyRouteApp),
@@ -12,5 +13,9 @@ const VerifyRouteApp = dynamic(
 );
 
 export default function VerifyPage() {
-  return <VerifyRouteApp />;
+  return (
+    <ErrorBoundary>
+      <VerifyRouteApp />
+    </ErrorBoundary>
+  );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useConnect } from '@starknet-react/core';
 
 interface ConnectWalletModalProps {
@@ -11,17 +11,59 @@ interface ConnectWalletModalProps {
 export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps) {
   const { connect, connectors } = useConnect();
   const [isAnimating, setIsAnimating] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const handleOverlayClick = useCallback(() => {
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
       document.body.style.overflow = 'hidden';
+      // Focus the dialog root for accessibility
+      dialogRef.current?.focus();
     } else {
       const timer = setTimeout(() => setIsAnimating(false), 300);
       document.body.style.overflow = '';
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  // Trap focus within the modal for keyboard users
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const focusableElements = document.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstEl = focusableElements[0] as HTMLElement;
+      const lastEl = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen && !isAnimating) return null;
 
@@ -30,13 +72,17 @@ export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps)
       className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center transition-all duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
+      onClick={handleOverlayClick}
+      role="presentation"
     >
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" aria-hidden />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="connect-wallet-title"
+        ref={dialogRef}
+        tabIndex={-1}
         className={`relative w-full sm:max-w-md bg-[color:var(--background)] border border-[color:var(--color-border)] shadow-2xl transition-all duration-300 transform ${
           isOpen ? 'translate-y-0 sm:scale-100' : 'translate-y-full sm:translate-y-4 sm:scale-95'
         } rounded-t-3xl sm:rounded-3xl max-h-[92dvh] overflow-y-auto`}

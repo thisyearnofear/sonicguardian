@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { getCurrentTheme, setTheme, Theme } from '@/lib/theme';
 import { WalletButton } from './WalletButton';
 import { AppNav } from './AppNav';
+import { SITE_TAGLINE } from '@/lib/site';
 
 export function Header() {
   const [currentTheme, setCurrentTheme] = useState<Theme>('system');
@@ -50,6 +51,9 @@ export function Header() {
           </div>
           <span className="text-sm sm:text-base font-bold tracking-tight hidden min-[420px]:inline truncate">
             Sonic<span className="text-[color:var(--color-primary)]">Guardian</span>
+          </span>
+          <span className="text-[10px] text-[color:var(--color-muted)] hidden min-[540px]:inline truncate">
+            {SITE_TAGLINE}
           </span>
         </div>
 

@@ -35,7 +35,7 @@ export function PageHero({ title, subtitle, badge, compact, onHelp, actions }: P
           type="button"
           onClick={onHelp}
           className="absolute top-0 right-0 w-9 h-9 rounded-full border border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] hover:border-[color:var(--color-primary)]/40 transition-colors flex items-center justify-center text-sm"
-          aria-label="Help"
+          aria-label="Get help with Sonic Guardian"
         >
           ?
         </button>
