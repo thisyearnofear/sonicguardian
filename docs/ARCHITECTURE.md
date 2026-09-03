@@ -95,3 +95,39 @@ fn verify_acoustic_signature(
 | `entropy-encoder.ts` | 256-bit entropy → musical chunks |
 | `storage.ts` | Session management, vault encryption |
 | `abi.ts` | Contract interface (Cairo ABI) |
+
+## Open Security Problems (gating production use)
+
+The privacy architecture above is sound as far as it goes, but two problems
+make this build a demo rather than a product. Both are first-class constraints
+for all future design work — see **[DIRECTION.md](./DIRECTION.md)** for the plan.
+
+### 1. Pattern-space entropy is unanalyzed
+
+`sha256(musical_features)` is only as strong as the *reachable pattern space*.
+A pattern generated from a common prompt ("dark industrial techno") may occupy
+a brute-forceable space (~2^40 effective bits or less). Because the DNA hash
+**is** the ECDSA private key, an attacker who brute-forces candidate patterns
+offline recovers the signing key directly. The on-chain blinding factor
+prevents commitment matching but not offline key search.
+
+**Constraint:** the protocol must compute and display a per-user effective
+entropy estimate and enforce a minimum (target: ≥128 bits of user-contributed
+secret) before registration.
+
+### 2. Exact hashes vs. approximate human recall
+
+Musical memory is approximate; SHA-256 is not. A single misremembered note
+produces an entirely different hash, so recovery fails precisely when it's
+needed. Exact-hash derivation cannot be the sole recovery mechanism.
+
+**Constraint:** key derivation must tolerate bounded perceptual error
+(fuzzy extractor / secure sketch, or discrete melodic representation with
+error tolerance). The required tolerance must come from measured human
+recall data (M1 in DIRECTION.md), not assumptions.
+
+### Design rule going forward
+
+> The pattern is one **factor** in a Shamir (or fuzzy-extractor) split — never
+> the whole key, never sufficient alone. Low entropy or partial recall must
+> each, alone, be survivable.

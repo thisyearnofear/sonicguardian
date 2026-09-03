@@ -1,5 +1,9 @@
 # Sonic Guardian Documentation
 
+> **⚠️ Start here: [Direction](./DIRECTION.md)** — the project has narrowed to the
+> **wallet recovery core** (memorized pattern as one recovery *factor*). Gifts/STRK20
+> features are deferred; entropy and fuzzy-recall are the two open problems.
+
 **Deployed on Starknet Sepolia** — mainnet STRK20 scoring in progress.
 
 ## Deployment roadmap
@@ -26,6 +30,10 @@ Full checklist: **[HACKATHON.md](./HACKATHON.md)** · **[DEPLOYMENT_STATUS.md](.
 ---
 
 ## Documentation index
+
+### Direction & strategy
+- **[Direction](./DIRECTION.md)** — ⚠️ Narrowed focus, known limitations, milestones (start here)
+- **[Recall Study](./RECALL_STUDY.md)** — M1: human recall experiment protocol (unblocks fuzzy key derivation)
 
 ### Getting started
 - **[Quick Start](../QUICKSTART.md)** — TL;DR + phased demo flow
@@ -58,4 +66,4 @@ Full checklist: **[HACKATHON.md](./HACKATHON.md)** · **[DEPLOYMENT_STATUS.md](.
 
 ---
 
-**Last Updated:** August 22, 2026
+**Last Updated:** September 3, 2026

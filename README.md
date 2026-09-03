@@ -1,8 +1,15 @@
 # Sonic Guardian 🎵🔐
 
-**Privacy-Preserving Sonic Identity Protocol — prove authorship of your creative expression with zero-knowledge proofs on Starknet.**
+**Memorable-music wallet recovery, privacy-preserving by design — prove knowledge of your secret with zero-knowledge proofs on Starknet.**
 
 > "Your creative expression is now your digital signature — and only you can prove it."
+
+> **⚠️ Read first: [Project Direction](./docs/DIRECTION.md)** — this project has narrowed
+> its focus to the **wallet recovery core**: a memorized musical pattern as one *factor*
+> in key recovery (paired with Shamir sharing / fuzzy extraction), not a whole-wallet key.
+> The gift/STRK20 features are deferred; the two open problems (pattern-space entropy,
+> approximate human recall vs. exact hashes) are documented there. Hackathon assets below
+> remain as completed Sepolia work.
 
 ---
 
@@ -102,11 +109,20 @@ pnpm dev
 - 🎵 **3-step mint wizard** — Secret → Link BTC address → Generate & commit on Starknet
 - 🔐 **Privacy-first** — All crypto client-side; only commitments on-chain
 - 🧾 **Zero-knowledge verification** — `/verify` route with acoustic ECDSA proof
-- 🛡️ **STRK20 integration** — Optional private STRK stake via Starknet Wallet API
+- 🛡️ **STRK20 integration** — Optional private STRK stake via Starknet Wallet API *(deferred — see [Direction](./docs/DIRECTION.md))*
 - ⚡ **Instant navigation** — Next.js 16 Cache Components + per-route loading shells
 - 📱 **Mobile-first** — Safe areas, touch targets, bottom-sheet modals
 - 🎼 **Strudel showcase** — Pattern library + optional live editor
 - 💰 **Xverse** — Bitcoin wallet for identifier linking
+
+## Path to production
+
+The core idea is sound; the current build is a demo of it. Two open problems
+gate real use — **pattern-space entropy** (common AI prompts yield
+brute-forceable secrets) and **approximate recall** (one misremembered note
+breaks an exact hash). The plan — recovery *factor* via Shamir sharing, fuzzy
+key derivation, audited entropy budgets, human recall study — is documented in
+**[docs/DIRECTION.md](./docs/DIRECTION.md)**.
 
 ---
 

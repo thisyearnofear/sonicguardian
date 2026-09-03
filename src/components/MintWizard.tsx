@@ -6,6 +6,7 @@ import { isValidBtcAddress } from '@/lib/crypto';
 import { DEMO_BTC_ADDRESS, isDemoBtcAddress } from '@/lib/demo-btc';
 import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import type { MusicalChunk } from '@/lib/entropy-encoder';
+import { assessSecretEntropy } from '@/lib/entropy-estimate';
 import { Tooltip } from './Tooltip';
 import { useBitcoinWallet } from '@/hooks/use-bitcoin-wallet';
 import { FlowState } from './FlowState';
@@ -277,6 +278,14 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
     (secretMode === 'library' && selectedLibraryPattern) ||
     (secretMode === 'vibe' && secretVibe.trim().length >= 10);
 
+  // Entropy budget disclosure (DIRECTION.md M4): show the effective secret
+  // strength for the chosen mode. Non-blocking for now — hard enforcement
+  // arrives with the multi-factor recovery flow.
+  const entropyEstimate = assessSecretEntropy(
+    secretMode,
+    secretMode === 'vibe' ? secretVibe : undefined,
+  );
+
   const canProceedStep2 = btcAddress.trim() && isValidBtcAddress(btcAddress);
 
   return (
@@ -339,6 +348,20 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
                   <span className="text-[8px] text-[color:var(--color-muted)] line-clamp-2">{p.vibe}</span>
                 </button>
               ))}
+            </div>
+          )}
+
+          {entropyEstimate && entropyEstimate.verdict !== 'sufficient' && (
+            <div
+              className="mt-3 p-3 rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning)]/5"
+              data-testid="entropy-warning"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--color-warning)]">
+                ⚠ Weak secret — {entropyEstimate.bits} effective bits
+              </p>
+              <p className="text-[10px] text-[color:var(--color-muted)] mt-1 leading-relaxed">
+                {entropyEstimate.message}
+              </p>
             </div>
           )}
 
