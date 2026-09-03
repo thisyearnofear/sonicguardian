@@ -99,13 +99,31 @@ device / encrypted backup → share #2 (stored)
 ```
 
 Neither factor alone is sufficient; loss of either alone is recoverable.
-Remaining M3 work: mint-wizard and recovery-flow UX wiring.
+
+### M3 UX wiring (Sept 3, 2026)
+
+Mint side: on successful on-chain commit, `SonicGuardian` splits the acoustic
+private key 2-of-3 via `src/lib/recovery-split.ts`. Share 1 (pattern) is an
+*anchored share* deterministically derived from the DNA hash — never stored;
+share 2 (device) is persisted in the session; share 3 (paper) is shown once in
+`PaperShareCard` (copy/download, deliberately not persisted). The anchored
+split (`splitSecretFromAnchor` in `shamir.ts`) constructs the line through
+(0, secret) and the anchor point, so the pattern share can be recomputed at
+recovery time. Note: with threshold 2 there is no fresh randomness — the same
+(secret, pattern) always yields the same device/paper shares.
+
+Recovery side: after pattern verification, `AcousticFactorCard` re-derives the
+pattern share from the verified DNA hash and reconstructs the acoustic secret
+with the device share, authenticated by the stored digest. Follow-ups:
+cross-device paper-share reconstruction (needs on-chain acoustic-key
+verification to authenticate without the local digest) and hard entropy
+blocking (M4).
 
 | # | Milestone | Done when | Status |
 |---|-----------|-----------|--------|
 | M1 | Human recall study designed & run (n=50, 1 week) | Error-distribution data published in `docs/` | 🟡 Protocol written + tooling shipped ([RECALL_STUDY.md](./RECALL_STUDY.md), `scripts/generate-study-materials.mjs`, `scripts/score-recall.mjs`); consent forms + recruitment next |
 | M2 | Fuzzy key derivation prototype | Near-recall (≤ tolerance errors) derives same key, no sketch leaks usable secret offline | ⬜ Blocked on M1 tolerance data |
-| M3 | Shamir 2-of-N recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟡 Core module shipped (`src/lib/shamir.ts`, 2-of-N over GF(2⁸), verified + serialized shares, 8 passing tests via `pnpm test:unit`); mint/recovery UX wiring next |
+| M3 | Shamir 2-of-N recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 Split wired end-to-end: anchored 2-of-3 split at mint (`PaperShareCard`), digest-authenticated reconstruction at recovery (`AcousticFactorCard`); 15 passing tests via `pnpm test:unit`. Follow-up: cross-device paper-share path |
 | M4 | Entropy budget documented & UX-enforced | Per-user entropy estimate shown at registration; < minimum blocked | 🟡 Estimator + warning banner shipped (`src/lib/entropy-estimate.ts`, mint wizard step 1); hard blocking lands with M3 |
 | M5 | Adversarial review of M1–M4 | Written review incorporated | ⬜ |
 

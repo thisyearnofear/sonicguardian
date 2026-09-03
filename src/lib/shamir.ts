@@ -110,6 +110,45 @@ export function splitSecret(
   return result;
 }
 
+/**
+ * Split a secret 2-of-N where one share is ANCHORED to a known value —
+ * e.g. a share deterministically derived from the user's memorized pattern.
+ * The line passes through (0, secret) and (anchor.x, anchor.data), so the
+ * anchored share can be recomputed from source material (the pattern) at
+ * recovery time without ever being stored. Note: with threshold 2 the slope
+ * is fully determined by the two points, so there is no fresh randomness —
+ * the same (secret, anchor) always yields the same additional shares.
+ *
+ * Threshold is fixed at 2: any pair of {anchor, share_k} reconstructs.
+ * Anchor index must not collide with shareIndexes.
+ */
+export function splitSecretFromAnchor(
+  secret: Uint8Array,
+  anchor: Share,
+  shareIndexes: number[],
+): Share[] {
+  if (secret.length === 0) throw new Error('Secret must not be empty');
+  if (anchor.data.length !== secret.length) {
+    throw new Error('Anchor length must match secret length');
+  }
+  if (anchor.x < 1 || anchor.x > 255) throw new Error('Anchor index out of range');
+  if (shareIndexes.length === 0) throw new Error('Need at least one additional share');
+  if (shareIndexes.some((x) => x < 1 || x > 255 || x === anchor.x)) {
+    throw new Error('Share indexes must be 1..255 and distinct from the anchor index');
+  }
+
+  const out = shareIndexes.map((x) => ({ x, data: new Uint8Array(secret.length) }));
+  for (let i = 0; i < secret.length; i++) {
+    // Threshold-2 line through (0, secret[i]) and (anchor.x, anchor.data[i]);
+    // slope is fully determined by those two points.
+    const a = gfMul(gfInv(anchor.x), secret[i] ^ anchor.data[i]);
+    for (let k = 0; k < shareIndexes.length; k++) {
+      out[k].data[i] = secret[i] ^ gfMul(a, shareIndexes[k]);
+    }
+  }
+  return out;
+}
+
 function evalPoly(coeffs: number[], x: number): number {
   // Horner's method in GF(2^8)
   let y = 0;

@@ -17,7 +17,8 @@ import { useMintValidation } from '@/hooks/use-mint-validation';
 import { useDebouncedCallback } from '@/hooks/use-debounce';
 import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import { stopStrudel } from '@/lib/strudel-lazy';
-import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature } from '@/lib/crypto';
+import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, deriveAcousticSecret } from '@/lib/crypto';
+import { createRecoverySplit, feltToBytes } from '@/lib/recovery-split';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
 import { MobileUtils } from '@/lib/mobile';
@@ -34,6 +35,7 @@ import { VisualizerPanel } from './VisualizerPanel';
 import { InferenceExplainer, INFERENCE_STEPS } from './InferenceExplainer';
 import { PageHero } from './PageHero';
 import { StatusBanner } from './StatusBanner';
+import { PaperShareCard } from './PaperShareCard';
 import { JudgeDemoButton } from './JudgeDemoButton';
 import { DEMO_BTC_ADDRESS } from '@/lib/demo-btc';
 
@@ -85,6 +87,7 @@ export default function SonicGuardian() {
   } = useStarknetGuardian();
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
+  const [paperShare, setPaperShare] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   
   // Decentralized Backup State
@@ -289,6 +292,24 @@ export default function SonicGuardian() {
       sessionManager.updateSession({ btcAddress });
       setOnChainStatus('success');
       setStatus('✅ Sonic Identity Anchored! Your pattern is now committed on-chain.');
+
+      // M3 recovery split: split the acoustic secret 2-of-3 —
+      // share 1 = pattern (recomputed from DNA hash at recovery, never stored),
+      // share 2 = device (persisted in the session), share 3 = paper (shown once).
+      try {
+        const acousticSecret = await deriveAcousticSecret(dnaHash);
+        const split = await createRecoverySplit(feltToBytes(acousticSecret), dnaHash);
+        sessionManager.updateSession({
+          deviceShare: split.deviceShare,
+          secretDigest: split.secretDigest,
+        });
+        setPaperShare(split.paperShare);
+      } catch (splitError) {
+        console.error('Recovery split failed:', splitError);
+        setStatus(
+          '⚠️ Identity anchored, but the recovery split failed — your guardian was created without backup shares.',
+        );
+      }
     } catch (error) {
       console.error(error);
       setOnChainStatus('failed');
@@ -443,6 +464,9 @@ export default function SonicGuardian() {
             {(status || showExplainer) && (
               <div className="max-w-2xl mx-auto mt-4 space-y-3">
                 {status && <StatusBanner message={status} />}
+                {paperShare && (
+                  <PaperShareCard share={paperShare} onClose={() => setPaperShare(null)} />
+                )}
                 <InferenceExplainer isVisible={showExplainer} currentStep={inferenceStep} />
               </div>
             )}

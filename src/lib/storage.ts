@@ -16,6 +16,10 @@ export interface UserSession {
   storedSalt: string;
   btcAddress?: string;
   blinding?: string; // Encrypted blinding factor
+  /** Shamir DEVICE share (x=2) of the acoustic secret, 2-of-3 recovery split */
+  deviceShare?: string;
+  /** SHA-256 of the acoustic secret, used to authenticate reconstruction */
+  secretDigest?: string;
   recoveryAttempts: RecoveryAttempt[];
 }
 

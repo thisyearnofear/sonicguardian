@@ -48,6 +48,15 @@ export async function getAcousticPublicKey(dnaHash: string): Promise<string> {
 }
 
 /**
+ * Derive the acoustic private key (felt252 decimal) from a DNA hash.
+ * Exposed for the recovery-split ceremony: this is the secret split
+ * 2-of-3 at mint time (see src/lib/recovery-split.ts).
+ */
+export async function deriveAcousticSecret(dnaHash: string): Promise<string> {
+    return safeHexToFelt(dnaHash);
+}
+
+/**
  * Sign a message using the derived acoustic key.
  * Returns a signature that proves knowledge of the DNA without revealing it.
  */

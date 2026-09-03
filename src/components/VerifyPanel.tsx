@@ -12,6 +12,11 @@ const PrivateRecoveryPanel = dynamic(
   { ssr: false },
 );
 
+const AcousticFactorCard = dynamic(
+  () => import('./AcousticFactorCard').then((m) => m.AcousticFactorCard),
+  { ssr: false },
+);
+
 interface ValidationState {
   isValid: boolean;
   message: string;
@@ -58,6 +63,7 @@ export function VerifyPanel({
         {verifiedDnaHash && btcAddress && (
           <PrivateRecoveryPanel btcAddress={btcAddress} dnaHash={verifiedDnaHash} />
         )}
+        {verifiedDnaHash && <AcousticFactorCard dnaHash={verifiedDnaHash} />}
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center space-y-1">
           <Link
             href="/"
