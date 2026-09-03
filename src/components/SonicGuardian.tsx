@@ -17,7 +17,7 @@ import { useMintValidation } from '@/hooks/use-mint-validation';
 import { useDebouncedCallback } from '@/hooks/use-debounce';
 import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import { stopStrudel } from '@/lib/strudel-lazy';
-import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, deriveAcousticSecret } from '@/lib/crypto';
+import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, generateAcousticSecret } from '@/lib/crypto';
 import { createRecoverySplit, feltToBytes } from '@/lib/recovery-split';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
@@ -288,16 +288,19 @@ export default function SonicGuardian() {
     setStatus('🔒 Committing Sonic Identity to Starknet (Pedersen Commitment)...');
 
     try {
-      await registerGuardian(btcAddress, dnaHash, blinding);
+      // Key decoupling: the secret whose public key is registered on-chain is a
+      // RANDOM high-entropy key, not pattern-derived. The pattern is only one
+      // Shamir factor for reconstructing it (see DIRECTION.md).
+      const acousticSecret = generateAcousticSecret();
+      await registerGuardian(btcAddress, dnaHash, blinding, acousticSecret);
       sessionManager.updateSession({ btcAddress });
       setOnChainStatus('success');
       setStatus('✅ Sonic Identity Anchored! Your pattern is now committed on-chain.');
 
-      // M3 recovery split: split the acoustic secret 2-of-3 —
+      // M3 recovery split: split the random acoustic secret 2-of-3 —
       // share 1 = pattern (recomputed from DNA hash at recovery, never stored),
       // share 2 = device (persisted in the session), share 3 = paper (shown once).
       try {
-        const acousticSecret = await deriveAcousticSecret(dnaHash);
         const split = await createRecoverySplit(feltToBytes(acousticSecret), dnaHash);
         sessionManager.updateSession({
           deviceShare: split.deviceShare,

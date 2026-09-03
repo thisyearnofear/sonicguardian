@@ -23,7 +23,7 @@ export function usePrivateRecovery() {
   const helperDeployed = Boolean(getRecoveryHelperAddress());
 
   const authorizePrivately = useCallback(
-    async (btcAddress: string, dnaHash: string) => {
+    async (btcAddress: string, dnaHash: string, acousticSecret?: string) => {
       if (!isMainnet) {
         setError('Private recovery authorization requires Starknet mainnet.');
         setStatus('error');
@@ -48,7 +48,7 @@ export function usePrivateRecovery() {
       setStatus('pending');
       setError(null);
       try {
-        const auth = await buildAcousticAuthorization(btcAddress, dnaHash);
+        const auth = await buildAcousticAuthorization(btcAddress, dnaHash, undefined, acousticSecret);
         const hash = await submitPrivateRecoveryAuthorization(walletAccount, address, auth);
         setTxHash(hash);
         setStatus('success');

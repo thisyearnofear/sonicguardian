@@ -7,6 +7,8 @@ import { StatusBanner } from './StatusBanner';
 interface PrivateRecoveryPanelProps {
   btcAddress: string;
   dnaHash: string;
+  /** Shamir-reconstructed acoustic secret (decoupled path); omit for legacy guardians */
+  acousticSecret?: string | null;
   disabled?: boolean;
 }
 
@@ -14,7 +16,7 @@ function normalizeId(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export function PrivateRecoveryPanel({ btcAddress, dnaHash, disabled }: PrivateRecoveryPanelProps) {
+export function PrivateRecoveryPanel({ btcAddress, dnaHash, acousticSecret, disabled }: PrivateRecoveryPanelProps) {
   const {
     isMainnet,
     helperDeployed,
@@ -33,7 +35,7 @@ export function PrivateRecoveryPanel({ btcAddress, dnaHash, disabled }: PrivateR
   const pickable = wallets.filter((w) => !normalizeId(w.name).includes('metamask'));
   const isPending = status === 'pending' || connecting;
 
-  const handleAuthorize = () => authorizePrivately(btcAddress, dnaHash);
+  const handleAuthorize = () => authorizePrivately(btcAddress, dnaHash, acousticSecret ?? undefined);
 
   const handleConnect = async (wallet: (typeof wallets)[0]) => {
     setConnecting(true);

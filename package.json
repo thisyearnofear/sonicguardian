@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
-    "test:unit": "node --test scripts/test-shamir.mjs scripts/test-recovery-split.mjs",
+    "test:unit": "node --test scripts/test-shamir.mjs scripts/test-recovery-split.mjs scripts/test-key-decoupling.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:ci": "CI=true pnpm build && playwright test --project=chromium",

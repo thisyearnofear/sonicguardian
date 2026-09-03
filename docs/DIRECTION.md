@@ -82,7 +82,59 @@ generated pattern after a week?** Measure recall rates and per-note error
 distributions — the error distribution directly parameterizes the fuzzy
 extractor (its required tolerance is an input, not a guess).
 
-## Milestones (in order)
+## Roadmap re-rank (Sept 3, 2026 — approved)
+
+The 2-of-3 scheme is shippable independently of the M1/M2 research: a
+low-entropy pattern is perfectly acceptable **as a Shamir factor**, because the
+device and paper shares carry the security weight. With key decoupling (below),
+that is now true *including* the on-chain identity. Therefore:
+
+- **Product track (primary): M3** — Shamir 2-of-3 recovery UX. First task was
+  key decoupling (done); remaining: cross-device paper-share recovery, E2E test
+  of the full mint→commit→share→recovery loop, and a threat-model doc making
+  "pattern as convenience factor" a documented claim.
+- **Research track (deprioritized): M1/M2** — recall study and fuzzy extractor
+  are now *upgrades*, not gates. The fuzzy extractor parameterizes recovery
+  tolerance when we get to it; nothing in the product depends on it today.
+- **M4 (entropy)** re-scoped to *guidance, not gating*: the estimator + warning
+  banner stay; hard 128-bit blocking is no longer required for the on-chain
+  identity because the registered key is random (decoupled).
+- **M5 (adversarial review)** unchanged; review M3's threat model first.
+
+### Key decoupling (Sept 3, 2026 — done, client-side, contract unchanged)
+
+Caveat that motivated this: the guardian contract registered
+`acoustic_key = getAcousticPublicKey(dnaHash)`, so the pattern remained a
+single-factor ~4.7–89-bit secret brute-forceable against the chain.
+
+Fix (Option 1, decoupled): at mint, `generateAcousticSecret()` produces a
+uniformly random felt; the on-chain acoustic key is its Starknet public key.
+The acoustic secret — random, ≥250 bits — is what gets split 2-of-3, with the
+pattern-derived anchored share as one factor. The pattern is now purely a
+*reconstruction factor*, never an on-chain attack surface.
+
+- `crypto.ts`: `generateAcousticSecret()`, `getPublicKeyFromSecret()`,
+  `signWithSecret()`; legacy `getAcousticPublicKey`/`signWithAcousticKey`/
+  `deriveAcousticSecret` retained (and fixed: the decimal felt from the KDF is
+  now normalized to hex — the legacy path was silently broken before).
+- `SonicGuardian`: mints generate the random secret, register its pubkey, then
+  split the secret (not a pattern derivative).
+- Recovery: `useAcousticFactor(dnaHash)` reconstructs the secret from
+  pattern+device shares; `AcousticFactorCard` reports it upward;
+  `PrivateRecoveryPanel`/`authorizeWithAcousticSignature`/
+  `buildAcousticAuthorization` sign with the reconstructed secret (legacy
+  pattern-derived signing remains as a fallback for pre-decoupling guardians).
+- Contract untouched: `register_guardian` and `authorize_with_acoustic_signature`
+  semantics are unchanged — only what the client feeds them differs.
+- Tests: `scripts/test-key-decoupling.mjs` (5 tests) — randomness, range,
+  sign/verify, decoupling property (random key ≠ pattern-derived key), and an
+  end-to-end split→reconstruct→same-pubkey roundtrip. `test:unit` is now 20/20.
+
+Known trade-off: authorship is no longer provable from pattern knowledge alone —
+verification now requires two shares (e.g. pattern + minting device). The
+"prove you made this song" positioning was already deferred (out of scope).
+
+## Milestones
 
 ### M3 module note (Sept 3, 2026)
 
@@ -92,8 +144,8 @@ reconstruction (`combineSharesAndVerify` against the secret's SHA-256, since
 raw Shamir shares are unauthenticated). The intended composition is:
 
 ```
-sonic pattern → DNA hash → share #1 (memorized)
-                          └→ derived secret split 2-of-N
+sonic pattern → DNA hash → anchored share #1 (memorized factor)
+random acoustic secret ────┘→ split 2-of-N (this is the on-chain key's private key)
 device / encrypted backup → share #2 (stored)
 …+ optional shares (paper, trusted contact) → share #3..N
 ```
@@ -102,8 +154,9 @@ Neither factor alone is sufficient; loss of either alone is recoverable.
 
 ### M3 UX wiring (Sept 3, 2026)
 
-Mint side: on successful on-chain commit, `SonicGuardian` splits the acoustic
-private key 2-of-3 via `src/lib/recovery-split.ts`. Share 1 (pattern) is an
+Mint side: on successful on-chain commit, `SonicGuardian` generates a random
+acoustic secret (key decoupling) and splits it 2-of-3 via
+`src/lib/recovery-split.ts`. Share 1 (pattern) is an
 *anchored share* deterministically derived from the DNA hash — never stored;
 share 2 (device) is persisted in the session; share 3 (paper) is shown once in
 `PaperShareCard` (copy/download, deliberately not persisted). The anchored
@@ -116,16 +169,16 @@ Recovery side: after pattern verification, `AcousticFactorCard` re-derives the
 pattern share from the verified DNA hash and reconstructs the acoustic secret
 with the device share, authenticated by the stored digest. Follow-ups:
 cross-device paper-share reconstruction (needs on-chain acoustic-key
-verification to authenticate without the local digest) and hard entropy
-blocking (M4).
+verification to authenticate without the local digest), an E2E test of the
+full loop, and the threat-model doc (all product-track M3).
 
 | # | Milestone | Done when | Status |
 |---|-----------|-----------|--------|
-| M1 | Human recall study designed & run (n=50, 1 week) | Error-distribution data published in `docs/` | 🟡 Protocol written + tooling shipped ([RECALL_STUDY.md](./RECALL_STUDY.md), `scripts/generate-study-materials.mjs`, `scripts/score-recall.mjs`); consent forms + recruitment next |
-| M2 | Fuzzy key derivation prototype | Near-recall (≤ tolerance errors) derives same key, no sketch leaks usable secret offline | ⬜ Blocked on M1 tolerance data |
-| M3 | Shamir 2-of-N recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 Split wired end-to-end: anchored 2-of-3 split at mint (`PaperShareCard`), digest-authenticated reconstruction at recovery (`AcousticFactorCard`); 15 passing tests via `pnpm test:unit`. Follow-up: cross-device paper-share path |
-| M4 | Entropy budget documented & UX-enforced | Per-user entropy estimate shown at registration; < minimum blocked | 🟡 Estimator + warning banner shipped (`src/lib/entropy-estimate.ts`, mint wizard step 1); hard blocking lands with M3 |
-| M5 | Adversarial review of M1–M4 | Written review incorporated | ⬜ |
+| M1 | Human recall study designed & run (n=50, 1 week) | Error-distribution data published in `docs/` | 🟡 Protocol written + tooling shipped ([RECALL_STUDY.md](./RECALL_STUDY.md), `scripts/generate-study-materials.mjs`, `scripts/score-recall.mjs`); consent forms + recruitment next. **Research track — deprioritized** |
+| M2 | Fuzzy key derivation prototype | Near-recall (≤ tolerance errors) derives same key, no sketch leaks usable secret offline | ⬜ Blocked on M1 tolerance data. **Research track — an upgrade, not a gate** |
+| M3 | Shamir 2-of-3 recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 Split wired end-to-end **and key-decoupled**: random on-chain key, pattern = factor only (`scripts/test-key-decoupling.mjs`, 20/20 unit tests). Product track. Follow-ups: cross-device paper path, E2E test, threat-model doc |
+| M4 | Entropy budget documented & UX-enforced | Per-user entropy estimate shown at registration; < minimum blocked | 🟡 Estimator + warning banner shipped; re-scoped to *guidance, not gating* — the on-chain key is random, so pattern entropy no longer gates on-chain safety |
+| M5 | Adversarial review of M1–M4 | Written review incorporated | ⬜ Review M3's threat model first |
 
 M4 (entropy documentation) can and should start immediately — it's cheap and
 shapes everything else. **Started Sept 3, 2026:** modelled estimator live with

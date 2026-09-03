@@ -4,7 +4,8 @@
  * and AES-GCM for secure backups.
  */
 
-import { hash, ec, Signature } from 'starknet';
+import { hash, ec } from 'starknet';
+import type { Signature } from 'starknet';
 
 /**
  * Derive a uniformly-distributed felt252 from a hex string via Pedersen KDF.
@@ -44,25 +45,60 @@ async function pedersenSync(a: string, b: string): Promise<string> {
  */
 export async function getAcousticPublicKey(dnaHash: string): Promise<string> {
     const privateKey = await safeHexToFelt(dnaHash);
-    return ec.starkCurve.getStarkKey(privateKey);
+    return ec.starkCurve.getStarkKey(feltToPrivateKeyHex(privateKey));
 }
 
 /**
  * Derive the acoustic private key (felt252 decimal) from a DNA hash.
- * Exposed for the recovery-split ceremony: this is the secret split
- * 2-of-3 at mint time (see src/lib/recovery-split.ts).
+ * LEGACY: pre-decoupling guardians derived their on-chain key this way.
+ * New mints use generateAcousticSecret() + Shamir split instead.
  */
 export async function deriveAcousticSecret(dnaHash: string): Promise<string> {
     return safeHexToFelt(dnaHash);
 }
 
 /**
+ * Generate a fresh uniformly-random acoustic secret (felt252 decimal).
+ *
+ * Decoupling (DIRECTION.md, M3 track): the secret registered on-chain is this
+ * RANDOM high-entropy key, NOT a key derived from the musical pattern. The
+ * pattern is only one Shamir factor (the anchored share) for reconstructing
+ * this secret, so pattern-space entropy is no longer a security property of
+ * the on-chain identity.
+ */
+export function generateAcousticSecret(): string {
+    const priv = ec.starkCurve.utils.randomPrivateKey();
+    const hex = Array.from(priv).map(b => b.toString(16).padStart(2, '0')).join('');
+    return BigInt('0x' + hex).toString();
+}
+
+/**
+ * Public key (Starknet stark key, hex) for a given acoustic secret felt
+ * (accepts decimal or hex string).
+ */
+export function getPublicKeyFromSecret(secretFelt: string): string {
+    return ec.starkCurve.getStarkKey(feltToPrivateKeyHex(secretFelt));
+}
+
+/**
+ * Sign a message hash with an explicit acoustic secret (decoupled path).
+ */
+export function signWithSecret(secretFelt: string, messageHash: string): Signature {
+    return ec.starkCurve.sign(messageHash, feltToPrivateKeyHex(secretFelt));
+}
+
+function feltToPrivateKeyHex(secretFelt: string): string {
+    return '0x' + BigInt(secretFelt).toString(16).padStart(64, '0');
+}
+
+/**
  * Sign a message using the derived acoustic key.
  * Returns a signature that proves knowledge of the DNA without revealing it.
+ * LEGACY path: only used for guardians registered before key decoupling.
  */
 export async function signWithAcousticKey(dnaHash: string, messageHash: string): Promise<Signature> {
     const privateKey = await safeHexToFelt(dnaHash);
-    return ec.starkCurve.sign(messageHash, privateKey);
+    return ec.starkCurve.sign(messageHash, feltToPrivateKeyHex(privateKey));
 }
 
 /**

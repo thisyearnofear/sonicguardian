@@ -1,4 +1,4 @@
-import { signWithAcousticKey, hashStringToFelt, hexToFelt } from '@/lib/crypto';
+import { signWithSecret, signWithAcousticKey, hashStringToFelt, hexToFelt } from '@/lib/crypto';
 
 export interface AcousticAuthorizationPayload {
   btcFelt: string;
@@ -11,13 +11,18 @@ export async function buildAcousticAuthorization(
   btcAddress: string,
   dnaHash: string,
   messageSeed?: string,
+  acousticSecret?: string,
 ): Promise<AcousticAuthorizationPayload> {
   const btcFelt = await hashStringToFelt(btcAddress);
   const messageHash = messageSeed
     ? await hashStringToFelt(messageSeed)
     : await hashStringToFelt(`${btcAddress}:sonic-recovery:${Date.now()}`);
 
-  const signature = signWithAcousticKey(dnaHash, messageHash);
+  // Decoupled path: sign with the reconstructed random acoustic secret.
+  // Legacy fallback (pre-decoupling guardians): pattern-derived key.
+  const signature = acousticSecret
+    ? signWithSecret(acousticSecret, messageHash)
+    : await signWithAcousticKey(dnaHash, messageHash);
 
   let r: bigint | string;
   let s: bigint | string;

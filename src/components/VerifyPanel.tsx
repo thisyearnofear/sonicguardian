@@ -49,6 +49,7 @@ export function VerifyPanel({
   const recoveryValidation = validationStates.get('recovery-phrase');
   const btcValidation = validationStates.get('btc-address');
   const verified = status?.includes('Verified') ?? false;
+  const [acousticSecret, setAcousticSecret] = React.useState<string | null>(null);
 
   if (verified) {
     return (
@@ -61,9 +62,15 @@ export function VerifyPanel({
         />
         {status && <StatusBanner message={status} />}
         {verifiedDnaHash && btcAddress && (
-          <PrivateRecoveryPanel btcAddress={btcAddress} dnaHash={verifiedDnaHash} />
+          <PrivateRecoveryPanel
+            btcAddress={btcAddress}
+            dnaHash={verifiedDnaHash}
+            acousticSecret={acousticSecret}
+          />
         )}
-        {verifiedDnaHash && <AcousticFactorCard dnaHash={verifiedDnaHash} />}
+        {verifiedDnaHash && (
+          <AcousticFactorCard dnaHash={verifiedDnaHash} onResolved={setAcousticSecret} />
+        )}
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center space-y-1">
           <Link
             href="/"

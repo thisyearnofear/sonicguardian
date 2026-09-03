@@ -1,55 +1,33 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { sessionManager } from '@/lib/storage';
-import { derivePatternShare, recoverFromShares, bytesToFelt } from '@/lib/recovery-split';
-import { getAcousticPublicKey } from '@/lib/crypto';
+import { useAcousticFactor } from '@/hooks/use-acoustic-factor';
+
+interface AcousticFactorCardProps {
+  dnaHash: string;
+  /** Reports the reconstructed secret (or null when unavailable) upward */
+  onResolved?: (acousticSecret: string | null) => void;
+}
 
 /**
  * Recovery-side half of the M3 ceremony: the user has replayed their pattern
- * (this panel only renders once the DNA hash is verified), so the PATTERN
+ * (this card only renders once the DNA hash is verified), so the PATTERN
  * share can be re-derived. Combined with the DEVICE share persisted at mint
- * time, the acoustic secret is reconstructed — digest-authenticated — without
- * ever having been stored whole.
+ * time, the random acoustic secret is reconstructed — digest-authenticated —
+ * without ever having been stored whole, and without the on-chain key being
+ * derivable from the pattern alone (key decoupling).
  *
  * The paper share (x=3) path for cross-device recovery is a documented
  * follow-up (requires on-chain acoustic-key verification to authenticate
  * reconstruction without the local digest).
  */
-export function AcousticFactorCard({ dnaHash }: { dnaHash: string }) {
-  const [state, setState] = useState<'checking' | 'available' | 'missing' | 'unavailable' | 'failed'>('checking');
-  const [pubKeyPreview, setPubKeyPreview] = useState<string | null>(null);
+export function AcousticFactorCard({ dnaHash, onResolved }: AcousticFactorCardProps) {
+  const { state, acousticSecret } = useAcousticFactor(dnaHash);
 
+  // Report resolution upward once the secret is available
   useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      const session = sessionManager.getCurrentSession();
-      if (!session?.deviceShare || !session?.secretDigest) {
-        if (!cancelled) setState(session ? 'missing' : 'unavailable');
-        return;
-      }
-      try {
-        const patternShare = await derivePatternShare(dnaHash, 32);
-        const serialized = await import('@/lib/shamir').then((m) => m.serializeShare(patternShare));
-        const secret = await recoverFromShares([serialized, session.deviceShare], session.secretDigest);
-        if (!secret) {
-          if (!cancelled) setState('failed');
-          return;
-        }
-        const pubKey = await getAcousticPublicKey(bytesToFelt(secret));
-        if (!cancelled) {
-          setPubKeyPreview(`${pubKey.slice(0, 10)}…${pubKey.slice(-6)}`);
-          setState('available');
-        }
-      } catch {
-        if (!cancelled) setState('failed');
-      }
-    };
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [dnaHash]);
+    if (acousticSecret) onResolved?.(acousticSecret);
+  }, [acousticSecret, onResolved]);
 
   return (
     <div
@@ -63,7 +41,6 @@ export function AcousticFactorCard({ dnaHash }: { dnaHash: string }) {
       {state === 'available' && (
         <p className="text-xs text-[color:var(--color-success)]" data-testid="acoustic-factor-success">
           ✓ Acoustic secret reconstructed (2-of-3: pattern + device) and digest-verified.
-          {pubKeyPreview && <> Acoustic key: <code className="font-mono">{pubKeyPreview}</code></>}
         </p>
       )}
       {state === 'missing' && (
