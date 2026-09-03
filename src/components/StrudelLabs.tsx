@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import { playStrudelCode, stopStrudel } from '@/lib/strudel-lazy';
-import { engine } from '@/lib/strudel-engine';
 import { PatternExplorer } from './PatternExplorer';
 
 interface StrudelLabsProps {
@@ -103,9 +102,6 @@ export function StrudelLabs({ onPatternSelect }: StrudelLabsProps) {
               </div>
             </div>
             <pre className="text-[10px] font-mono text-blue-400/80 overflow-x-auto max-h-32">{STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedId)?.code}</pre>
-            {previewId === selectedId && engine.getActiveHapsCount() > 0 && (
-              <p className="text-[8px] text-[color:var(--color-success)] mt-2">{engine.getActiveHapsCount()} events</p>
-            )}
           </div>
         )}
       </div>

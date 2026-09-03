@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { Tooltip } from './Tooltip';
-import { engine } from '@/lib/strudel-engine';
+import {
+  getStrudelPlaybackState,
+  playStrudelCode,
+  stopStrudel,
+} from '@/lib/strudel-lazy';
 import { StrudelVisualizer } from './StrudelVisualizer';
-import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
-import Link from 'next/link';
 
 interface StrudelEditorProps {
   initialCode: string;
@@ -38,17 +40,19 @@ export function StrudelEditor({
       return;
     }
     const id = window.setInterval(() => {
-      setCycleProgress(engine.getCycleProgress());
-      if (!engine.isPlaying()) {
-        setIsPlaying(false);
-      }
+      void getStrudelPlaybackState().then((state) => {
+        setCycleProgress(state.cycleProgress);
+        if (!state.isPlaying) {
+          setIsPlaying(false);
+        }
+      });
     }, 50);
     return () => clearInterval(id);
   }, [isPlaying]);
 
   useEffect(() => {
     return () => {
-      engine.stop();
+      void stopStrudel();
     };
   }, []);
 
@@ -63,7 +67,7 @@ export function StrudelEditor({
     setIsBusy(true);
     setError(null);
     try {
-      const ok = await engine.play(code);
+      const ok = await playStrudelCode(code);
       if (!ok) {
         setError('Could not play pattern. Check syntax and try again.');
         setIsPlaying(false);
@@ -79,7 +83,7 @@ export function StrudelEditor({
   };
 
   const handleStop = () => {
-    engine.stop();
+    void stopStrudel();
     setIsPlaying(false);
     setCycleProgress(0);
   };

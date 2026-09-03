@@ -14,8 +14,6 @@ class StrudelEngine {
   private status: EngineStatus = 'idle';
   private replInstance: any = null;
   private strudel: StrudelWeb | null = null;
-  private analyser: AnalyserNode | null = null;
-  private dataArray: Uint8Array<ArrayBuffer> | null = null;
   private initPromise: Promise<void> | null = null;
   private drawCb: ((haps: any[], time: number) => void) | null = null;
   private animationFrameId: number | null = null;
@@ -24,15 +22,9 @@ class StrudelEngine {
   private playing = false;
   private playStartedAt = 0;
 
-  private sanitizeCode(code: string): string {
-    const cpmMatch = code.match(/\.cpm\((\d+)\)/);
+  private setTempoFromCode(code: string): void {
+    const cpmMatch = code.match(/\.cpm\((\d+(?:\.\d+)?)\)/);
     this.currentCpm = cpmMatch ? parseInt(cpmMatch[1], 10) : 120;
-
-    // Map exotic sample banks to local Dirt-style names when missing
-    return code
-      .replace(/\.s\(["'](?:piano|fm|gm_pad|x)[^"']*["']\)/g, '.s("sine")')
-      .replace(/s\(["'](?:piano|fm|gm_pad|x)[^"']*["']\)/g, (match) =>
-        match.replace(/piano|fm|gm_pad|x/g, 'sine'));
   }
 
   private constructor() {}
@@ -56,22 +48,12 @@ class StrudelEngine {
 
         this.replInstance = await strudel.initStrudel({
           prebake: async () => {
-            // Local map first; Dirt-Samples CDN as fallback base
-            await strudel.samples('/samples/strudel.json', 'github:tidalcycles/Dirt-Samples');
+            // This map is deliberately local so playback does not depend on a CDN.
+            await strudel.samples('/samples/strudel.json');
           },
         });
 
         const ctx = strudel.getAudioContext();
-        this.analyser = ctx.createAnalyser();
-        this.analyser.fftSize = 256;
-        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-        // Tap master output for spectrum (best-effort; may be silent if graph bypasses)
-        try {
-          this.analyser.connect(ctx.destination);
-        } catch {
-          /* ignore */
-        }
-
         if (ctx.state === 'suspended') {
           await ctx.resume();
         }
@@ -125,7 +107,9 @@ class StrudelEngine {
         await ctx.resume();
       }
 
-      await this.strudel.evaluate(this.sanitizeCode(code), true);
+      // Evaluate exactly the source the user authored and that Sonic Guardian hashes.
+      this.setTempoFromCode(code);
+      await this.strudel.evaluate(code, true);
       this.playing = true;
       this.playStartedAt = ctx.currentTime;
       return true;
@@ -155,14 +139,6 @@ class StrudelEngine {
 
   public getStatus(): EngineStatus {
     return this.status;
-  }
-
-  public getAnalyserData(): Uint8Array | null {
-    if (this.analyser && this.dataArray) {
-      this.analyser.getByteFrequencyData(this.dataArray);
-      return this.dataArray;
-    }
-    return null;
   }
 
   public getCycleProgress(): number {

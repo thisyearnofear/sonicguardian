@@ -38,3 +38,13 @@ export async function getStrudelEngine() {
   const { engine } = await import('./strudel-engine');
   return engine;
 }
+
+/** Read playback data without adding the Strudel engine to an initial client chunk. */
+export async function getStrudelPlaybackState() {
+  const { engine } = await import('./strudel-engine');
+  return {
+    cycleProgress: engine.getCycleProgress(),
+    haps: engine.getActiveHaps(),
+    isPlaying: engine.isPlaying(),
+  };
+}

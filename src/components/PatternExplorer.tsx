@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { engine } from '@/lib/strudel-engine';
+import React, { useState } from 'react';
+import { playStrudelCode, stopStrudel } from '@/lib/strudel-lazy';
 import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import { StrudelVisualizer } from './StrudelVisualizer';
 
@@ -21,8 +21,6 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeDemo, setActiveDemo] = useState<FeatureDemo | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showCode, setShowCode] = useState<string | null>(null);
-  const [currentLibraryPage, setCurrentLibraryPage] = useState(0);
 
   // Filter patterns by category
   const filteredPatterns = React.useMemo(() => {
@@ -32,18 +30,18 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
 
   const handlePlayDemo = async (demo: FeatureDemo) => {
     if (activeDemo?.name === demo.name && isPlaying) {
-      engine.stop();
+      void stopStrudel();
       setIsPlaying(false);
       return;
     }
 
     if (isPlaying) {
-      engine.stop();
+      void stopStrudel();
     }
 
     setActiveDemo(demo);
     setIsPlaying(true);
-    const ok = await engine.play(demo.code);
+    const ok = await playStrudelCode(demo.code);
     if (!ok) setIsPlaying(false);
   };
 
@@ -142,7 +140,7 @@ export function PatternExplorer({ onPatternSelect }: PatternExplorerProps) {
                   <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Live Visualizer</span>
                   <div className="flex items-center gap-1">
                     <span className="text-[9px] font-black text-[color:var(--color-primary)] uppercase tracking-widest">
-                      {engine.getActiveHapsCount()} Events
+                      Live pattern
                     </span>
                   </div>
                 </div>

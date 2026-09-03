@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { engine } from '@/lib/strudel-engine';
+import { getStrudelPlaybackState } from '@/lib/strudel-lazy';
 
 interface StrudelVisualizerProps {
   isActive: boolean;
@@ -27,8 +27,8 @@ function noteToFrequency(note: string): number {
 }
 
 /**
- * Enhanced visualizer for Strudel patterns.
- * Combines real-time audio frequency data with scheduled musical events.
+ * Pattern visualizer driven by Strudel's scheduled events. This avoids tapping
+ * private WebAudio graph nodes, which are not part of the @strudel/web API.
  */
 export function StrudelVisualizer({ 
   isActive, 
@@ -57,22 +57,6 @@ export function StrudelVisualizer({
     const clearCanvas = () => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
       ctx.fillRect(0, 0, rect.width, height);
-    };
-
-    const drawSpectrum = (data: Uint8Array) => {
-      const barWidth = (rect.width / data.length) * 2.5;
-      let x = 0;
-
-      for (let i = 0; i < data.length; i++) {
-        const barHeight = (data[i] / 255) * height * 0.8;
-        
-        // Dynamic color based on frequency
-        const hue = (i / data.length) * 360;
-        ctx.fillStyle = `hsla(${hue}, 70%, 50%, 0.3)`;
-        ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-
-        x += barWidth + 1;
-      }
     };
 
     const drawCycleProgress = (progress: number) => {
@@ -122,32 +106,24 @@ export function StrudelVisualizer({
       }
     };
 
-    const animate = () => {
+    const animate = async () => {
       clearCanvas();
 
       if (isActive) {
-        // 1. Draw Real-time Spectrum
-        const spectrumData = engine.getAnalyserData();
-        if (spectrumData) {
-          drawSpectrum(spectrumData);
-        }
-
-        // 2. Draw Cycle Progress
-        const progress = engine.getCycleProgress();
-        drawCycleProgress(progress);
-
-        // 3. Draw Active Haps
-        const haps = engine.getActiveHaps();
-        setHapCount(haps.length);
-        haps.forEach(drawHap);
+        const state = await getStrudelPlaybackState();
+        drawCycleProgress(state.cycleProgress);
+        setHapCount(state.haps.length);
+        state.haps.forEach(drawHap);
       } else {
         setHapCount(0);
       }
 
-      animationRef.current = requestAnimationFrame(animate);
+      animationRef.current = requestAnimationFrame(() => {
+        void animate();
+      });
     };
 
-    animate();
+    void animate();
 
     return () => {
       if (animationRef.current) {

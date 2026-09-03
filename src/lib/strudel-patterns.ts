@@ -123,7 +123,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Chord Progression I-V-vi-IV',
         vibe: 'emotional pop progression with pad sounds',
         code: `note("<c3 e3 g3 b3> <g3 b3 d4 f4> <a3 c4 e4 g4> <f3 a3 c4 e4>")
-  .s("gm_pad_sweep")
+  .s("sawtooth")
   .slow(4)
   .room(0.8)
   .gain(0.6)`,
@@ -134,7 +134,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Jazz Voicings',
         vibe: 'rich jazz chord voicings',
         code: `note("<[d3,f3,a3,c4] [g3,b3,d4,f4] [c3,e3,g3,b3]>")
-  .s("piano")
+  .s("triangle")
   .slow(2)
   .room(0.5)
   .gain(0.7)`,
@@ -191,7 +191,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'Evolving Pad',
         vibe: 'morphing chordal texture with movement',
         code: `note("<[c3,e3,g3] [a2,c3,e3] [f2,a2,c3] [g2,b2,d3]>")
-  .s("gm_pad_warm")
+  .s("sawtooth")
   .slow(8)
   .lpf("<300 500 800 600>")
   .room(0.85)
@@ -228,7 +228,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         vibe: 'downtempo with layers',
         code: `stack(
   s("bd ~ [bd ~] ~").gain(0.9),
-  note("<[e3,g3,b3] [d3,f3,a3] [c3,e3,g3]>").s("gm_pad_sweep").slow(4).room(0.8).gain(0.4),
+  note("<[e3,g3,b3] [d3,f3,a3] [c3,e3,g3]>").s("sawtooth").slow(4).room(0.8).gain(0.4),
   note("c4 d4 e4 g4").s("sine").slow(2).delay(0.4).gain(0.3)
 ).cpm(95)`,
         category: 'complex',
@@ -252,7 +252,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
         name: 'House Piano',
         vibe: 'classic house music piano riff',
         code: `note("[c3,e3,g3] [f3,a3,c4] [g3,b3,d4] [e3,g3,b3]")
-  .s("piano")
+  .s("triangle")
   .room(0.4)
   .gain(0.7)
   .fast(2)`,
@@ -278,7 +278,7 @@ export const STRUDEL_PATTERN_LIBRARY = [
   s("bd ~ [bd ~] ~").gain(0.8).crush(8),
   s("~ sd ~ ~").gain(0.6).crush(8),
   s("hh*8").gain(0.3).crush(8).lpf(4000),
-  note("<[f3,a3,c4] [d3,f3,a3] [bb2,d3,f3] [c3,e3,g3]>").s("piano").slow(4).room(0.5).crush(10).gain(0.4)
+  note("<[f3,a3,c4] [d3,f3,a3] [bb2,d3,f3] [c3,e3,g3]>").s("triangle").slow(4).room(0.5).crush(10).gain(0.4)
 ).cpm(85)`,
         category: 'complex',
         features: ['lo-fi', 'bitcrush', 'chill', 'hip hop'],
