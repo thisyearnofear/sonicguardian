@@ -9,15 +9,25 @@ import { useStarknetGuardian } from '@/hooks/use-starknet-guardian';
 import { generateStrudelCode } from '@/lib/ai-agent';
 import { extractSonicDNA } from '@/lib/dna';
 import { downloadFromIPFS } from '@/lib/ipfs';
-import { deriveKeyFromSignature, decryptData, isValidBtcAddress } from '@/lib/crypto';
+import { deriveKeyFromSignature, decryptData, isValidBtcAddress, getAcousticPublicKey, getPublicKeyFromSecret } from '@/lib/crypto';
 import { sessionManager, isRealAIEnabled } from '@/lib/storage';
-import Link from 'next/link';
+import { readGuardianOnChain } from '@/lib/sonic-chain';
+import {
+  derivePatternShare,
+  recoverFromShares,
+  recoverFromSharesByPubKey,
+  bytesToFelt,
+} from '@/lib/recovery-split';
+import { serializeShare } from '@/lib/shamir';
 
 export function VerifyRouteApp() {
   const [btcAddress, setBtcAddress] = useState('');
   const [recoveryVibe, setRecoveryVibe] = useState('');
   const [status, setStatus] = useState('');
   const [verifiedDnaHash, setVerifiedDnaHash] = useState('');
+  const [awaitingSecondFactor, setAwaitingSecondFactor] = useState(false);
+  const [decoupled, setDecoupled] = useState(false);
+  const [acousticSecret, setAcousticSecret] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [validationStates, setValidationStates] = useState<
     Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>
@@ -116,15 +126,102 @@ export function VerifyRouteApp() {
         finalDnaHash = dna.hash;
       }
 
-      setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
-      await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
-
-      setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
+      // Determine whether this guardian uses the decoupled (random) on-chain
+      // key or the legacy pattern-derived key — compare the pattern-derived
+      // key against the registered acoustic key.
+      setStatus('🔍 Reading on-chain guardian…');
+      const onChain = await readGuardianOnChain(btcAddress);
+      if (!onChain.registered) throw new Error('No guardian registered for this address');
+      const legacyKey = await getAcousticPublicKey(finalDnaHash);
+      const isDecoupled = BigInt(legacyKey) !== BigInt(onChain.acousticKey);
+      setDecoupled(isDecoupled);
       setVerifiedDnaHash(finalDnaHash);
-      sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, finalDnaHash);
+
+      if (!isDecoupled) {
+        // Legacy guardian: the pattern-derived key is registered on-chain.
+        setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
+        await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
+        setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
+        sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, finalDnaHash);
+      } else {
+        // Decoupled guardian: the on-chain key is a random secret — a pattern
+        // signature alone can never match it. Reconstruct the secret from two
+        // Shamir shares first: pattern + device share locally, else ask for
+        // the paper share (cross-device).
+        const secret = await tryLocalReconstruction(finalDnaHash, onChain.acousticKey);
+        if (secret) {
+          await finishAuthorization(finalDnaHash, secret);
+        } else {
+          setAwaitingSecondFactor(true);
+          setStatus(
+            'Second recovery factor required — no device share on this browser. Enter your paper share below.',
+          );
+        }
+      }
     } catch (error) {
       console.error(error);
       setStatus('❌ Verification Failed. Pattern mismatch or decryption error.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Try to reconstruct the decoupled acoustic secret locally from
+   * pattern share + device share. Authenticated by the stored digest when
+   * present and always cross-checked against the on-chain acoustic key.
+   * Returns the secret as a felt252 decimal, or null.
+   */
+  const tryLocalReconstruction = async (
+    dnaHash: string,
+    onChainAcousticKey: string,
+  ): Promise<string | null> => {
+    try {
+      const session = sessionManager.getCurrentSession();
+      if (!session?.deviceShare) return null;
+      const patternShare = serializeShare(await derivePatternShare(dnaHash, 32));
+      const secretBytes = session.secretDigest
+        ? await recoverFromShares([patternShare, session.deviceShare], session.secretDigest)
+        : await recoverFromSharesByPubKey(
+            [patternShare, session.deviceShare],
+            onChainAcousticKey,
+          );
+      if (!secretBytes) return null;
+      const felt = bytesToFelt(secretBytes);
+      // Always confirm the reconstruction controls the on-chain key —
+      // the digest authenticates bytes; the pubkey authenticates identity.
+      if (BigInt(getPublicKeyFromSecret(felt)) !== BigInt(onChainAcousticKey)) return null;
+      return felt;
+    } catch {
+      return null;
+    }
+  };
+
+  /** Complete verification: authorize on-chain with the reconstructed secret. */
+  const finishAuthorization = async (dnaHash: string, secret: string) => {
+    setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
+    await authorizeWithAcousticSignature(btcAddress, dnaHash, secret);
+    setAcousticSecret(secret);
+    setAwaitingSecondFactor(false);
+    setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
+    sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dnaHash);
+  };
+
+  /**
+   * Callback from AcousticFactorCard when a paper share reconstructs the
+   * secret on a device with no local share.
+   */
+  const handleAcousticSecretResolved = async (secret: string | null) => {
+    if (!secret || !verifiedDnaHash || !awaitingSecondFactor) {
+      setAcousticSecret(secret);
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      await finishAuthorization(verifiedDnaHash, secret);
+    } catch (error) {
+      console.error(error);
+      setStatus('❌ Authorization failed after share reconstruction.');
     } finally {
       setIsProcessing(false);
     }
@@ -153,6 +250,10 @@ export function VerifyRouteApp() {
           onVerify={handleRecovery}
           status={status || undefined}
           verifiedDnaHash={verifiedDnaHash || undefined}
+          awaitingSecondFactor={awaitingSecondFactor}
+          decoupled={decoupled}
+          acousticSecret={acousticSecret}
+          onAcousticSecret={(s) => void handleAcousticSecretResolved(s)}
         />
       </main>
     </div>

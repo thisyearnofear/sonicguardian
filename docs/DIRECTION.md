@@ -165,18 +165,29 @@ split (`splitSecretFromAnchor` in `shamir.ts`) constructs the line through
 recovery time. Note: with threshold 2 there is no fresh randomness — the same
 (secret, pattern) always yields the same device/paper shares.
 
-Recovery side: after pattern verification, `AcousticFactorCard` re-derives the
-pattern share from the verified DNA hash and reconstructs the acoustic secret
-with the device share, authenticated by the stored digest. Follow-ups:
-cross-device paper-share reconstruction (needs on-chain acoustic-key
-verification to authenticate without the local digest), an E2E test of the
-full loop, and the threat-model doc (all product-track M3).
+Recovery side: `VerifyRouteApp` reads the on-chain acoustic key and compares it
+against the pattern-derived key to route legacy vs decoupled guardians.
+Decoupled guardians must present a second factor BEFORE any on-chain
+authorization: locally, `AcousticFactorCard`/`use-acoustic-factor` re-derive
+the pattern share and reconstruct with the device share (digest-authenticated,
+pubkey cross-checked); cross-device, the paper-share input reconstructs
+pattern+paper and authenticates via `recoverFromSharesByPubKey` against
+`get_acoustic_key` — no local digest needed — then persists the share as this
+device's share. Authorization then signs with the reconstructed secret.
+
+Follow-ups completed (Sept 6, 2026): cross-device paper-share recovery,
+E2E coverage of mint→split→reconstruct→sign including all share pairs and
+negative cases (`scripts/test-recovery-e2e.mjs`, `test:unit` 27/27), and the
+M3 threat model (`docs/THREAT_MODEL.md`). Also fixed: the verify flow
+previously authorized with the legacy pattern-derived signature first, which
+would revert on-chain for decoupled guardians — reconstruction now precedes
+authorization.
 
 | # | Milestone | Done when | Status |
 |---|-----------|-----------|--------|
 | M1 | Human recall study designed & run (n=50, 1 week) | Error-distribution data published in `docs/` | 🟡 Protocol written + tooling shipped ([RECALL_STUDY.md](./RECALL_STUDY.md), `scripts/generate-study-materials.mjs`, `scripts/score-recall.mjs`); consent forms + recruitment next. **Research track — deprioritized** |
 | M2 | Fuzzy key derivation prototype | Near-recall (≤ tolerance errors) derives same key, no sketch leaks usable secret offline | ⬜ Blocked on M1 tolerance data. **Research track — an upgrade, not a gate** |
-| M3 | Shamir 2-of-3 recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 Split wired end-to-end **and key-decoupled**: random on-chain key, pattern = factor only (`scripts/test-key-decoupling.mjs`, 20/20 unit tests). Product track. Follow-ups: cross-device paper path, E2E test, threat-model doc |
+| M3 | Shamir 2-of-3 recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 **Complete pending M5 review**: key-decoupled split wired end-to-end, cross-device paper path shipped (on-chain pubkey auth), E2E coverage of all share pairs (`scripts/test-recovery-e2e.mjs`, 27/27 unit tests), threat model at [THREAT_MODEL.md](./THREAT_MODEL.md) |
 | M4 | Entropy budget documented & UX-enforced | Per-user entropy estimate shown at registration; < minimum blocked | 🟡 Estimator + warning banner shipped; re-scoped to *guidance, not gating* — the on-chain key is random, so pattern entropy no longer gates on-chain safety |
 | M5 | Adversarial review of M1–M4 | Written review incorporated | ⬜ Review M3's threat model first |
 

@@ -21,9 +21,11 @@ import {
   serializeShare,
   parseShare,
   splitSecretFromAnchor,
+  combineShares,
   combineSharesAndVerify,
 } from './shamir.ts';
 import type { Share } from './shamir.ts';
+import { getPublicKeyFromSecret } from './crypto.ts';
 
 const PATTERN_SHARE_X = 1;
 const DEVICE_SHARE_X = 2;
@@ -112,6 +114,30 @@ export async function recoverFromShares(
     const shares: Share[] = serializedShares.map(parseShare);
     if (shares.length < 2) return null;
     return await combineSharesAndVerify(shares, expectedDigest);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reconstruct the secret from any two serialized shares and authenticate it
+ * against the guardian's ON-CHAIN acoustic public key — used when the local
+ * secret digest is unavailable (cross-device recovery, e.g. pattern + paper
+ * share on a fresh browser). `expectedPubKey` accepts the felt252 form
+ * returned by `get_acoustic_key` (decimal or 0x-hex). Returns null on any
+ * mismatch, malformed share, or fewer than two shares.
+ */
+export async function recoverFromSharesByPubKey(
+  serializedShares: string[],
+  expectedPubKey: string,
+): Promise<Uint8Array | null> {
+  try {
+    const shares: Share[] = serializedShares.map(parseShare);
+    if (shares.length < 2) return null;
+    const secret = combineShares(shares);
+    const derived = getPublicKeyFromSecret(bytesToFelt(secret));
+    if (BigInt(derived) !== BigInt(expectedPubKey)) return null;
+    return secret;
   } catch {
     return null;
   }

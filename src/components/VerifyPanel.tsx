@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
 import { isValidBtcAddress } from '@/lib/crypto';
 import { StatusBanner } from './StatusBanner';
@@ -33,6 +32,13 @@ export interface VerifyPanelProps {
   onVerify: () => void;
   status?: string;
   verifiedDnaHash?: string;
+  /** Decoupled guardian: pattern accepted, a second share is needed before authorization */
+  awaitingSecondFactor?: boolean;
+  /** Whether the guardian uses the decoupled (random) on-chain key */
+  decoupled?: boolean;
+  /** Reconstructed acoustic secret, if resolved via the factor card */
+  acousticSecret?: string | null;
+  onAcousticSecret?: (secret: string | null) => void;
 }
 
 export function VerifyPanel({
@@ -45,11 +51,43 @@ export function VerifyPanel({
   onVerify,
   status,
   verifiedDnaHash,
+  awaitingSecondFactor,
+  decoupled,
+  acousticSecret,
+  onAcousticSecret,
 }: VerifyPanelProps) {
   const recoveryValidation = validationStates.get('recovery-phrase');
   const btcValidation = validationStates.get('btc-address');
   const verified = status?.includes('Verified') ?? false;
-  const [acousticSecret, setAcousticSecret] = React.useState<string | null>(null);
+
+  if (verifiedDnaHash && awaitingSecondFactor && !verified) {
+    return (
+      <div className="glass rounded-[var(--border-radius)] p-4 sm:p-8 w-full max-w-2xl mx-auto space-y-6">
+        <FlowState
+          variant="empty"
+          icon="🧩"
+          title="Second factor required"
+          description="This identity uses decoupled recovery — authorization takes any two of {pattern, device share, paper share}. This device holds no share, so enter your paper share to continue."
+        />
+        {status && <StatusBanner message={status} />}
+        <AcousticFactorCard
+          dnaHash={verifiedDnaHash}
+          btcAddress={btcAddress}
+          onResolved={onAcousticSecret}
+        />
+        <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
+          <Link
+            href="/"
+            prefetch
+            className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors block"
+            data-testid="nav-to-mint"
+          >
+            ← Back to minting
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (verified) {
     return (
@@ -68,8 +106,12 @@ export function VerifyPanel({
             acousticSecret={acousticSecret}
           />
         )}
-        {verifiedDnaHash && (
-          <AcousticFactorCard dnaHash={verifiedDnaHash} onResolved={setAcousticSecret} />
+        {verifiedDnaHash && decoupled && !acousticSecret && (
+          <AcousticFactorCard
+            dnaHash={verifiedDnaHash}
+            btcAddress={btcAddress}
+            onResolved={onAcousticSecret}
+          />
         )}
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center space-y-1">
           <Link
