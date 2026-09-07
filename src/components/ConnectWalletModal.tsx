@@ -140,7 +140,7 @@ export function ConnectWalletModal({ isOpen, onClose }: ConnectWalletModalProps)
 
               <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
                 <span className="font-bold text-white/90">Starknet</span> signs your on-chain commitment.
-                For the <span className="font-bold text-white/90">Bitcoin address</span> field in the mint form, paste an address, use Demo mode, or connect{' '}
+                For the <span className="font-bold text-white/90">Bitcoin address</span> on Create, paste an address, use the demo address, or connect{' '}
                 <span className="font-bold text-white/90">Xverse</span> / <span className="font-bold text-white/90">Leather</span> separately.
               </p>
 

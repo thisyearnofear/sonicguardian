@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { isValidBtcAddress } from '@/lib/crypto';
 import { StatusBanner } from './StatusBanner';
 import { FlowState } from './FlowState';
-import dynamic from 'next/dynamic';
+import { RecoveryFactors } from './RecoveryFactors';
 import { PromotedShareNotice } from './PromotedShareNotice';
+import dynamic from 'next/dynamic';
 
 const PrivateRecoveryPanel = dynamic(
   () => import('./PrivateRecoveryPanel').then((m) => m.PrivateRecoveryPanel),
@@ -33,11 +34,8 @@ export interface VerifyPanelProps {
   onVerify: () => void;
   status?: string;
   verifiedDnaHash?: string;
-  /** Decoupled guardian: pattern accepted, a second share is needed before authorization */
   awaitingSecondFactor?: boolean;
-  /** Whether the guardian uses the decoupled (random) on-chain key */
   decoupled?: boolean;
-  /** Reconstructed acoustic secret, if resolved via the factor card */
   acousticSecret?: string | null;
   onAcousticSecret?: (secret: string | null) => void;
 }
@@ -66,18 +64,17 @@ export function VerifyPanel({
       <div className="glass rounded-[var(--border-radius)] p-4 sm:p-8 w-full max-w-2xl mx-auto space-y-6">
         <FlowState
           variant="empty"
-          icon="🧩"
-          title="Second factor required"
-          description="This identity uses decoupled recovery — authorization takes any two of {pattern, device share, paper share}. This device holds no share, so enter your paper share to continue."
+          icon="♩"
+          title="One more key"
+          description="You remembered the music. This phone doesn’t have a saved copy, so enter the paper backup you wrote down."
         />
+        <RecoveryFactors pattern="ready" device="missing" paper="needed" />
         {status && <StatusBanner message={status} />}
         <AcousticFactorCard
           dnaHash={verifiedDnaHash}
           btcAddress={btcAddress}
           onResolved={onAcousticSecret}
         />
-        {/* R5: shown here too — a previously promoted share should be
-            visible whenever the user is back in the second-factor flow. */}
         <PromotedShareNotice />
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
           <Link
@@ -86,7 +83,7 @@ export function VerifyPanel({
             className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors block"
             data-testid="nav-to-mint"
           >
-            ← Back to minting
+            ← Back to create
           </Link>
         </div>
       </div>
@@ -98,21 +95,30 @@ export function VerifyPanel({
       <div className="glass rounded-[var(--border-radius)] p-4 sm:p-8 w-full max-w-2xl mx-auto space-y-6">
         <FlowState
           variant="success"
-          icon="✅"
-          title="Authorship verified"
-          description="Your zero-knowledge proof matched the on-chain acoustic public key. Your pattern was never revealed."
+          icon="♩"
+          title="You’re back"
+          description="Recovery matched. Your pattern was never revealed on-chain."
+        />
+        <RecoveryFactors
+          pattern="ready"
+          device={acousticSecret || !decoupled ? 'ready' : 'pending'}
+          paper={acousticSecret && decoupled ? 'ready' : 'pending'}
         />
         {status && <StatusBanner message={status} />}
-        {/* R5: the disclosure must survive the success state — the paper
-            share was just promoted to this device, which is exactly when
-            the user needs to know it is no longer offline-only. */}
         <PromotedShareNotice />
         {verifiedDnaHash && btcAddress && (
-          <PrivateRecoveryPanel
-            btcAddress={btcAddress}
-            dnaHash={verifiedDnaHash}
-            acousticSecret={acousticSecret}
-          />
+          <details className="rounded-xl border border-[color:var(--color-border)]">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
+              Authorize privately (optional)
+            </summary>
+            <div className="px-4 pb-4">
+              <PrivateRecoveryPanel
+                btcAddress={btcAddress}
+                dnaHash={verifiedDnaHash}
+                acousticSecret={acousticSecret}
+              />
+            </div>
+          </details>
         )}
         {verifiedDnaHash && decoupled && !acousticSecret && (
           <AcousticFactorCard
@@ -121,21 +127,15 @@ export function VerifyPanel({
             onResolved={onAcousticSecret}
           />
         )}
-        <div className="pt-2 border-t border-[color:var(--color-border)] text-center space-y-1">
+        <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
           <Link
             href="/"
             prefetch
             className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors block"
             data-testid="nav-to-mint"
           >
-            ← Back to minting
+            ← Back to create
           </Link>
-          <p className="text-xs text-[color:var(--color-muted)]">
-            Haven't created an identity yet?{' '}
-            <Link href="/" prefetch className="text-[color:var(--color-primary)] hover:underline">
-              Create your first Sonic Guardian
-            </Link>
-          </p>
         </div>
       </div>
     );
@@ -145,46 +145,36 @@ export function VerifyPanel({
     <div className="glass rounded-[var(--border-radius)] p-4 sm:p-8 w-full max-w-2xl mx-auto space-y-6">
       <div>
         <h2 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="verify-panel-title">
-          Prove it&apos;s you
+          Recover with what you have
         </h2>
         <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
-          Replay your secret to generate a zero-knowledge proof. The contract checks your signature — not your pattern.
+          Paste the phrases you remembered. Any two keys — the music, this device, or paper — are enough.
         </p>
       </div>
 
-      <div className="p-4 rounded-xl bg-[color:var(--color-primary)]/5 border border-[color:var(--color-primary)]/15">
-        <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-          <strong className="text-[color:var(--color-foreground)]">No audio needed.</strong>{' '}
-          Paste the musical chunks you saved at mint time, your vibe phrase, or an IPFS backup CID.
-        </p>
-      </div>
+      <RecoveryFactors
+        pattern={recoveryVibe.trim() ? 'ready' : 'needed'}
+        device="pending"
+        paper="pending"
+      />
 
       <div>
         <label htmlFor="recovery-secret" className="field-label">
-          Your recovery secret
+          The phrases you remember
         </label>
-        {!recoveryVibe.trim() && !btcAddress.trim() ? (
-          <FlowState
-            variant="empty"
-            icon="🔑"
-            title="Enter what you saved at mint time"
-            description="Paste your musical recovery chunks, vibe phrase, or IPFS backup CID below."
-            className="mb-4 py-4"
-          />
-        ) : null}
         <input
           id="recovery-secret"
           type="text"
           value={recoveryVibe}
           onChange={(e) => setRecoveryVibe(e.target.value)}
-          placeholder="sawtooth c2 · sine c4 · … or Qm…"
+          placeholder="sawtooth c2 · sine c4 · …"
           className="input-mobile"
           disabled={isProcessing}
           autoComplete="off"
         />
-        {recoveryValidation && (
+        {recoveryVibe.trim() && recoveryValidation && (
           <p
-            className={`text-xs mt-1.5 ${
+            className={`text-sm mt-1.5 ${
               recoveryValidation.type === 'error'
                 ? 'text-[color:var(--color-error)]'
                 : recoveryValidation.type === 'success'
@@ -213,9 +203,9 @@ export function VerifyPanel({
           autoCapitalize="off"
           spellCheck={false}
         />
-        {btcValidation && (
+        {btcAddress.trim() && btcValidation && (
           <p
-            className={`text-xs mt-1.5 ${
+            className={`text-sm mt-1.5 ${
               btcValidation.type === 'error' ? 'text-[color:var(--color-error)]' : 'text-[color:var(--color-muted)]'
             }`}
           >
@@ -230,9 +220,9 @@ export function VerifyPanel({
         type="button"
         onClick={onVerify}
         disabled={isProcessing || !recoveryVibe.trim() || !btcAddress.trim() || !isValidBtcAddress(btcAddress)}
-        className={`btn-primary py-4 text-sm ${verified ? 'opacity-60' : ''}`}
+        className="btn-primary py-4 text-sm"
       >
-        {isProcessing ? 'Verifying…' : verified ? 'Verified' : 'Verify authorship'}
+        {isProcessing ? 'Checking…' : 'Recover'}
         {isProcessing && (
           <span className="w-4 h-4 border-2 border-[color:var(--background)] border-t-transparent rounded-full animate-spin" />
         )}
@@ -245,7 +235,7 @@ export function VerifyPanel({
           className="text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] transition-colors"
           data-testid="nav-to-mint"
         >
-          ← Back to minting
+          ← Back to create
         </Link>
       </div>
     </div>

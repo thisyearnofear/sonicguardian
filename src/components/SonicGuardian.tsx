@@ -32,8 +32,8 @@ import {
 } from '@/lib/entropy-encoder';
 import dynamic from 'next/dynamic';
 import { MintWizard, type SecretMode } from './MintWizard';
-import { VisualizerPanel } from './VisualizerPanel';
 import { InferenceExplainer, INFERENCE_STEPS } from './InferenceExplainer';
+import { RecoveryFactors } from './RecoveryFactors';
 import { PageHero } from './PageHero';
 import { StatusBanner } from './StatusBanner';
 import { PaperShareCard } from './PaperShareCard';
@@ -68,7 +68,6 @@ export default function SonicGuardian() {
   const [secretMode, setSecretMode] = useState<SecretMode>('random');
   const [selectedLibraryPattern, setSelectedLibraryPattern] = useState<string | null>(null);
   const [showExplanations, setShowExplanations] = useState(false);
-  const [showVisualizer, setShowVisualizer] = useState(false);
   const [judgeDemoPending, setJudgeDemoPending] = useState(false);
   
   // Inference Explainer State
@@ -89,6 +88,7 @@ export default function SonicGuardian() {
   const [isCommiting, setIsCommiting] = useState(false);
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
   const [paperShare, setPaperShare] = useState<string | null>(null);
+  const [paperShareSaved, setPaperShareSaved] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   
   // Decentralized Backup State
@@ -158,7 +158,7 @@ export default function SonicGuardian() {
 
   const handleGenerate = useCallback(async () => {
     setIsProcessing(true);
-    setStatus('Generating your sonic identity...');
+    setStatus('Composing your secret…');
 
     try {
       let code: string;
@@ -259,7 +259,7 @@ export default function SonicGuardian() {
     setSelectedLibraryPattern(null);
     setWizardStep(3);
     setJudgeDemoPending(true);
-    setStatus('Judge demo — generating random identity with demo BTC address…');
+    setStatus('Demo — generating a random secret with the demo Bitcoin address…');
   }, []);
 
   const extractDnaFromCode = useCallback(async (newCode: string) => {
@@ -295,7 +295,7 @@ export default function SonicGuardian() {
 
     setIsCommiting(true);
     setOnChainStatus('pending');
-    setStatus('🔒 Committing Sonic Identity to Starknet (Pedersen Commitment)...');
+      setStatus('Locking recovery on-chain…');
 
     try {
       // Key decoupling: the secret whose public key is registered on-chain is a
@@ -305,7 +305,7 @@ export default function SonicGuardian() {
       await registerGuardian(btcAddress, dnaHash, blinding, acousticSecret);
       sessionManager.updateSession({ btcAddress });
       setOnChainStatus('success');
-      setStatus('✅ Sonic Identity Anchored! Your pattern is now committed on-chain.');
+      setStatus('Recovery locked. Write down the paper key — it is shown only once.');
 
       // M3 recovery split: split the random acoustic secret 2-of-3 —
       // share 1 = pattern (recomputed from DNA hash at recovery, never stored),
@@ -322,7 +322,7 @@ export default function SonicGuardian() {
       } catch (splitError) {
         console.error('Recovery split failed:', splitError);
         setStatus(
-          '⚠️ Identity anchored, but the recovery split failed — your guardian was created without backup shares.',
+          'Recovery locked, but the paper key could not be created. This device plus the music can still recover you.',
         );
       }
     } catch (error) {
@@ -336,7 +336,7 @@ export default function SonicGuardian() {
 
   const handleDecentralizedBackup = useCallback(async () => {
     if (!generatedCode || !blinding || !btcAddress) {
-      setStatus('⚠️ Please mint a sonic identity first.');
+      setStatus('Create a recovery first.');
       return;
     }
 
@@ -413,7 +413,7 @@ export default function SonicGuardian() {
     setSecretMode('library');
     setSelectedLibraryPattern(name);
     setWizardStep(1);
-    setStatus(`Pattern "${name}" selected — complete the wizard to mint.`);
+    setStatus(`Pattern "${name}" selected — finish the steps to lock it in.`);
   }, []);
 
   const visualizerTheme = currentTheme === 'dark' ? 'dark' : 'light';
@@ -422,14 +422,14 @@ export default function SonicGuardian() {
     <div className="relative min-h-dvh bg-[color:var(--background)] selection:bg-[color:var(--color-primary)] selection:text-white pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-20 pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <Header />
       <div className="noise" />
-      <div className="bg-gradient-mesh" />
+      <div className="bg-sonic-wash" />
 
-      <main className="relative z-10 container mx-auto px-4 sm:px-6 py-4 sm:py-10 flex flex-col items-center">
+      <main id="main-content" className="relative z-10 container mx-auto px-4 sm:px-6 py-4 sm:py-10 flex flex-col items-center">
         <PageHero
           compact={hasVisited}
-          badge={hasVisited ? undefined : 'Privacy-first · Starknet'}
+          badge={hasVisited ? undefined : 'Musical recovery'}
           title="Sonic Guardian"
-          subtitle="Replace your seed phrase with a musical secret. Prove it's yours — years later — without anyone knowing what the music was."
+          subtitle="Replace your seed phrase with a musical secret. Remember the music. Keep one paper backup. Recover years later without revealing the pattern."
           onHelp={() => setShowHelp(true)}
           actions={
             <JudgeDemoButton
@@ -441,10 +441,6 @@ export default function SonicGuardian() {
         />
 
         <div className="w-full max-w-6xl grid grid-cols-1 gap-8 items-start">
-          {showVisualizer && (
-            <VisualizerPanel theme={visualizerTheme} dnaSequence={dna?.dna} />
-          )}
-
           <div className="w-full" ref={formContainerRef}>
             <MintWizard
               wizardStep={wizardStep}
@@ -475,13 +471,14 @@ export default function SonicGuardian() {
               onDecentralizedBackup={handleDecentralizedBackup}
               isBackingUp={isBackingUp}
               backupCid={backupCid}
+              paperShareSaved={paperShareSaved}
+              paperSharePending={!!paperShare}
+              dnaSequence={dna?.dna}
+              visualizerTheme={visualizerTheme}
             />
             {(status || showExplainer) && (
               <div className="max-w-2xl mx-auto mt-4 space-y-3">
                 {status && <StatusBanner message={status} />}
-                {paperShare && (
-                  <PaperShareCard share={paperShare} onClose={() => setPaperShare(null)} />
-                )}
                 <InferenceExplainer isVisible={showExplainer} currentStep={inferenceStep} />
               </div>
             )}
@@ -489,7 +486,7 @@ export default function SonicGuardian() {
             <details className="max-w-2xl mx-auto mt-8 group">
               <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] flex items-center gap-2">
                 <span className="group-open:rotate-90 transition-transform text-xs">▶</span>
-                Explore Strudel patterns
+                Explore more patterns
               </summary>
               <div className="mt-4">
                 <StrudelLabs onPatternSelect={handlePatternSelect} />
@@ -499,15 +496,8 @@ export default function SonicGuardian() {
             <div className="max-w-2xl mx-auto mt-6 flex flex-wrap justify-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowVisualizer(!showVisualizer)}
-                className="text-xs px-3 py-1.5 rounded-full border border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-              >
-                {showVisualizer ? 'Hide visualizer' : 'Show visualizer'}
-              </button>
-              <button
-                type="button"
                 onClick={() => setShowExplanations(!showExplanations)}
-                className="text-xs px-3 py-1.5 rounded-full border border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+                className="text-sm px-3 py-2 rounded-full border border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
               >
                 {showExplanations ? 'Hide how it works' : 'How it works'}
               </button>
@@ -516,79 +506,55 @@ export default function SonicGuardian() {
         </div>
 
         {/* AI toggle — compact */}
-        <div
-          className="fixed z-40 right-4 pointer-events-none"
-          style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              const enabled = !isRealAIEnabled();
-              setRealAIEnabled(enabled);
-              setUseRealAI(enabled);
-            }}
-            className={`pointer-events-auto px-3 py-2 rounded-full flex items-center gap-2 text-xs font-medium border transition-all active:scale-95 ${
-              useRealAI
-                ? 'border-[color:var(--color-success)]/40 text-[color:var(--color-success)] bg-[color:var(--color-success)]/10'
-                : 'border-[color:var(--color-border)] text-[color:var(--color-muted)] bg-[color:var(--background)]/90 backdrop-blur-sm'
-            }`}
-            aria-label={useRealAI ? 'AI enabled' : 'AI disabled'}
+        {secretMode === 'vibe' && (
+          <div
+            className="fixed z-40 right-4 pointer-events-none"
+            style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${useRealAI ? 'bg-[color:var(--color-success)] animate-pulse' : 'bg-[color:var(--color-muted)]'}`} />
-            AI {useRealAI ? 'on' : 'off'}
-          </button>
-        </div>
-
-        {showExplanations && (
-        <section className="mt-12 w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 px-2">
-          <div className="p-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-foreground)]/[0.02]">
-            <p className="text-xs font-semibold text-[color:var(--color-primary)] mb-2">1 · Choose a secret</p>
-            <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Random chunks, a curated pattern, or an AI vibe — your recovery factor stays in the browser.
-            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const enabled = !isRealAIEnabled();
+                setRealAIEnabled(enabled);
+                setUseRealAI(enabled);
+              }}
+              className={`pointer-events-auto px-3 py-2 rounded-full flex items-center gap-2 text-xs font-medium border transition-all active:scale-95 ${
+                useRealAI
+                  ? 'border-[color:var(--color-success)]/40 text-[color:var(--color-success)] bg-[color:var(--color-success)]/10'
+                  : 'border-[color:var(--color-border)] text-[color:var(--color-muted)] bg-[color:var(--background)]/90 backdrop-blur-sm'
+              }`}
+              aria-label={useRealAI ? 'AI enabled' : 'AI disabled'}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${useRealAI ? 'bg-[color:var(--color-success)] animate-pulse' : 'bg-[color:var(--color-muted)]'}`} />
+              AI {useRealAI ? 'on' : 'off'}
+            </button>
           </div>
-          <div className="p-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-foreground)]/[0.02]">
-            <p className="text-xs font-semibold text-[color:var(--color-accent)] mb-2">2 · Zero-knowledge proof</p>
-            <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Prove authorship with an acoustic signature. The contract checks your proof — not your pattern.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-foreground)]/[0.02]">
-            <p className="text-xs font-semibold text-[color:var(--color-success)] mb-2">3 · Starknet anchor</p>
-            <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">
-              Only a Pedersen commitment and public key land on-chain. Audio preview is optional.
-            </p>
-          </div>
-        </section>
         )}
 
-        {/* Cross-chain + STRK20 */}
-        <section className="mt-16 w-full max-w-4xl border-t border-[color:var(--color-border)] pt-12">
-          <div className="text-center mb-8">
-            <div className="inline-block px-3 py-1 rounded-full bg-[color:var(--color-accent)]/10 border border-[color:var(--color-accent)]/30 text-[color:var(--color-accent)] text-[10px] font-bold tracking-widest uppercase mb-4">
-              STRK20 Private Sprint
-            </div>
-            <h2 className="text-xl font-bold tracking-tight mb-2">Private registration bonds</h2>
-            <p className="text-[color:var(--color-muted)] text-xs max-w-xl mx-auto">
-              Shield an optional STRK stake in the STRK20 pool before anchoring your sonic identity.
-              See <code className="text-[10px]">docs/HACKATHON.md</code> for the judge demo path.
-            </p>
-          </div>
-          <div className="opacity-60 text-center">
-            <p className="text-[color:var(--color-muted)] text-[10px] uppercase tracking-widest">
-              Cross-chain storage proofs — roadmap
-            </p>
-          </div>
-        </section>
+        {showExplanations && (
+          <section className="mt-12 w-full max-w-2xl px-2 space-y-3">
+            <p className="text-sm font-semibold text-center">Three keys. Any two recover you.</p>
+            <RecoveryFactors pattern="pending" device="pending" paper="pending" />
+          </section>
+        )}
       </main>
 
-      <footer className="relative z-10 py-12 mt-12 border-t border-[color:var(--color-border)] text-center">
-        <p className="text-[color:var(--color-muted)] text-[10px] font-bold uppercase tracking-[0.5em]">
-          Evolved from the Sound of Data • © 2026 Sonic Guardian
+      <footer className="relative z-10 py-10 mt-10 border-t border-[color:var(--color-border)] text-center">
+        <p className="text-sm text-[color:var(--color-muted)]">
+          Sonic Guardian · musical recovery · 2026
         </p>
       </footer>
 
-      {/* Help Modal */}
+      {paperShare && (
+        <PaperShareCard
+          share={paperShare}
+          onClose={() => {
+            setPaperShare(null);
+            setPaperShareSaved(true);
+          }}
+        />
+      )}
+
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );

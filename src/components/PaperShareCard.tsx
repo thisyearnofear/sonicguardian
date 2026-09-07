@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 interface PaperShareCardProps {
   share: string;
@@ -8,13 +8,24 @@ interface PaperShareCardProps {
 }
 
 /**
- * One-time display of the PAPER share (x=3) of the 2-of-3 recovery split.
- * This share is intentionally NOT persisted by the app — the user must copy
- * it (or download the file) and store it offline. Losing it still leaves
- * pattern+device recovery; keeping it adds a third independent factor.
+ * Blocking one-time display of the PAPER share (x=3) of the 2-of-3 split.
+ * The share is not persisted — dismiss only after the user acknowledges
+ * they wrote it down.
  */
 export function PaperShareCard({ share, onClose }: PaperShareCardProps) {
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const headingId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   const handleCopy = async () => {
     try {
@@ -22,68 +33,93 @@ export function PaperShareCard({ share, onClose }: PaperShareCardProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // clipboard unavailable (e.g. insecure context) — user can select manually
+      // clipboard unavailable — user can select the share manually
     }
   };
 
   const handleDownload = () => {
     const blob = new Blob(
       [
-        'Sonic Guardian recovery paper share (SGS1, Shamir 2-of-3, index 3)\n',
+        'Sonic Guardian paper backup (any two of: the music, this device, this paper)\n',
         `Created: ${new Date().toISOString()}\n\n`,
         share,
-        '\n\nStore this offline. Any two of {pattern, device share, paper share} reconstruct your acoustic secret.\n',
+        '\n\nStore this offline. Do not photograph it in cloud backup.\n',
       ],
       { type: 'text/plain' },
     );
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sonic-guardian-paper-share.txt';
+    a.download = 'sonic-guardian-paper-backup.txt';
     a.click();
     URL.revokeObjectURL(url);
+    setDownloaded(true);
   };
 
+  const canDismiss = acknowledged && (copied || downloaded);
+
   return (
-    <div
-      role="alert"
-      data-testid="paper-share-card"
-      className="max-w-2xl mx-auto mt-4 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 space-y-3"
-    >
-      <p className="text-sm font-semibold">
-        📄 Your paper recovery share — shown only once
-      </p>
-      <p className="text-xs text-[color:var(--color-muted)]">
-        Your acoustic secret is now split 2-of-3: your <strong>memorized pattern</strong> (share 1,
-        never stored), this <strong>paper share</strong> (3), and a device share (2, saved in this
-        browser). Any two reconstruct your secret. Store this paper share somewhere offline —
-        writing it down is fine.
-      </p>
-      <code className="block text-xs break-all rounded bg-black/20 p-2 font-mono select-all">
-        {share}
-      </code>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="text-xs px-3 py-1.5 rounded border border-[color:var(--color-border)] hover:bg-black/10"
+    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        data-testid="paper-share-card"
+        className="relative w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--background)] p-5 sm:p-6 space-y-4 shadow-2xl"
+      >
+        <p
+          id={headingId}
+          className="text-lg font-bold tracking-tight"
         >
-          {copied ? '✓ Copied' : 'Copy share'}
-        </button>
+          Write this down — shown once
+        </p>
+        <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">
+          This is the paper key. Together with the music you remember, it can recover
+          you on a new phone. The app will not show it again.
+        </p>
+        <code className="block text-sm break-all rounded-xl bg-[color:var(--color-foreground)]/6 border border-[color:var(--color-border)] p-3 font-mono select-all leading-relaxed">
+          {share}
+        </code>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            className="flex-1 min-h-11 px-3 rounded-xl border border-[color:var(--color-border)] text-sm font-semibold hover:border-[color:var(--color-primary)]/40"
+          >
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="flex-1 min-h-11 px-3 rounded-xl border border-[color:var(--color-border)] text-sm font-semibold hover:border-[color:var(--color-primary)]/40"
+          >
+            {downloaded ? 'Downloaded' : 'Download .txt'}
+          </button>
+        </div>
+        <label className="flex items-start gap-3 text-sm leading-snug cursor-pointer">
+          <input
+            type="checkbox"
+            checked={acknowledged}
+            onChange={(e) => setAcknowledged(e.target.checked)}
+            className="mt-1 h-4 w-4 accent-[color:var(--color-primary)]"
+          />
+          <span>I wrote this down and stored it offline — not in a screenshot or cloud notes.</span>
+        </label>
+        {!canDismiss && acknowledged && (
+          <p className="text-xs text-[color:var(--color-muted)]">
+            Copy or download first so you have a copy outside this screen.
+          </p>
+        )}
         <button
-          type="button"
-          onClick={handleDownload}
-          className="text-xs px-3 py-1.5 rounded border border-[color:var(--color-border)] hover:bg-black/10"
-        >
-          Download as .txt
-        </button>
-        <button
+          ref={closeRef}
           type="button"
           onClick={onClose}
+          disabled={!canDismiss}
           data-testid="paper-share-dismiss"
-          className="text-xs px-3 py-1.5 rounded border border-transparent text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+          className="btn-primary py-3.5 disabled:opacity-40"
         >
-          I&apos;ve saved it — dismiss
+          I have the paper copy
         </button>
       </div>
     </div>

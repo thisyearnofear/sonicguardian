@@ -13,7 +13,7 @@ export function JudgeDemoButton({ onRun, disabled, loading }: JudgeDemoButtonPro
       onClick={onRun}
       disabled={disabled || loading}
       data-testid="judge-demo-button"
-      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border border-[color:var(--color-accent)]/40 text-[color:var(--color-accent)] bg-[color:var(--color-accent)]/10 hover:bg-[color:var(--color-accent)]/15 disabled:opacity-50 transition-colors"
+      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border border-[color:var(--color-border)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-50 transition-colors"
     >
       {loading ? (
         <>
@@ -21,7 +21,7 @@ export function JudgeDemoButton({ onRun, disabled, loading }: JudgeDemoButtonPro
           Preparing demo…
         </>
       ) : (
-        <>⚡ Run judge demo</>
+        <>Skip to demo</>
       )}
     </button>
   );

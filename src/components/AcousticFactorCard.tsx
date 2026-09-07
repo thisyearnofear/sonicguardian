@@ -11,19 +11,6 @@ interface AcousticFactorCardProps {
   onResolved?: (acousticSecret: string | null) => void;
 }
 
-/**
- * Recovery-side half of the M3 ceremony: the user has replayed their pattern
- * (this card only renders once the DNA hash is verified), so the PATTERN
- * share can be re-derived. Combined with the DEVICE share persisted at mint
- * time, the random acoustic secret is reconstructed — digest-authenticated —
- * without ever having been stored whole, and without the on-chain key being
- * derivable from the pattern alone (key decoupling).
- *
- * Cross-device: when this browser holds no device share, the user can paste
- * their PAPER share (x=3). Pattern + paper reconstructs the secret, which is
- * authenticated against the guardian's on-chain acoustic public key — no
- * local digest required.
- */
 export function AcousticFactorCard({ dnaHash, btcAddress, onResolved }: AcousticFactorCardProps) {
   const { state, acousticSecret, paperBusy, submitPaperShare } = useAcousticFactor(
     dnaHash,
@@ -31,7 +18,6 @@ export function AcousticFactorCard({ dnaHash, btcAddress, onResolved }: Acoustic
   );
   const [paperInput, setPaperInput] = useState('');
 
-  // Report resolution upward once the secret is available
   useEffect(() => {
     if (acousticSecret) onResolved?.(acousticSecret);
   }, [acousticSecret, onResolved]);
@@ -44,41 +30,41 @@ export function AcousticFactorCard({ dnaHash, btcAddress, onResolved }: Acoustic
       className="rounded-xl border border-[color:var(--color-border)] p-4 space-y-2"
       data-testid="acoustic-factor-card"
     >
-      <p className="text-sm font-semibold">Acoustic recovery factor</p>
+      <p className="text-sm font-semibold">Paper backup</p>
       {state === 'checking' && (
-        <p className="text-xs text-[color:var(--color-muted)]">Reconstructing acoustic secret from pattern + device shares…</p>
+        <p className="text-sm text-[color:var(--color-muted)]">Checking this device for a saved key…</p>
       )}
       {state === 'available' && (
-        <p className="text-xs text-[color:var(--color-success)]" data-testid="acoustic-factor-success">
-          ✓ Acoustic secret reconstructed (2-of-3) and verified against the on-chain key.
+        <p className="text-sm text-[color:var(--color-success)]" data-testid="acoustic-factor-success">
+          Two keys matched. Recovery can continue.
         </p>
       )}
       {state === 'awaiting-paper' && (
-        <p className="text-xs text-[color:var(--color-muted)]">
-          No device share found in this browser. Paste your paper share (starts with{' '}
-          <code className="text-[10px]">SGS1:3:</code>) to recover on this device.
+        <p className="text-sm text-[color:var(--color-muted)]">
+          No key is saved in this browser. Paste the paper backup you wrote down (it starts with{' '}
+          <code className="text-xs">SGS1:3:</code>).
         </p>
       )}
       {state === 'missing' && (
-        <p className="text-xs text-[color:var(--color-muted)]">
-          No device share found in this browser. Open recovery on the device where you minted.
+        <p className="text-sm text-[color:var(--color-muted)]">
+          No key on this phone. Open recovery on the device you used to create it, or paste the paper backup.
         </p>
       )}
       {state === 'unavailable' && (
-        <p className="text-xs text-[color:var(--color-muted)]">
-          No local session found — device share unavailable on this device.
+        <p className="text-sm text-[color:var(--color-muted)]">
+          This browser has no saved key. Use the paper backup to continue.
         </p>
       )}
       {state === 'failed' && (
-        <p className="text-xs text-[color:var(--color-error)]" data-testid="acoustic-factor-failed">
-          Reconstruction failed — shares don&apos;t match this identity. Check the paper share and pattern.
+        <p className="text-sm text-[color:var(--color-error)]" data-testid="acoustic-factor-failed">
+          Those keys don’t match this recovery. Check the paper backup and the phrases you entered.
         </p>
       )}
 
       {showPaperInput && (
         <div className="pt-2 space-y-2">
           <label htmlFor="paper-share-input" className="field-label">
-            Paper share
+            Paper backup
           </label>
           <input
             id="paper-share-input"
@@ -86,7 +72,7 @@ export function AcousticFactorCard({ dnaHash, btcAddress, onResolved }: Acoustic
             value={paperInput}
             onChange={(e) => setPaperInput(e.target.value)}
             placeholder="SGS1:3:…"
-            className="input-mobile font-mono text-xs"
+            className="input-mobile font-mono text-sm"
             disabled={paperBusy}
             autoComplete="off"
             autoCapitalize="off"
@@ -97,10 +83,10 @@ export function AcousticFactorCard({ dnaHash, btcAddress, onResolved }: Acoustic
             type="button"
             disabled={paperBusy || !paperInput.trim()}
             onClick={() => void submitPaperShare(paperInput)}
-            className="w-full py-2.5 rounded-lg bg-[color:var(--color-primary)] text-white text-xs font-semibold disabled:opacity-50"
+            className="btn-primary py-3 text-sm"
             data-testid="paper-share-submit"
           >
-            {paperBusy ? 'Verifying on-chain…' : 'Recover with paper share'}
+            {paperBusy ? 'Checking…' : 'Use paper backup'}
           </button>
         </div>
       )}

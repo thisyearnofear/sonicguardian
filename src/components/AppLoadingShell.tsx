@@ -2,7 +2,7 @@
  * Prerenderable instant loading shells for Cache Components / Partial Prefetching.
  */
 
-type ShellVariant = 'mint' | 'verify';
+type ShellVariant = 'mint' | 'verify' | 'pool';
 
 interface AppLoadingShellProps {
   variant?: ShellVariant;
@@ -15,12 +15,18 @@ export function AppLoadingShell({ variant = 'mint' }: AppLoadingShellProps) {
     <div
       className="relative min-h-dvh bg-[color:var(--background)] pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))]"
       aria-busy="true"
-      aria-label={isVerify ? 'Loading verify flow' : 'Loading Sonic Guardian'}
+      aria-label={
+        variant === 'verify'
+          ? 'Loading recovery'
+          : variant === 'pool'
+            ? 'Loading privacy pool'
+            : 'Loading Sonic Guardian'
+      }
       data-testid="app-loading-shell"
       data-variant={variant}
     >
       <div className="noise" />
-      <div className="bg-gradient-mesh" />
+      <div className="bg-sonic-wash" />
 
       <header className="fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)] py-3 bg-[color:var(--background)]/80 backdrop-blur-md border-b border-[color:var(--color-border)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3">
@@ -74,7 +80,11 @@ export function AppLoadingShell({ variant = 'mint' }: AppLoadingShellProps) {
           className="mt-6 text-[10px] text-[color:var(--color-muted)] uppercase tracking-widest animate-pulse"
           data-testid="loading-shell-message"
         >
-          {isVerify ? 'Loading verify flow…' : 'Loading sonic protocol…'}
+          {variant === 'verify'
+            ? 'Loading recovery…'
+            : variant === 'pool'
+              ? 'Loading privacy pool…'
+              : 'Loading…'}
         </p>
       </main>
     </div>

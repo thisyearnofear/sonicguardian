@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { RecoveryFactors } from './RecoveryFactors';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -14,140 +15,138 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl border border-[color:var(--color-primary)]/30 bg-[color:var(--color-bg)] shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[color:var(--color-primary)]/20">
-          <h2 className="text-xl font-bold text-[color:var(--color-primary)]">Help & Guide</h2>
+      <div className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--background)] shadow-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-[color:var(--color-border)]">
+          <h2 className="text-xl font-bold">How recovery works</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)] transition-colors"
+            className="touch-target text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+            aria-label="Close help"
           >
             ✕
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-[color:var(--color-primary)]/20">
+        <div className="flex border-b border-[color:var(--color-border)]">
           <button
+            type="button"
             onClick={() => setActiveTab('guide')}
-            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-6 py-3 text-sm font-medium ${
               activeTab === 'guide'
-                ? 'text-[color:var(--color-primary)] border-b-2 border-[color:var(--color-primary)]'
-                : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)]'
+                ? 'text-[color:var(--color-foreground)] border-b-2 border-[color:var(--color-primary)]'
+                : 'text-[color:var(--color-muted)]'
             }`}
           >
-            Quick Start
+            Guide
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('faq')}
-            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-6 py-3 text-sm font-medium ${
               activeTab === 'faq'
-                ? 'text-[color:var(--color-primary)] border-b-2 border-[color:var(--color-primary)]'
-                : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-primary)]'
+                ? 'text-[color:var(--color-foreground)] border-b-2 border-[color:var(--color-primary)]'
+                : 'text-[color:var(--color-muted)]'
             }`}
           >
             FAQ
           </button>
         </div>
 
-        {/* Content */}
         <div className="overflow-y-auto max-h-[calc(80vh-140px)] p-6 space-y-6">
           {activeTab === 'guide' ? (
             <>
+              <RecoveryFactors pattern="pending" device="pending" paper="pending" />
+
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-[color:var(--color-primary)]">How It Works</h3>
-                <div className="space-y-4">
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/20 flex items-center justify-center text-[color:var(--color-primary)] font-bold">1</div>
-                    <div>
-                      <h4 className="font-bold text-[color:var(--color-text)]">Generate Musical DNA</h4>
-                      <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                        Enter a vibe or use secure generation. AI creates a unique Strudel pattern that becomes your on-chain sonic identity.
-                      </p>
-                    </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/15 flex items-center justify-center text-sm font-bold">
+                    1
                   </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/20 flex items-center justify-center text-[color:var(--color-primary)] font-bold">2</div>
-                    <div>
-                      <h4 className="font-bold text-[color:var(--color-text)]">Anchor to Starknet</h4>
-                      <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                        Connect Starknet wallet, paste or demo a Bitcoin address to protect, then commit. Only a Pedersen commitment is stored on-chain (privacy preserved).
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="font-bold">Create a musical secret</h3>
+                    <p className="text-sm text-[color:var(--color-muted)] mt-1">
+                      Random phrases are strongest. Remember them the way you would a short song.
+                    </p>
                   </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/20 flex items-center justify-center text-[color:var(--color-primary)] font-bold">3</div>
-                    <div>
-                      <h4 className="font-bold text-[color:var(--color-text)]">Verify Anytime</h4>
-                      <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                        Switch to Verify mode, replay your musical pattern to verify your identity without revealing your secret.
-                      </p>
-                    </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/15 flex items-center justify-center text-sm font-bold">
+                    2
+                  </div>
+                  <div>
+                    <h3 className="font-bold">Link the Bitcoin address to protect</h3>
+                    <p className="text-sm text-[color:var(--color-muted)] mt-1">
+                      Paste it, connect a Bitcoin wallet, or use the demo address. No funds are required to try this.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/15 flex items-center justify-center text-sm font-bold">
+                    3
+                  </div>
+                  <div>
+                    <h3 className="font-bold">Write down the paper key</h3>
+                    <p className="text-sm text-[color:var(--color-muted)] mt-1">
+                      After you lock recovery, a paper backup is shown once. This device also keeps a copy. Any two of
+                      the three keys recover you later.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[color:var(--color-primary)]/15 flex items-center justify-center text-sm font-bold">
+                    4
+                  </div>
+                  <div>
+                    <h3 className="font-bold">Recover on this phone or another</h3>
+                    <p className="text-sm text-[color:var(--color-muted)] mt-1">
+                      Open Recover, enter the phrases and the Bitcoin address. If this is a new phone, paste the paper
+                      backup when asked.
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[color:var(--color-accent)]/10 border border-[color:var(--color-accent)]/20">
-                <p className="text-xs text-[color:var(--color-muted)]">
-                  💡 <strong>Tip:</strong> Save your musical chunks! They describe your unique sonic identity.
-                </p>
-              </div>
+              <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">
+                The privacy pool under <strong>Pool</strong> is a separate demo. You do not need it to create or recover
+                a secret.
+              </p>
             </>
           ) : (
             <div className="space-y-6">
               <div>
-                <h4 className="font-bold text-[color:var(--color-primary)] mb-2">What is Musical DNA?</h4>
+                <h3 className="font-bold mb-2">What do I have to save?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Your musical pattern is converted to a deterministic SHA-256 hash. This "DNA" is your sonic fingerprint—same pattern always produces the same hash, making it a reliable on-chain identity.
+                  The musical phrases (in your head) and the paper backup (offline). This device keeps the third key
+                  automatically. Any two are enough.
                 </p>
               </div>
-
               <div>
-                <h4 className="font-bold text-[color:var(--color-primary)] mb-2">What is a Pedersen Commitment?</h4>
+                <h3 className="font-bold mb-2">What if I get a new phone?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  A cryptographic commitment that hides your DNA hash using a blinding factor. You can later prove you know the secret without revealing it (zero-knowledge).
+                  Replay the phrases and paste the paper backup. After that, this new device can hold a local key so
+                  you don’t need the paper every time — you’ll see a notice if that happens.
                 </p>
               </div>
-
               <div>
-                <h4 className="font-bold text-[color:var(--color-primary)] mb-2">Is my data private?</h4>
+                <h3 className="font-bold mb-2">Does anyone hear or see my music on-chain?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Yes! Only the commitment is stored on-chain. Your musical pattern, DNA hash, and blinding factor stay client-side. No one can reverse-engineer your secret.
+                  No. Only a lock that proves you know the secret is stored. The pattern itself stays in the browser.
                 </p>
               </div>
-
               <div>
-                <h4 className="font-bold text-[color:var(--color-primary)] mb-2">What if I forget my pattern?</h4>
+                <h3 className="font-bold mb-2">Which wallet do I connect?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Save your musical chunks (the text descriptions). You can reconstruct the pattern from them to re-verify your sonic identity anytime.
+                  Bitcoin wallet (or a pasted address) names what you are protecting. The header wallet is Starknet,
+                  used to lock and recover. Pool uses a privacy-capable Starknet wallet on mainnet.
                 </p>
               </div>
-
               <div>
-                <h4 className="font-bold text-[color:var(--color-primary)] mb-2">Why Strudel?</h4>
+                <h3 className="font-bold mb-2">Can I use this for real funds?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Strudel is a live-coding language for music. It's deterministic (same code = same sound) and human-readable, making it perfect for unique on-chain identities.
+                  This is a working demo of the recovery idea. Treat it as a prototype, not a replacement for a
+                  production seed-phrase backup.
                 </p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-[color:var(--color-primary)] mb-2">Can I use this for real Bitcoin?</h4>
-                <p className="text-sm text-[color:var(--color-muted)]">
-                  This is a proof-of-concept demonstrating sonic identity as a verification layer for on-chain identity. Your wallet secures funds; the pattern is your human-verifiable sonic signature.
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-[color:var(--color-primary)]/20">
-                <a
-                  href="https://github.com/thisyearnofear/sonicguardian"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[color:var(--color-accent)] hover:underline"
-                >
-                  📚 Read full documentation →
-                </a>
               </div>
             </div>
           )}

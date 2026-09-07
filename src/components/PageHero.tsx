@@ -20,7 +20,7 @@ export function PageHero({ title, subtitle, badge, compact, onHelp, actions }: P
         </div>
       )}
       <h1
-        className={`font-bold tracking-tight text-gradient leading-[1.08] ${
+        className={`font-bold tracking-tight text-[color:var(--foreground)] leading-[1.08] ${
           compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl md:text-5xl'
         }`}
       >

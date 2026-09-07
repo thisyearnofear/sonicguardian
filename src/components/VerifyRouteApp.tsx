@@ -95,12 +95,12 @@ export function VerifyRouteApp() {
 
   const handleRecovery = async () => {
     if (!recoveryVibe.trim() || !btcAddress) {
-      setStatus('Please provide your vibe (or CID) and Bitcoin address.');
+      setStatus('Enter the phrases you remember and the Bitcoin address.');
       return;
     }
 
     setIsProcessing(true);
-    setStatus('Verifying authorship of sonic identity...');
+    setStatus('Checking your recovery…');
 
     try {
       let finalDnaHash = '';
@@ -126,7 +126,7 @@ export function VerifyRouteApp() {
         const backup = JSON.parse(decryptedData) as { dnaHash: string };
         finalDnaHash = backup.dnaHash;
       } else {
-        setStatus('Extracting DNA from musical pattern...');
+        setStatus('Reading the pattern…');
         const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
         // Continuity (THREAT_MODEL_REVIEW.md R1): guardians minted before the
         // deterministic-salt fix were hashed with a session-random salt. When
@@ -144,7 +144,7 @@ export function VerifyRouteApp() {
       // Determine whether this guardian uses the decoupled (random) on-chain
       // key or the legacy pattern-derived key — compare the pattern-derived
       // key against the registered acoustic key.
-      setStatus('🔍 Reading on-chain guardian…');
+      setStatus('Looking up this address…');
       const onChain = await readGuardianOnChain(btcAddress);
       if (!onChain.registered) throw new Error('No guardian registered for this address');
       const legacyKey = await getAcousticPublicKey(finalDnaHash);
@@ -154,9 +154,9 @@ export function VerifyRouteApp() {
 
       if (!isDecoupled) {
         // Legacy guardian: the pattern-derived key is registered on-chain.
-        setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
+        setStatus('Checking your keys on-chain…');
         await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
-        setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
+        setStatus('Verified. Recovery matched without revealing your pattern.');
         sessionManager.addRecoveryAttempt(true); // R2: no prompt material persisted
       } else {
         // Decoupled guardian: the on-chain key is a random secret — a pattern
@@ -169,13 +169,13 @@ export function VerifyRouteApp() {
         } else {
           setAwaitingSecondFactor(true);
           setStatus(
-            'Second recovery factor required — no device share on this browser. Enter your paper share below.',
+            'This phone has no saved key. Enter the paper backup you wrote down.',
           );
         }
       }
     } catch (error) {
       console.error(error);
-      setStatus('❌ Verification Failed. Pattern mismatch or decryption error.');
+      setStatus('Recovery failed. Check the phrases, the Bitcoin address, or the paper backup.');
     } finally {
       setIsProcessing(false);
     }
@@ -217,11 +217,11 @@ export function VerifyRouteApp() {
 
   /** Complete verification: authorize on-chain with the reconstructed secret. */
   const finishAuthorization = async (dnaHash: string, secret: string) => {
-    setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
+    setStatus('Checking your keys on-chain…');
     await authorizeWithAcousticSignature(btcAddress, dnaHash, secret);
     setAcousticSecret(secret);
     setAwaitingSecondFactor(false);
-    setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
+    setStatus('Verified. Recovery matched without revealing your pattern.');
     sessionManager.addRecoveryAttempt(true); // R2: no prompt material persisted
   };
 
@@ -239,7 +239,7 @@ export function VerifyRouteApp() {
       await finishAuthorization(verifiedDnaHash, secret);
     } catch (error) {
       console.error(error);
-      setStatus('❌ Authorization failed after share reconstruction.');
+      setStatus('The paper backup was accepted, but the on-chain check failed. Try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -249,13 +249,13 @@ export function VerifyRouteApp() {
     <div className="relative min-h-dvh bg-[color:var(--background)] pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-20 pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <Header />
       <div className="noise" />
-      <div className="bg-gradient-mesh" />
+      <div className="bg-sonic-wash" />
 
-      <main className="relative z-10 container mx-auto px-4 sm:px-6 py-4 sm:py-10 flex flex-col items-center">
+      <main id="main-content" className="relative z-10 container mx-auto px-4 sm:px-6 py-4 sm:py-10 flex flex-col items-center">
         <PageHero
           compact
-          title="Verify authorship"
-          subtitle="Prove human authority over a sonic identity — then optionally authorize recovery privately via the STRK20 pool."
+          title="Recover"
+          subtitle="Replay the music you remember. If this is a new phone, you’ll be asked for the paper backup."
         />
 
         <VerifyPanel

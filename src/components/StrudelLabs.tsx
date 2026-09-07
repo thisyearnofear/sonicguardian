@@ -49,7 +49,7 @@ export function StrudelLabs({ onPatternSelect }: StrudelLabsProps) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-widest text-[color:var(--color-muted)]">Strudel Labs</h3>
-            <p className="text-[9px] text-[color:var(--color-muted)] mt-1">Optional — explore patterns & audio. Not required for minting.</p>
+            <p className="text-xs text-[color:var(--color-muted)] mt-1">Optional — listen to patterns. Not required to create recovery.</p>
           </div>
           <button type="button" onClick={() => { setOpen(false); stopStrudel(); setPreviewId(null); }} className="text-[9px] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]">
             Collapse
@@ -96,7 +96,7 @@ export function StrudelLabs({ onPatternSelect }: StrudelLabsProps) {
                     onClick={() => onPatternSelect(STRUDEL_PATTERN_LIBRARY.find(p => p.name === selectedId)!.code, selectedId)}
                     className="text-[9px] px-2 py-1 rounded bg-[color:var(--color-primary)]/20 text-[color:var(--color-primary)] uppercase font-bold"
                   >
-                    Use for mint
+                    Use this pattern
                   </button>
                 )}
               </div>

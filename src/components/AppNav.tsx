@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV = [
-  { href: '/', label: 'Mint', testId: 'nav-mint' },
-  { href: '/verify', label: 'Verify', testId: 'nav-verify' },
+  { href: '/', label: 'Create', testId: 'nav-mint' },
+  { href: '/verify', label: 'Recover', testId: 'nav-verify' },
+  { href: '/pool', label: 'Pool', testId: 'nav-pool' },
 ] as const;
 
 export function AppNav() {

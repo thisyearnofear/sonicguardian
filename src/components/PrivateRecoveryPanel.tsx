@@ -53,22 +53,19 @@ export function PrivateRecoveryPanel({ btcAddress, dnaHash, acousticSecret, disa
       data-testid="private-recovery-panel"
     >
       <div>
-        <p className="text-sm font-semibold">Private recovery authority</p>
-        <p className="text-xs text-[color:var(--color-muted)] mt-1 leading-relaxed">
-          Authorize Bitcoin recovery via STRK20 — the pool invokes your anonymizer, verifies your
-          sonic ZK proof, and emits recovery on-chain with no public link to you.
+        <p className="text-sm font-semibold">Authorize without a public trail</p>
+        <p className="text-sm text-[color:var(--color-muted)] mt-1 leading-relaxed">
+          Optional. Ask the privacy pool to confirm recovery so the on-chain action is not linked to you.
         </p>
       </div>
 
       {!isMainnet && (
-        <p className="text-xs text-[color:var(--color-warning)]">Switch to Starknet mainnet.</p>
+        <p className="text-sm text-[color:var(--color-warning)]">Switch the header wallet to Starknet mainnet.</p>
       )}
 
       {!helperDeployed && isMainnet && (
-        <p className="text-xs text-[color:var(--color-muted)]">
-          Deploy <code className="text-[10px]">RecoveryInvokeHelper</code> and set{' '}
-          <code className="text-[10px]">NEXT_PUBLIC_RECOVERY_HELPER_MAINNET</code> — see{' '}
-          <code className="text-[10px]">docs/HACKATHON.md</code>.
+        <p className="text-sm text-[color:var(--color-muted)]">
+          Private authorize is not available on this deployment yet.
         </p>
       )}
 

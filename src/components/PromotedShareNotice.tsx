@@ -32,12 +32,12 @@ export function PromotedShareNotice() {
       data-testid="promoted-share-notice"
     >
       <p className="text-xs leading-relaxed text-[color:var(--color-foreground)]">
-        <strong>📋 Your paper share is now stored on this device.</strong>{' '}
+        <strong>Your paper backup is now saved on this device.</strong>{' '}
         <span className="text-[color:var(--color-muted)]">
-          It was saved here (encrypted) after your cross-device recovery on{' '}
-          {new Date(promotedAt).toLocaleDateString()} so future recoveries on this
-          device stay local. It is <strong>no longer offline-only</strong> — anyone
-          with access to this device holds a recovery share.
+          It was stored here (encrypted) after recovery on{' '}
+          {new Date(promotedAt).toLocaleDateString()} so this phone can recover without
+          the paper next time. It is <strong>no longer paper-only</strong> — anyone
+          with this device holds one of your keys.
         </span>
       </p>
       <p className="text-xs text-[color:var(--color-muted)] leading-relaxed">

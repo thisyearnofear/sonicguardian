@@ -11,7 +11,7 @@ function inferTone(message: string): BannerTone {
   if (/^(❌|⚠️)/.test(message) || /failed|error|invalid/i.test(message)) {
     return message.startsWith('⚠️') ? 'warning' : 'error';
   }
-  if (/^(🔒|🔮|📦|🔐|🌐|Generating|Committing|Verifying|Playing|Initializing)/.test(message)) {
+  if (/^(🔒|🔮|📦|🔐|🌐|Generating|Committing|Verifying|Playing|Initializing|Locking|Checking|Demo)/.test(message)) {
     return 'pending';
   }
   return 'neutral';

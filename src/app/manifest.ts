@@ -32,8 +32,8 @@ export default function manifest(): MetadataRoute.Manifest {
     screenshots: [],
     shortcuts: [
       {
-        name: 'Verify authorship',
-        short_name: 'Verify',
+        name: 'Recover',
+        short_name: 'Recover',
         description: SITE_TAGLINE,
         url: '/verify',
       },

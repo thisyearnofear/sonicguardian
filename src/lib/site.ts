@@ -5,10 +5,10 @@ export const SITE_URL =
 
 export const SITE_NAME = 'Sonic Guardian';
 
-export const SITE_TAGLINE = 'Private human authority for Bitcoin and agents';
+export const SITE_TAGLINE = 'Musical wallet recovery';
 
 export const SITE_DESCRIPTION =
-  'Turn a memorable musical secret into zero-knowledge authorship on Starknet. Prove human authority without revealing your pattern — authorize recovery privately via STRK20.';
+  'Replace a seed phrase with a musical secret. Remember the music, keep a paper backup, and recover without revealing the pattern.';
 
 export const SITE_KEYWORDS = [
   'Sonic Guardian',
@@ -33,6 +33,7 @@ export const THEME_COLOR = '#020617';
 export const ROUTES = [
   { path: '/', changeFrequency: 'weekly' as const, priority: 1 },
   { path: '/verify', changeFrequency: 'weekly' as const, priority: 0.9 },
+  { path: '/pool', changeFrequency: 'weekly' as const, priority: 0.6 },
 ];
 
 export function absoluteUrl(path: string): string {
