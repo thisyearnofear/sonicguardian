@@ -10,6 +10,7 @@ import {
 } from '@/lib/recovery-split';
 import { serializeShare } from '@/lib/shamir';
 import { readGuardianOnChain } from '@/lib/sonic-chain';
+import { decryptDeviceShare, encryptDeviceShare } from '@/lib/share-crypto';
 
 export type AcousticFactorState =
   | 'checking'
@@ -51,10 +52,17 @@ export function useAcousticFactor(dnaHash: string, btcAddress?: string) {
         return;
       }
       try {
+        // The share is stored encrypted at rest (R3) — decrypt before use.
+        // null means the wrapping key was lost; the paper-share path remains.
+        const deviceShare = await decryptDeviceShare(session.deviceShare);
+        if (!deviceShare) {
+          if (!cancelled) setState(btcAddress ? 'awaiting-paper' : 'failed');
+          return;
+        }
         const patternShare = await derivePatternShare(dnaHash, 32);
         const serialized = serializeShare(patternShare);
         const secretBytes = await recoverFromShares(
-          [serialized, session.deviceShare],
+          [serialized, deviceShare],
           session.secretDigest,
         );
         if (!secretBytes) {
@@ -104,10 +112,13 @@ export function useAcousticFactor(dnaHash: string, btcAddress?: string) {
         setState('available');
         // Persist the paper share as this device's share so subsequent
         // recoveries on this device stay local (digest now known). No-op
-        // when there is no session on this device yet.
+        // when there is no session on this device yet. Encrypted at rest (R3).
+        // paperSharePromotedAt (R5) drives the user-facing custody disclosure:
+        // the paper share is no longer offline-only on this device.
         sessionManager.updateSession({
-          deviceShare: serializedPaperShare.trim(),
+          deviceShare: await encryptDeviceShare(serializedPaperShare.trim()),
           secretDigest: await sha256Hex(secretBytes),
+          paperSharePromotedAt: Date.now(),
         });
         return true;
       } catch {

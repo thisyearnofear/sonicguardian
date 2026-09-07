@@ -18,7 +18,13 @@ async function safeHexToFelt(hex: string): Promise<string> {
     const DOMAIN_MARKER = 'acoustic_key_derivation';
     const markerHex = Array.from(new TextEncoder().encode(DOMAIN_MARKER))
         .map(b => b.toString(16).padStart(2, '0')).join('');
-    return pedersenSync(clean, markerHex);
+    const felt = await pedersenSync(clean, markerHex);
+    if (felt === '0') {
+        // R4 (THREAT_MODEL_REVIEW.md): a zero private key is degenerate and
+        // predictable — fail closed rather than register or sign under it.
+        throw new Error('Legacy key derivation produced the degenerate key 0');
+    }
+    return felt;
 }
 
 /**
@@ -27,15 +33,19 @@ async function safeHexToFelt(hex: string): Promise<string> {
  */
 async function pedersenSync(a: string, b: string): Promise<string> {
     const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
+    const combined = new TextEncoder().encode(a + '|' + b);
+    let hashBuffer: ArrayBuffer;
     try {
-        const combined = new TextEncoder().encode(a + '|' + b);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return (BigInt('0x' + hex) % MODULO).toString();
-    } catch {
-        return "0";
+        hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+    } catch (error) {
+        // R4 (THREAT_MODEL_REVIEW.md): fail closed. The previous catch
+        // returned "0", which silently derived the degenerate, predictable
+        // private key 0 in degraded environments.
+        throw new Error('Key derivation failed: crypto.subtle is unavailable', { cause: error });
     }
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return (BigInt('0x' + hex) % MODULO).toString();
 }
 
 /**
@@ -134,6 +144,27 @@ export function generateBlinding(): string {
 }
 
 /**
+ * Resolve the raw AES-256 key bytes for encryptData/decryptData.
+ *
+ * R6 (THREAT_MODEL_REVIEW.md): the key material produced by
+ * deriveKeyFromSignature is a 64-char hex digest; the legacy implementation
+ * used only the first 32 *characters* as ASCII key bytes — 128 bits of a
+ * 256-bit digest. A full hex digest is now decoded to its 32 raw bytes
+ * (full 256-bit key). Any other key string is SHA-256 hashed so that no
+ * input material is silently discarded.
+ */
+async function aesKeyBytes(keyStr: string): Promise<ArrayBuffer> {
+    if (/^[0-9a-fA-F]{64}$/.test(keyStr)) {
+        const bytes = new Uint8Array(32);
+        for (let i = 0; i < 32; i++) {
+            bytes[i] = parseInt(keyStr.slice(i * 2, i * 2 + 2), 16);
+        }
+        return bytes.buffer as ArrayBuffer;
+    }
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyStr));
+}
+
+/**
  * AES-GCM Encryption
  * Securely encrypts data using a derived key
  */
@@ -141,11 +172,9 @@ export async function encryptData(data: string, keyStr: string): Promise<string>
     const encoder = new TextEncoder();
     const encodedData = encoder.encode(data);
     
-    // Convert hex key string to CryptoKey
-    const keyData = encoder.encode(keyStr.slice(0, 32)); // Use first 32 chars for 256-bit key
     const key = await crypto.subtle.importKey(
         'raw',
-        keyData,
+        await aesKeyBytes(keyStr),
         { name: 'AES-GCM' },
         false,
         ['encrypt']
@@ -177,24 +206,44 @@ export async function decryptData(encryptedBase64: string, keyStr: string): Prom
     
     const iv = combined.slice(0, 12);
     const encrypted = combined.slice(12);
-    
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(keyStr.slice(0, 32));
-    const key = await crypto.subtle.importKey(
-        'raw',
-        keyData,
-        { name: 'AES-GCM' },
-        false,
-        ['decrypt']
-    );
 
-    const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv },
-        key,
-        encrypted
-    );
+    try {
+        const key = await crypto.subtle.importKey(
+            'raw',
+            await aesKeyBytes(keyStr),
+            { name: 'AES-GCM' },
+            false,
+            ['decrypt']
+        );
 
-    return new TextDecoder().decode(decrypted);
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            encrypted
+        );
+
+        return new TextDecoder().decode(decrypted);
+    } catch {
+        // R6 compatibility: data encrypted before the key-slice fix used the
+        // ASCII bytes of keyStr.slice(0, 32) as the AES key. Retry once with
+        // that legacy derivation so pre-fix backups stay readable; a genuinely
+        // wrong key still fails here exactly as before.
+        const legacyKey = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(keyStr.slice(0, 32)),
+            { name: 'AES-GCM' },
+            false,
+            ['decrypt']
+        );
+
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            legacyKey,
+            encrypted
+        );
+
+        return new TextDecoder().decode(decrypted);
+    }
 }
 
 /**
@@ -228,12 +277,13 @@ export async function hashStringToFelt(input: string): Promise<string> {
 export function hexToFelt(hex: string): string {
     const MODULO = BigInt("0x800000000000011000000000000000000000000000000000000000000000001");
     const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
-    try {
-        return (BigInt('0x' + clean) % MODULO).toString();
-    } catch {
-        // Fallback for non-hex strings if accidentally passed
-        return "0";
+    if (!/^[0-9a-fA-F]+$/.test(clean)) {
+        // R4 (THREAT_MODEL_REVIEW.md): fail closed. The previous catch
+        // silently mapped any invalid input to "0", which key-derivation
+        // paths would turn into the degenerate private key 0.
+        throw new Error('hexToFelt: input is not a valid hex string');
     }
+    return (BigInt('0x' + clean) % MODULO).toString();
 }
 
 

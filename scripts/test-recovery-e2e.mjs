@@ -25,6 +25,7 @@ import {
   bytesToFelt,
 } from '../src/lib/recovery-split.ts';
 import { serializeShare } from '../src/lib/shamir.ts';
+import { extractSonicDNA } from '../src/lib/dna.ts';
 
 const DNA_HASH = 'c'.repeat(62);
 const OTHER_DNA = 'd'.repeat(62);
@@ -119,4 +120,46 @@ test('malformed and mismatched shares fail closed', async () => {
     await recoverFromSharesByPubKey([other.split.deviceShare, split.paperShare], onChainKey),
     null,
   );
+});
+
+// ---------------------------------------------------------------------------
+// R1 regression (THREAT_MODEL_REVIEW.md): verify-time DNA extraction must be
+// reproducible. These tests call extractSonicDNA(code) WITHOUT a salt on both
+// the mint and verify paths — exactly as SonicGuardian.handleGenerate and
+// VerifyRouteApp.handleRecovery do. A per-call random salt here is what made
+// UI recovery impossible before the fix.
+// ---------------------------------------------------------------------------
+const PATTERN_CODE = 'stack(s("bd*4"), s("~ sd ~ sd"), s("hh*16").gain(0.4)).cpm(128)';
+
+test('R1: DNA hash is a pure function of the pattern (deterministic across calls)', async () => {
+  const mintDna = await extractSonicDNA(PATTERN_CODE);   // mint path, no salt
+  const verifyDna = await extractSonicDNA(PATTERN_CODE); // verify path, no salt
+  assert.equal(verifyDna.hash, mintDna.hash, 'same pattern must reproduce the same hash');
+  assert.equal(verifyDna.salt, mintDna.salt, 'default salt must be deterministic');
+  const otherDna = await extractSonicDNA('s("bd [~ sd] [bd bd] sd")');
+  assert.notEqual(otherDna.hash, mintDna.hash, 'different patterns must hash differently');
+});
+
+test('R1: explicit-salt continuity reproduces a legacy (pre-fix) mint-time hash', async () => {
+  const legacySalt = crypto.randomUUID();
+  const a = await extractSonicDNA(PATTERN_CODE, legacySalt);
+  const b = await extractSonicDNA(PATTERN_CODE, legacySalt);
+  assert.equal(a.hash, b.hash, 'explicit salt must be honored deterministically');
+  assert.notEqual(a.hash, (await extractSonicDNA(PATTERN_CODE)).hash, 'legacy salt must not collide with the default');
+});
+
+test('R1 full wiring: mint (fresh extract) → split → verify (fresh extract) → recover', async () => {
+  // Mint path: the component extracts DNA from the generated code (no salt).
+  const mintDna = await extractSonicDNA(PATTERN_CODE);
+  const { onChainKey, split } = await mint(mintDna.hash);
+
+  // Verify path on a FRESH device: re-extract from the recalled pattern with
+  // no salt and no session — before the fix this produced a different hash
+  // and recovery always failed.
+  const verifyDna = await extractSonicDNA(PATTERN_CODE);
+  assert.equal(verifyDna.hash, mintDna.hash);
+  const patternShare = serializeShare(await derivePatternShare(verifyDna.hash, 32));
+  const recovered = await recoverFromSharesByPubKey([patternShare, split.paperShare], onChainKey);
+  assert.ok(recovered, 'exact recall must recover cross-device');
+  assert.equal(BigInt(getPublicKeyFromSecret(bytesToFelt(recovered))), BigInt(onChainKey));
 });

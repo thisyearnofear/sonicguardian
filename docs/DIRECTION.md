@@ -85,8 +85,13 @@ extractor (its required tolerance is an input, not a guess).
 ## Roadmap re-rank (Sept 3, 2026 — approved)
 
 The 2-of-3 scheme is shippable independently of the M1/M2 research: a
-low-entropy pattern is perfectly acceptable **as a Shamir factor**, because the
-device and paper shares carry the security weight. With key decoupling (below),
+low-entropy pattern is acceptable **as a Shamir factor** because the device
+and paper shares carry the security weight — with one caveat added by the M5
+review (below): the moment *one stored share leaks*, the system's effective
+security drops to the pattern's entropy, because the public on-chain key is
+an offline verification oracle for pattern guesses. Low pattern entropy is a
+liability in exactly the stored-share-leak scenario, which is the most likely
+real-world compromise. With key decoupling (below),
 that is now true *including* the on-chain identity. Therefore:
 
 - **Product track (primary): M3** — Shamir 2-of-3 recovery UX. First task was
@@ -187,9 +192,9 @@ authorization.
 |---|-----------|-----------|--------|
 | M1 | Human recall study designed & run (n=50, 1 week) | Error-distribution data published in `docs/` | 🟡 Protocol written + tooling shipped ([RECALL_STUDY.md](./RECALL_STUDY.md), `scripts/generate-study-materials.mjs`, `scripts/score-recall.mjs`); consent forms + recruitment next. **Research track — deprioritized** |
 | M2 | Fuzzy key derivation prototype | Near-recall (≤ tolerance errors) derives same key, no sketch leaks usable secret offline | ⬜ Blocked on M1 tolerance data. **Research track — an upgrade, not a gate** |
-| M3 | Shamir 2-of-3 recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 **Complete pending M5 review**: key-decoupled split wired end-to-end, cross-device paper path shipped (on-chain pubkey auth), E2E coverage of all share pairs (`scripts/test-recovery-e2e.mjs`, 27/27 unit tests), threat model at [THREAT_MODEL.md](./THREAT_MODEL.md) |
+| M3 | Shamir 2-of-3 recovery flow | Pattern loss OR device loss each alone recoverable; neither alone sufficient | 🟢 R1 and R2 fixed (Sept 7); R3 at-rest oracle closed by share encryption; R4–R7 all fixed (Sept 7 — R7 = contract v1.4.0 replay bound, needs lockstep deploy) — details in [THREAT_MODEL_REVIEW.md](./THREAT_MODEL_REVIEW.md) |
 | M4 | Entropy budget documented & UX-enforced | Per-user entropy estimate shown at registration; < minimum blocked | 🟡 Estimator + warning banner shipped; re-scoped to *guidance, not gating* — the on-chain key is random, so pattern entropy no longer gates on-chain safety |
-| M5 | Adversarial review of M1–M4 | Written review incorporated | ⬜ Review M3's threat model first |
+| M5 | Adversarial review of M1–M4 | Written review incorporated | 🟢 Internal review of the M3 threat model done (Sept 7, [THREAT_MODEL_REVIEW.md](./THREAT_MODEL_REVIEW.md)); all findings R1–R7 fixed and incorporated into [THREAT_MODEL.md](./THREAT_MODEL.md); remaining: optional external pass |
 
 M4 (entropy documentation) can and should start immediately — it's cheap and
 shapes everything else. **Started Sept 3, 2026:** modelled estimator live with
@@ -205,3 +210,68 @@ analysis in this doc).
 - Mainnet deployment of anything new
 
 These are revisit-after-M5.
+
+## M5 review findings (Sept 7, 2026)
+
+The full review is [THREAT_MODEL_REVIEW.md](./THREAT_MODEL_REVIEW.md); claim
+verification was done against code, not docs. Accepted findings, ranked:
+
+- **R1 (critical, functional) — FIXED Sept 7:** verify-time DNA extraction
+  re-salted randomly (`extractSonicDNA` default salt was `crypto.randomUUID()`),
+  so the recomputed hash never matched the mint-time hash — **UI recovery
+  failed even with perfect recall**, for legacy and decoupled guardians alike.
+  Fix: deterministic domain salt default (`sonic-guardian:dna:v1`); the verify
+  flow passes the session's stored salt for pre-fix guardians on their minting
+  device. Regression tests in `scripts/test-recovery-e2e.mjs` (30/30) now
+  exercise the salt-less mint→verify wiring that would have caught this.
+  Pre-fix guardians verify only on the minting device; re-mint restores
+  cross-device recovery.
+- **R2 (critical, security claim) — FIXED Sept 7:** the minting device's
+  session stored the full pattern code, device share, and secret digest
+  together — device theft alone was full compromise. Fix: the persistence
+  layer no longer accepts or stores pattern material (code, DNA hash,
+  recovery prompts); legacy sessions are sanitized on first read. Regression
+  tests in `scripts/test-session-hygiene.mjs` (34/34). Residual: the device
+  share + digest remain a self-contained offline oracle for pattern guesses
+  (R3 class) — encrypting the share at rest is the follow-up that closes it.
+- **R3 (high, analytic):** any single leaked stored share + offline pattern
+  brute-force = full compromise via the public on-chain key oracle. Effective
+  security is `min(pattern entropy, ~250 bits)` when one share leaks. Doc and
+  guidance amended accordingly; raises the priority of R2.
+- **R4 (medium) — FIXED Sept 7:** legacy key derivation failed open to the
+  degenerate key `0` when `crypto.subtle` broke or inputs were invalid. Fix:
+  `pedersenSync`/`hexToFelt` throw (fail closed) and `safeHexToFelt` rejects a
+  derived felt of `0`. The fix surfaced a latent bug: `extractSonicDNA`'s salt
+  term had *always* silently evaluated to `0` (non-hex salt through the old
+  catch); the commitment is now derived deterministically from 128-bit hex
+  terms. Regression tests in `scripts/test-crypto-hardening.mjs`.
+- **R5 (medium, UX) — FIXED Sept 7:** paper-share persistence after
+  cross-device recovery is now disclosed: the session records
+  `paperSharePromotedAt` and a persistent custody notice (with a
+  clear-device-copy affordance) shows in the verify flow's second-factor and
+  success states. Regression tests in `scripts/test-session-hygiene.mjs`.
+- **R6 (low) — FIXED Sept 7:** `encryptData` used only the first 32 ASCII
+  characters of a 64-hex digest (128 of 256 bits). Fix: the full digest is
+  decoded to 32 raw key bytes; non-hex keys are SHA-256 hashed; `decryptData`
+  retries legacy-key derivation so pre-fix IPFS backups stay readable.
+  Regression tests in `scripts/test-crypto-hardening.mjs`.
+- **R7 (low) — FIXED Sept 7 (contract v1.4.0):** authorization signatures
+  are now window-bound: message = `Poseidon(btcFelt, end-of-current-15-min-window)`,
+  recomputed on-chain from `block.timestamp` ('SIG_EXPIRED'). Replay bounded
+  to the window; deadline unforgeable (inside the signed hash); no interface
+  change (`recovery_helper` untouched). Residual: within-window replay ≤ 15
+  min (event-only); lockstep client/contract deploy required. Tests:
+  `scripts/test-authorization-deadline.mjs` + Poseidon pairing vectors in
+  `contracts/tests/test_poseidon_binding.cairo`.
+
+**Priority order going forward:** R1 and R2 are fixed (Sept 7, 2026) — M3 is
+back to 🟢. The R3 self-contained at-rest oracle is closed by device-share
+encryption under a non-extractable wrapping key (`share-crypto.ts`, SGE1
+envelope; active-XSS residual documented in the threat model). R4/R6
+hardening fixed (Sept 7 — fail-closed legacy derivation, full-entropy backup
+keys, paper-share custody disclosure). R7 replay bound shipped (contract
+v1.4.0: window-deadline Poseidon message, recomputed on-chain; needs lockstep
+deploy). All M5 findings R1–R7 are now fixed. M4
+guidance copy should mention
+the R3 scenario (pattern entropy is load-bearing whenever a share leaks to
+an active attacker). M1/M2 unchanged (research track).

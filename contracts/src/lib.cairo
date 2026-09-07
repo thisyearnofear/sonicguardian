@@ -3,6 +3,11 @@
 //! Design: Only a Pedersen commitment and a Stark Curve public key are stored on-chain.
 //! The blinding factor, DNA hash, and musical pattern never leave the browser.
 //!
+//! v1.4.0: `authorize_with_acoustic_signature` binds the signed message to
+//! `Poseidon(btc_address, end_of_current_15min_window)`, recomputed from
+//! `block.timestamp` — intercepted signatures are replayable only until their
+//! window closes (THREAT_MODEL_REVIEW.md R7).
+//!
 //! Deprecated entrypoints (removed from contract but kept in ABI for backwards compat):
 //! - `verify_recovery` / `authorize_btc_recovery` — legacy, requires revealing DNA hash.
 //! - `create_onchain_gift` / `claim_onchain_gift` — feature-creep removed.
@@ -39,6 +44,8 @@ trait ISonicGuardian<TContractState> {
 
 #[starknet::contract]
 mod SonicGuardian {
+    use core::hash::HashStateTrait;
+    use core::poseidon::PoseidonTrait;
     use starknet::{get_caller_address, get_block_timestamp, ContractAddress};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use core::ecdsa::check_ecdsa_signature;
@@ -124,6 +131,25 @@ mod SonicGuardian {
             signature_r: felt252,
             signature_s: felt252
         ) -> felt252 {
+            // R7 replay bound (THREAT_MODEL_REVIEW.md): the signed message
+            // must be Poseidon(btc_address, end_of_current_window). The
+            // deadline is recomputed from block.timestamp — no calldata
+            // changes and no nonce store. An intercepted (message_hash,
+            // signature) pair re-emits AcousticAuthorized only until the
+            // window it was signed in closes, never indefinitely, and cannot
+            // be extended (the deadline is inside the signed hash).
+            // 15-min window — keep in sync with AUTHORIZATION_WINDOW_SECONDS
+            // in src/lib/sonic-authorization.ts.
+            let window: u64 = 900;
+            let now = get_block_timestamp();
+            let deadline: felt252 = (((now / window) + 1) * window).into();
+            // Mirrors starknetjs hash.computePoseidonHashOnElements([btc, deadline])
+            // — verified against corelib's own golden vector
+            // (update(1).update(2).finalize() == 0x0371cb…f0e7); see
+            // contracts/tests/test_poseidon_binding.cairo.
+            let expected = PoseidonTrait::new().update(btc_address).update(deadline).finalize();
+            assert(message_hash == expected, 'SIG_EXPIRED');
+
             let is_valid = self.verify_acoustic_signature(
                 btc_address, message_hash, signature_r, signature_s
             );
@@ -151,7 +177,7 @@ mod SonicGuardian {
         }
 
         fn get_version(self: @ContractState) -> felt252 {
-            'v1.3.0-zk-only'
+            'v1.4.0-replay-bound'
         }
     }
 }

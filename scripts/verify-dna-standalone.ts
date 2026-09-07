@@ -2,6 +2,7 @@
 import { parse } from 'acorn';
 import { walk } from 'estree-walker';
 import { hash } from 'starknet';
+import { createHash } from 'node:crypto';
 
 // --- Simplified Crypto for Verification ---
 
@@ -10,6 +11,7 @@ function hexToFelt(hex: string): string {
     const clean = hex.replace(/^0x/, '');
     return (BigInt('0x' + clean) % MODULO).toString();
 }
+
 
 async function pedersen(a: string, b: string): Promise<string> {
     const cleanA = a.startsWith('0x') ? a : '0x' + a;
@@ -97,7 +99,11 @@ async function extractSonicDNA(code: string, salt: string) {
     const normalized = Array.from(features).sort().join('|');
     const hashHex = hash.computePoseidonHashOnElements([BigInt('0x' + Buffer.from(normalized).toString('hex'))]).toString();
 
-    const commitment = await pedersen(hexToFelt(hashHex.substring(0, 32)), hexToFelt(salt.substring(0, 32)));
+    // R4 follow-up: both terms are derived deterministically as 128-bit hex
+    // values (the old hexToFelt(rawSalt) call silently evaluated to 0 for
+    // non-hex salts).
+    const saltHex = createHash('sha256').update(salt, 'utf8').digest('hex');
+    const commitment = await pedersen('0x' + hashHex.substring(0, 32), '0x' + saltHex.substring(0, 32));
 
     return { dna: normalized, commitment, hash: hashHex };
   } catch (e: any) {

@@ -5,6 +5,7 @@ import { isValidBtcAddress } from '@/lib/crypto';
 import { StatusBanner } from './StatusBanner';
 import { FlowState } from './FlowState';
 import dynamic from 'next/dynamic';
+import { PromotedShareNotice } from './PromotedShareNotice';
 
 const PrivateRecoveryPanel = dynamic(
   () => import('./PrivateRecoveryPanel').then((m) => m.PrivateRecoveryPanel),
@@ -75,6 +76,9 @@ export function VerifyPanel({
           btcAddress={btcAddress}
           onResolved={onAcousticSecret}
         />
+        {/* R5: shown here too — a previously promoted share should be
+            visible whenever the user is back in the second-factor flow. */}
+        <PromotedShareNotice />
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
           <Link
             href="/"
@@ -99,6 +103,10 @@ export function VerifyPanel({
           description="Your zero-knowledge proof matched the on-chain acoustic public key. Your pattern was never revealed."
         />
         {status && <StatusBanner message={status} />}
+        {/* R5: the disclosure must survive the success state — the paper
+            share was just promoted to this device, which is exactly when
+            the user needs to know it is no longer offline-only. */}
+        <PromotedShareNotice />
         {verifiedDnaHash && btcAddress && (
           <PrivateRecoveryPanel
             btcAddress={btcAddress}

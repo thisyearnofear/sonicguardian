@@ -48,7 +48,7 @@ export function usePrivateRecovery() {
       setStatus('pending');
       setError(null);
       try {
-        const auth = await buildAcousticAuthorization(btcAddress, dnaHash, undefined, acousticSecret);
+        const auth = await buildAcousticAuthorization(btcAddress, dnaHash, acousticSecret);
         const hash = await submitPrivateRecoveryAuthorization(walletAccount, address, auth);
         setTxHash(hash);
         setStatus('success');

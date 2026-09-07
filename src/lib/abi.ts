@@ -1,7 +1,10 @@
 /**
- * Sonic Guardian ABI — v1.3.0-zk-only
+ * Sonic Guardian ABI — v1.4.0-replay-bound
  *
- * This matches the deployed contract at ISonicGuardian.
+ * This matches the deployed contract at ISonicGuardian. Interface is unchanged
+ * since v1.3.0; v1.4.0 adds a behavior change in `authorize_with_acoustic_signature`:
+ * the message_hash must equal Poseidon(btc_address, end of the current 15-min
+ * window) — see sonic-authorization.ts (THREAT_MODEL_REVIEW.md R7).
  * Dead functions have been removed:
  *   - verify_recovery (deprecated — requires DNA reveal)
  *   - authorize_btc_recovery (deprecated — requires DNA reveal)

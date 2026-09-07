@@ -19,6 +19,7 @@ import {
   bytesToFelt,
 } from '@/lib/recovery-split';
 import { serializeShare } from '@/lib/shamir';
+import { decryptDeviceShare, migrateSessionDeviceShare } from '@/lib/share-crypto';
 
 export function VerifyRouteApp() {
   const [btcAddress, setBtcAddress] = useState('');
@@ -86,6 +87,12 @@ export function VerifyRouteApp() {
     });
   }, [btcAddress]);
 
+  useEffect(() => {
+    // R2/R3 hardening: re-persist any legacy plaintext device share as an
+    // encrypted-at-rest envelope (non-extractable wrapping key in IndexedDB).
+    void migrateSessionDeviceShare().catch(() => {});
+  }, []);
+
   const handleRecovery = async () => {
     if (!recoveryVibe.trim() || !btcAddress) {
       setStatus('Please provide your vibe (or CID) and Bitcoin address.');
@@ -121,7 +128,15 @@ export function VerifyRouteApp() {
       } else {
         setStatus('Extracting DNA from musical pattern...');
         const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
-        const dna = await extractSonicDNA(agentResponse.code);
+        // Continuity (THREAT_MODEL_REVIEW.md R1): guardians minted before the
+        // deterministic-salt fix were hashed with a session-random salt. When
+        // this device's session belongs to the guardian being verified, reuse
+        // its salt to reproduce the mint-time hash. Otherwise the
+        // deterministic default salt applies (portable across devices).
+        const session = sessionManager.getCurrentSession();
+        const continuitySalt =
+          session?.storedSalt && session.btcAddress === btcAddress ? session.storedSalt : undefined;
+        const dna = await extractSonicDNA(agentResponse.code, continuitySalt);
         if (!dna) throw new Error('DNA extraction failed');
         finalDnaHash = dna.hash;
       }
@@ -142,7 +157,7 @@ export function VerifyRouteApp() {
         setStatus('🔮 Generating ZK-Proof (Acoustic Signature)...');
         await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
         setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
-        sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, finalDnaHash);
+        sessionManager.addRecoveryAttempt(true); // R2: no prompt material persisted
       } else {
         // Decoupled guardian: the on-chain key is a random secret — a pattern
         // signature alone can never match it. Reconstruct the secret from two
@@ -179,11 +194,14 @@ export function VerifyRouteApp() {
     try {
       const session = sessionManager.getCurrentSession();
       if (!session?.deviceShare) return null;
+      // The share is stored encrypted at rest (R3) — decrypt before use.
+      const deviceShare = await decryptDeviceShare(session.deviceShare);
+      if (!deviceShare) return null;
       const patternShare = serializeShare(await derivePatternShare(dnaHash, 32));
       const secretBytes = session.secretDigest
-        ? await recoverFromShares([patternShare, session.deviceShare], session.secretDigest)
+        ? await recoverFromShares([patternShare, deviceShare], session.secretDigest)
         : await recoverFromSharesByPubKey(
-            [patternShare, session.deviceShare],
+            [patternShare, deviceShare],
             onChainAcousticKey,
           );
       if (!secretBytes) return null;
@@ -204,7 +222,7 @@ export function VerifyRouteApp() {
     setAcousticSecret(secret);
     setAwaitingSecondFactor(false);
     setStatus('✅ Authorship Verified! ZK-Signature matches on-chain public key.');
-    sessionManager.addRecoveryAttempt(recoveryVibe.trim(), true, dnaHash);
+    sessionManager.addRecoveryAttempt(true); // R2: no prompt material persisted
   };
 
   /**

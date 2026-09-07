@@ -3,6 +3,7 @@
 import { useAccount, useContract, useSendTransaction } from '@starknet-react/core';
 import { abi } from '@/lib/abi';
 import { pedersen, isValidBtcAddress, isValidHex, hashStringToFelt, hexToFelt, getAcousticPublicKey, getPublicKeyFromSecret, signWithAcousticKey, signWithSecret } from '@/lib/crypto';
+import { buildAcousticAuthorization, isAuthorizationFresh } from '@/lib/sonic-authorization';
 import { BaseAPIError } from '@/lib/api';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SONIC_GUARDIAN_ADDRESS || '0x02b680ba171e40a103739a4af6739ce9b7df2c4cd24ff6c230074af3af8b73de') as `0x${string}`;
@@ -154,34 +155,27 @@ export function useStarknetGuardian() {
         if (!contract) throw new Error('Contract not initialized');
 
         try {
-            const feltBtcAddress = await hashStringToFelt(btcAddress);
-
-            // Create a unique message hash for this authorization (BTC address + timestamp)
-            const message = await hashStringToFelt(`${btcAddress}:${Date.now()}`);
-
-            // Sign with the acoustic secret (decoupled) or pattern-derived key (legacy)
-            const signature = acousticSecret
-                ? signWithSecret(acousticSecret, message)
-                : await signWithAcousticKey(dnaHash, message);
-
-            // Extract r and s correctly from Signature type
-            let r, s;
-            if (Array.isArray(signature)) {
-                r = signature[0];
-                s = signature[1];
-            } else if ('r' in signature && 's' in signature) {
-                r = (signature as any).r;
-                s = (signature as any).s;
-            } else {
-                throw new Error('Unsupported signature format');
+            // R7 (THREAT_MODEL_REVIEW.md): one shared, deadline-bound message
+            // scheme — Poseidon(btcFelt, windowDeadline) — replaces the ad-hoc
+            // `${btcAddress}:${Date.now()}` hash built here before. The
+            // contract recomputes the identical hash from block.timestamp and
+            // reverts with 'SIG_EXPIRED' once the window has passed, bounding
+            // signature replay to the window instead of indefinitely.
+            const payload = await buildAcousticAuthorization(
+                btcAddress,
+                dnaHash,
+                acousticSecret
+            );
+            if (!isAuthorizationFresh(payload)) {
+                throw new Error('Authorization window rolled over — retry to sign a fresh message');
             }
 
             const result = await sendAsync([
                 contract.populate('authorize_with_acoustic_signature', [
-                    feltBtcAddress,
-                    message,
-                    hexToFelt(r.toString(16)),
-                    hexToFelt(s.toString(16))
+                    payload.btcFelt,
+                    payload.messageHash,
+                    payload.signatureR,
+                    payload.signatureS
                 ]),
             ]);
 

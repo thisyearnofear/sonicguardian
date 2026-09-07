@@ -1,6 +1,6 @@
 import { parse } from 'acorn';
 import { walk } from 'estree-walker';
-import { pedersen, hexToFelt } from './crypto';
+import { pedersen } from './crypto.ts';
 
 /**
  * Sonic DNA - Advanced Musical Fingerprinting
@@ -15,6 +15,17 @@ export interface SonicDNA {
   hash: string;         // SHA-256 hash
   salt: string;
 }
+
+/**
+ * Domain-separated default salt. The DNA hash must be a PURE FUNCTION OF THE
+ * PATTERN so that verification can reproduce the mint-time hash on any device
+ * (THREAT_MODEL_REVIEW.md R1: a per-call random salt made UI recovery fail
+ * even with perfect recall). Salting here is domain separation, not secrecy —
+ * the input is already pattern material the user must recall exactly. Tests
+ * and legacy-tooling paths may still pass an explicit salt; guardians minted
+ * before this fix rely on the session's storedSalt (see VerifyRouteApp).
+ */
+export const DEFAULT_DNA_SALT = 'sonic-guardian:dna:v1';
 
 /**
  * Deep semantic expansion of mini-notation strings.
@@ -91,7 +102,10 @@ export async function extractSonicDNA(
     if (!trimmedCode) throw new Error('Empty code');
 
     const features: Set<string> = new Set();
-    const activeSalt = salt || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36));
+    // Deterministic default (R1): same code ⇒ same hash, on any device, at
+    // any time. Never re-randomize here — verification depends on reproducing
+    // the mint-time hash exactly.
+    const activeSalt = salt || DEFAULT_DNA_SALT;
 
     // 1. Parse JS AST
     const ast = parse(trimmedCode, { ecmaVersion: 2022, sourceType: 'module' });
@@ -137,7 +151,19 @@ export async function extractSonicDNA(
     const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
     // 4. Compute ZK-friendly Pedersen Commitment
-    const commitment = await pedersen(hexToFelt(hashHex.substring(0, 32)), hexToFelt(activeSalt.substring(0, 32)));
+    // R4 follow-up (THREAT_MODEL_REVIEW.md): the salt term used to pass the
+    // raw (non-hex) salt through hexToFelt, whose fail-open catch silently
+    // returned 0 — so every historical commitment was pedersen(hashPrefix, 0).
+    // Both terms are now derived deterministically as 128-bit hex values
+    // (always valid PedersenArgs, < CURVE.P). Nothing consumes historical
+    // commitments (on-chain registration computes its own from dnaHash +
+    // blinding), so there is no continuity constraint on the old value.
+    const saltDigest = await crypto.subtle.digest('SHA-256', encoder.encode(activeSalt));
+    const saltHex = Array.from(new Uint8Array(saltDigest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const commitment = await pedersen(
+        '0x' + hashHex.substring(0, 32),
+        '0x' + saltHex.substring(0, 32)
+    );
 
     return {
       dna: normalized,

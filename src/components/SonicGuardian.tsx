@@ -19,6 +19,7 @@ import { STRUDEL_PATTERN_LIBRARY } from '@/lib/strudel-patterns';
 import { stopStrudel } from '@/lib/strudel-lazy';
 import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, generateAcousticSecret } from '@/lib/crypto';
 import { createRecoverySplit, feltToBytes } from '@/lib/recovery-split';
+import { encryptDeviceShare, migrateSessionDeviceShare } from '@/lib/share-crypto';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
 import { MobileUtils } from '@/lib/mobile';
@@ -142,6 +143,12 @@ export default function SonicGuardian() {
     };
   }, []);
 
+  useEffect(() => {
+    // R2/R3 hardening: re-persist any legacy plaintext device share as an
+    // encrypted-at-rest envelope (non-extractable wrapping key in IndexedDB).
+    void migrateSessionDeviceShare().catch(() => {});
+  }, []);
+
   const playAudio = useCallback((type: Parameters<typeof generateAudio>[1]) => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -217,7 +224,10 @@ export default function SonicGuardian() {
         setDnaHash(dna.hash);
         const blindingFactor = generateBlinding();
         setBlinding(blindingFactor);
-        sessionManager.createSession(code, dna.hash, dna.salt, btcAddress || undefined, blindingFactor);
+        // R2 (THREAT_MODEL_REVIEW.md): persist session metadata only — the
+        // generated code is the user's memorized secret and is deliberately
+        // NEVER stored. Device theft must not yield both recovery factors.
+        sessionManager.createSession(dna.salt, btcAddress || undefined, blindingFactor);
         if (audioEnabled) playAudio('success');
       }
     } catch (error) {
@@ -303,7 +313,9 @@ export default function SonicGuardian() {
       try {
         const split = await createRecoverySplit(feltToBytes(acousticSecret), dnaHash);
         sessionManager.updateSession({
-          deviceShare: split.deviceShare,
+          // Encrypted at rest under a non-extractable wrapping key (R3): the
+          // raw share bytes never touch localStorage in the clear.
+          deviceShare: await encryptDeviceShare(split.deviceShare),
           secretDigest: split.secretDigest,
         });
         setPaperShare(split.paperShare);
