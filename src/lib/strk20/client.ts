@@ -62,6 +62,19 @@ export async function privateTransferStrk(
   return transaction_hash;
 }
 
+export async function unshieldStrk(
+  account: WalletAccountV6,
+  amountWei: bigint,
+  recipient: string,
+  token: string = STRK_TOKEN_MAINNET,
+): Promise<string> {
+  const actions: STRK20_ACTION[] = [
+    { type: 'withdraw', token, amount: num.toHex(amountWei), recipient },
+  ];
+  const { transaction_hash } = await account.strk20InvokeTransaction(actions);
+  return transaction_hash;
+}
+
 export async function getShieldedBalances(account: WalletAccountV6) {
   return account.strk20Balances([STRK_TOKEN_MAINNET]);
 }

@@ -19,6 +19,7 @@ import {
   privateTransferStrk,
   probeStrk20Support,
   shieldStrk,
+  unshieldStrk,
   waitForStrk20Tx,
 } from '@/lib/strk20/client';
 
@@ -136,6 +137,16 @@ export function useStrk20() {
     );
   }, [runAction, walletAccount, address]);
 
+  const demoUnshield = useCallback(() => {
+    if (!address) {
+      setError('Connect your Starknet wallet first (recipient = your address).');
+      return Promise.resolve(null);
+    }
+    return runAction('Unshield', () =>
+      unshieldStrk(walletAccount!, DEMO_TRANSFER_WEI, address),
+    );
+  }, [runAction, walletAccount, address]);
+
   return {
     isMainnet,
     isWalletConnected: accountStatus === 'connected',
@@ -150,6 +161,7 @@ export function useStrk20() {
     connectPrivacyWallet,
     shieldRegistrationFee,
     demoPrivateTransfer,
+    demoUnshield,
     refreshBalances,
     registrationFeeStr: '0.1 STRK',
     transferAmountStr: '0.01 STRK',

@@ -25,6 +25,7 @@ export function Strk20Panel({ onTxRecorded, setStatus, collapsible = false }: St
     connectPrivacyWallet,
     shieldRegistrationFee,
     demoPrivateTransfer,
+    demoUnshield,
     registrationFeeStr,
     transferAmountStr,
   } = useStrk20();
@@ -60,6 +61,14 @@ export function Strk20Panel({ onTxRecorded, setStatus, collapsible = false }: St
     const hash = await demoPrivateTransfer();
     if (hash) {
       setStatus?.(`Private transfer sent. Tx: ${hash.slice(0, 10)}…`);
+      onTxRecorded?.(hash);
+    }
+  };
+
+  const handleUnshield = async () => {
+    const hash = await demoUnshield();
+    if (hash) {
+      setStatus?.(`Unshielded ${transferAmountStr} back to your wallet. Tx: ${hash.slice(0, 10)}…`);
       onTxRecorded?.(hash);
     }
   };
@@ -109,6 +118,17 @@ export function Strk20Panel({ onTxRecorded, setStatus, collapsible = false }: St
             Private transfer {transferAmountStr}
           </button>
         </div>
+      )}
+
+      {supported === true && (
+        <button
+          type="button"
+          disabled={isPending || !isWalletConnected}
+          onClick={handleUnshield}
+          className="w-full py-2.5 rounded-lg border border-[color:var(--color-border)] text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-50"
+        >
+          Unshield {transferAmountStr} to wallet
+        </button>
       )}
 
       {supported === false && (
