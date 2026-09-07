@@ -187,8 +187,8 @@ export function VerifyPanel({
         </h2>
         <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
           {hasDeviceShare
-            ? 'Paste the phrases you remembered. This device already holds one key.'
-            : 'This looks like a new phone. Paste the phrases and the paper backup you wrote down.'}
+            ? 'Paste the card you copied. This device already holds one key.'
+            : 'This looks like a new phone. Paste the card you copied and the paper backup you wrote down.'}
         </p>
       </div>
 
@@ -211,20 +211,20 @@ export function VerifyPanel({
 
       <div>
         <label htmlFor="recovery-secret" className="field-label">
-          The phrases you remember
+          Recovery card
         </label>
         <textarea
           id="recovery-secret"
           value={recoveryVibe}
           onChange={(e) => setRecoveryVibe(e.target.value)}
-          placeholder="Paste the recovery card, or the lines you remember"
+          placeholder="Paste the whole card you copied"
           rows={3}
           className="input-mobile"
           disabled={isProcessing}
           autoComplete="off"
         />
         <p className="text-xs text-[color:var(--color-muted)] mt-1.5">
-          If you copied the card, paste the whole thing — including the hidden SG2 line.
+          Paste the whole card. The spoken lines are what you remember; Recover needs the complete copy.
         </p>
         {recoveryVibe.trim() && recoveryValidation && (
           <p

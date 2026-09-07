@@ -6,7 +6,7 @@ import { WalletButton } from './WalletButton';
 import { AppNav } from './AppNav';
 import { SITE_TAGLINE } from '@/lib/site';
 
-export function Header() {
+export function Header({ showWallet = true }: { showWallet?: boolean }) {
   const [currentTheme, setCurrentTheme] = useState<Theme>('system');
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -60,7 +60,7 @@ export function Header() {
         <AppNav />
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <WalletButton />
+          {showWallet && <WalletButton />}
 
           <button
             type="button"

@@ -102,8 +102,8 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   <div>
                     <h3 className="font-bold">Recover on this phone or another</h3>
                     <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                      Open Recover and use what you just made, or paste the phrases. On a new phone, the paper field is
-                      already there.
+                      Open Recover and use what you just made, or paste the whole card you copied. On a new phone, the
+                      paper field is already there.
                     </p>
                   </div>
                 </div>
@@ -138,8 +138,8 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div>
                 <h3 className="font-bold mb-2">Which wallet do I connect?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Bitcoin wallet (or a pasted address) names what you are protecting. The header wallet is Starknet,
-                  used only when you lock. The privacy pool is a separate demo and needs its own mainnet wallet.
+                  Bitcoin wallet (or a pasted address) names what you are protecting. A Starknet wallet appears only
+                  when you lock. The privacy pool is a separate demo and needs its own mainnet wallet.
                 </p>
               </div>
               <div>

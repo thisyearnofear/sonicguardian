@@ -53,6 +53,12 @@ next-env.d.ts
 *~
 .junie
 
+# Local agent / skill tooling (never commit)
+.agents/
+.claude/
+.zencoder/
+skills-lock.json
+
 # Cairo / Starknet
 contracts/target/
 contracts/Scarb.lock

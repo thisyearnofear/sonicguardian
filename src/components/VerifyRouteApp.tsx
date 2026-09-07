@@ -295,7 +295,7 @@ export function VerifyRouteApp() {
         <PageHero
           compact
           title="Recover"
-          subtitle="Use what you just made, or paste the recovery card. On a new phone, the paper field is already there."
+          subtitle="Use what you just made, or paste the whole card you copied. On a new phone, the paper field is already there."
         />
 
         <VerifyPanel

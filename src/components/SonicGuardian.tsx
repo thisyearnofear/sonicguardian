@@ -483,7 +483,7 @@ export default function SonicGuardian() {
 
   return (
     <div className="relative min-h-dvh bg-[color:var(--background)] selection:bg-[color:var(--color-primary)] selection:text-white pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-20 pb-[calc(5rem+env(safe-area-inset-bottom))]">
-      <Header />
+      <Header showWallet={wizardStep === 3 && paperShareSaved} />
       <div className="noise" />
       <div className="bg-sonic-wash" />
 

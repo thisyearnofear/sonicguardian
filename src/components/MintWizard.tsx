@@ -13,6 +13,7 @@ import { FlowState } from './FlowState';
 import { RecoveryFactors } from './RecoveryFactors';
 import { VisualizerPanel } from './VisualizerPanel';
 import { HearAndQuiz } from './HearAndQuiz';
+import { ConnectWalletModal } from './ConnectWalletModal';
 import dynamic from 'next/dynamic';
 
 const StrudelEditor = dynamic(
@@ -75,7 +76,7 @@ export interface MintWizardProps {
 const STEPS = [
   { num: 1 as const, label: 'Secret', desc: 'Choose what you will remember' },
   { num: 2 as const, label: 'Address', desc: 'Bitcoin address to protect' },
-  { num: 3 as const, label: 'Lock', desc: 'Save your keys and lock it in' },
+  { num: 3 as const, label: 'Remember', desc: 'Hear it, write the paper key, then lock' },
 ];
 
 function StepIndicator({
@@ -283,7 +284,12 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
   } = props;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
   const btcValidation = validationStates.get('btc-address');
+
+  useEffect(() => {
+    if (isConnected) setWalletOpen(false);
+  }, [isConnected]);
   const featuredPatterns = STRUDEL_PATTERN_LIBRARY.slice(0, 6);
 
   const canProceedStep1 =
@@ -439,7 +445,7 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
               onClick={() => setWizardStep(3)}
               className="btn-primary flex-[2] py-3"
             >
-              Next — Hear and lock
+              Next — Remember
             </button>
           </div>
         </div>
@@ -520,7 +526,7 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
                     Copy recovery card
                   </button>
                   <p className="text-xs text-[color:var(--color-muted)]">
-                    The copy includes a hidden line so Recover can rebuild the exact pattern. Keep the spoken lines in your head.
+                    Keep the spoken lines in your head. Paste the whole card on Recover — Recover needs the complete copy.
                   </p>
                 </div>
               )}
@@ -543,18 +549,20 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
                   </p>
                   <button
                     type="button"
-                    onClick={onCommit}
-                    disabled={isCommiting || !isConnected}
+                    onClick={() => {
+                      if (!isConnected) {
+                        setWalletOpen(true);
+                        return;
+                      }
+                      onCommit();
+                    }}
+                    disabled={isCommiting}
                     className="btn-primary py-4"
                   >
                     {isConnected ? 'Lock recovery' : 'Connect Starknet wallet to lock'}
                     {isCommiting && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-2" />}
                   </button>
-                  {!isConnected && (
-                    <p className="text-sm text-center text-[color:var(--color-muted)]">
-                      Use Connect wallet in the header.
-                    </p>
-                  )}
+                  <ConnectWalletModal isOpen={walletOpen} onClose={() => setWalletOpen(false)} />
                 </div>
               )}
 
