@@ -12,6 +12,7 @@ import { useBitcoinWallet } from '@/hooks/use-bitcoin-wallet';
 import { FlowState } from './FlowState';
 import { RecoveryFactors } from './RecoveryFactors';
 import { VisualizerPanel } from './VisualizerPanel';
+import { HearAndQuiz } from './HearAndQuiz';
 import dynamic from 'next/dynamic';
 
 const StrudelEditor = dynamic(
@@ -65,6 +66,10 @@ export interface MintWizardProps {
   paperSharePending?: boolean;
   dnaSequence?: string;
   visualizerTheme?: 'light' | 'dark';
+  recallLines?: string[];
+  packedSecret?: string;
+  quizPassed?: boolean;
+  onQuizPassed?: () => void;
 }
 
 const STEPS = [
@@ -175,7 +180,7 @@ function BtcAddressField({
       </div>
 
       <p className="text-xs text-[color:var(--color-muted)] mb-3">
-        Paste, connect, or use the demo address — no funds required.
+        This names what you are protecting. Paste, connect a Bitcoin wallet, or use the demo address. No Bitcoin moves.
       </p>
 
       <input
@@ -271,6 +276,10 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
     paperSharePending = false,
     dnaSequence,
     visualizerTheme = 'dark',
+    recallLines = [],
+    packedSecret,
+    quizPassed = false,
+    onQuizPassed,
   } = props;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -353,16 +362,16 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
             </div>
           )}
 
-          {entropyEstimate && entropyEstimate.verdict !== 'sufficient' && (
+          {entropyEstimate && secretMode !== 'random' && entropyEstimate.verdict !== 'sufficient' && (
             <div
               className="mt-3 p-3 rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning)]/5"
               data-testid="entropy-warning"
             >
               <p className="text-xs font-bold text-[color:var(--color-warning)]">
-                Weak secret — {entropyEstimate.bits} effective bits
+                Demo-strength secret — {entropyEstimate.bits} effective bits
               </p>
               <p className="text-xs text-[color:var(--color-muted)] mt-1 leading-relaxed">
-                {entropyEstimate.message}
+                Fine for a walkthrough. For a real backup, use Random pattern — it is one of three keys, not the whole secret.
               </p>
             </div>
           )}
@@ -477,7 +486,7 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
                     variant="success"
                     icon="♩"
                     title="Recovery is locked in"
-                    description="Any two of these three keys can bring you back. Finish the paper step if the sheet is still open."
+                    description="Any two of these three keys can bring you back."
                   />
                   <RecoveryFactors
                     pattern="ready"
@@ -487,46 +496,63 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
                 </div>
               ) : (
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  Remember the phrases below. They are the key you carry in your head.
+                  Remember the lines below the way you would a short song. Then prove you heard it.
                 </p>
               )}
 
-              {musicalChunks.length > 0 && (
+              {recallLines.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[color:var(--color-warning)]">
-                    Remember these phrases
-                  </p>
-                  {musicalChunks.map((chunk, i) => (
+                  <p className="text-sm font-semibold">Remember these lines</p>
+                  {recallLines.map((line, i) => (
                     <div key={i} className="flex gap-2 p-3 rounded-lg bg-[color:var(--color-foreground)]/5 border border-[color:var(--color-border)] text-sm">
                       <span className="text-[color:var(--color-primary)] font-bold">{i + 1}.</span>
-                      <span className="flex-1">{chunk.text}</span>
+                      <span className="flex-1">{line}</span>
                     </div>
                   ))}
                   <button
                     type="button"
-                    onClick={() => { navigator.clipboard.writeText(seedPhrase || musicalChunks.map(c => c.text).join(' · ')); setStatus?.('Phrases copied.'); }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(packedSecret || recallLines.join(' · '));
+                      setStatus?.('Recovery card copied.');
+                    }}
                     className="w-full min-h-11 py-2 rounded-lg border border-[color:var(--color-primary)]/30 text-sm font-semibold text-[color:var(--color-primary)]"
                   >
-                    Copy phrases
+                    Copy recovery card
                   </button>
+                  <p className="text-xs text-[color:var(--color-muted)]">
+                    The copy includes a hidden line so Recover can rebuild the exact pattern. Keep the spoken lines in your head.
+                  </p>
                 </div>
               )}
 
-              {onChainStatus !== 'success' && (
+              {onChainStatus !== 'success' && generatedCode && onQuizPassed && (
+                <HearAndQuiz code={generatedCode} passed={quizPassed} onPassed={onQuizPassed} />
+              )}
+
+              {onChainStatus !== 'success' && quizPassed && !paperShareSaved && (
+                <p className="text-sm text-[color:var(--color-muted)]">
+                  Write down the paper key in the sheet — shown once, before any wallet step.
+                </p>
+              )}
+
+              {onChainStatus !== 'success' && quizPassed && paperShareSaved && (
                 <div className="space-y-2">
                   <p className="field-label mb-0">Lock it on-chain</p>
+                  <p className="text-sm text-[color:var(--color-muted)]">
+                    This is a different wallet from Bitcoin. It only writes the lock to Starknet. No Bitcoin moves.
+                  </p>
                   <button
                     type="button"
                     onClick={onCommit}
                     disabled={isCommiting || !isConnected}
                     className="btn-primary py-4"
                   >
-                    {isConnected ? 'Lock recovery' : 'Connect wallet to lock'}
+                    {isConnected ? 'Lock recovery' : 'Connect Starknet wallet to lock'}
                     {isCommiting && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-2" />}
                   </button>
                   {!isConnected && (
                     <p className="text-sm text-center text-[color:var(--color-muted)]">
-                      Use Connect wallet in the header — that’s your Starknet wallet, separate from Bitcoin.
+                      Use Connect wallet in the header.
                     </p>
                   )}
                 </div>

@@ -20,6 +20,8 @@ import { stopStrudel } from '@/lib/strudel-lazy';
 import { generateBlinding, isValidBtcAddress, encryptData, deriveKeyFromSignature, generateAcousticSecret } from '@/lib/crypto';
 import { createRecoverySplit, feltToBytes } from '@/lib/recovery-split';
 import { encryptDeviceShare, migrateSessionDeviceShare } from '@/lib/share-crypto';
+import { humanizeChunks, humanizeNamedPattern, packRecoverySecret } from '@/lib/recall-phrases';
+import { saveRehearsal } from '@/lib/rehearsal';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useAccount } from '@starknet-react/core';
 import { MobileUtils } from '@/lib/mobile';
@@ -89,6 +91,10 @@ export default function SonicGuardian() {
   const [onChainStatus, setOnChainStatus] = useState<'none' | 'pending' | 'success' | 'failed'>('none');
   const [paperShare, setPaperShare] = useState<string | null>(null);
   const [paperShareSaved, setPaperShareSaved] = useState(false);
+  const [recallLines, setRecallLines] = useState<string[]>([]);
+  const [packedSecret, setPackedSecret] = useState('');
+  const [quizPassed, setQuizPassed] = useState(false);
+  const [pendingAcousticSecret, setPendingAcousticSecret] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   
   // Decentralized Backup State
@@ -174,6 +180,7 @@ export default function SonicGuardian() {
         code = pattern.code;
         setMusicalChunks([]);
         setSeedPhrase('');
+        setRecallLines(humanizeNamedPattern(pattern.name, pattern.vibe));
         setStatus(`Pattern "${pattern.name}" loaded as your secret.`);
       } else if (secretMode === 'random') {
         const entropyBytes = generateEntropy();
@@ -183,7 +190,8 @@ export default function SonicGuardian() {
         const phrase = chunksToSeedPhrase(chunks);
         setSeedPhrase(phrase);
         setMusicalChunks(chunks);
-        setStatus(`Random secret generated (${chunks.length} recovery chunks).`);
+        setRecallLines(humanizeChunks(chunks));
+        setStatus('Secret ready — listen, then write the paper key.');
       } else {
         if (!secretVibe.trim()) {
           setStatus('Please describe your vibe in Advanced settings.');
@@ -209,6 +217,7 @@ export default function SonicGuardian() {
           chunks = [];
           setMusicalChunks([]);
           setSeedPhrase('');
+          setRecallLines(humanizeNamedPattern(secretVibe));
         } finally {
           setTimeout(() => setShowExplainer(false), 500);
         }
@@ -216,6 +225,11 @@ export default function SonicGuardian() {
       }
 
       setGeneratedCode(code);
+      setQuizPassed(false);
+      setPendingAcousticSecret(null);
+      setPaperShare(null);
+      setPaperShareSaved(false);
+      setOnChainStatus('none');
 
       const dna = await extractSonicDNA(code);
 
@@ -228,6 +242,18 @@ export default function SonicGuardian() {
         // generated code is the user's memorized secret and is deliberately
         // NEVER stored. Device theft must not yield both recovery factors.
         sessionManager.createSession(dna.salt, btcAddress || undefined, blindingFactor);
+        const lines =
+          secretMode === 'random'
+            ? humanizeChunks(chunks)
+            : secretMode === 'library' && selectedLibraryPattern
+              ? humanizeNamedPattern(selectedLibraryPattern)
+              : humanizeNamedPattern(secretVibe);
+        const packed = packRecoverySecret(lines, code);
+        setRecallLines(lines);
+        setPackedSecret(packed);
+        if (btcAddress) {
+          saveRehearsal({ phrases: packed, btcAddress, code });
+        }
         if (audioEnabled) playAudio('success');
       }
     } catch (error) {
@@ -251,7 +277,9 @@ export default function SonicGuardian() {
     if (!judgeDemoPending) return;
     if (wizardStep !== 3 || secretMode !== 'random' || btcAddress !== DEMO_BTC_ADDRESS) return;
     setJudgeDemoPending(false);
-    void handleGenerate();
+    void handleGenerate().then(() => {
+      setQuizPassed(true);
+    });
   }, [judgeDemoPending, wizardStep, secretMode, btcAddress, handleGenerate]);
 
   const handleJudgeDemo = useCallback(() => {
@@ -275,10 +303,42 @@ export default function SonicGuardian() {
   const handleCodeChange = useCallback(
     (newCode: string) => {
       setGeneratedCode(newCode);
+      setQuizPassed(false);
+      setPendingAcousticSecret(null);
+      setPaperShare(null);
+      setPaperShareSaved(false);
       debouncedExtractDna(newCode);
     },
     [debouncedExtractDna],
   );
+
+  const preparePaperSplit = useCallback(async () => {
+    if (!dnaHash || pendingAcousticSecret) return;
+    try {
+      const acousticSecret = generateAcousticSecret();
+      const split = await createRecoverySplit(feltToBytes(acousticSecret), dnaHash);
+      setPendingAcousticSecret(acousticSecret);
+      sessionManager.updateSession({
+        deviceShare: await encryptDeviceShare(split.deviceShare),
+        secretDigest: split.secretDigest,
+      });
+      setPaperShare(split.paperShare);
+      setStatus('Write down the paper key — shown once, before you lock.');
+    } catch (splitError) {
+      console.error('Recovery split failed:', splitError);
+      setStatus('Could not create the paper key. You can still lock with this device plus the music.');
+      setPaperShareSaved(true);
+    }
+  }, [dnaHash, pendingAcousticSecret]);
+
+  const handleQuizPassed = useCallback(() => {
+    setQuizPassed(true);
+  }, []);
+
+  useEffect(() => {
+    if (!quizPassed || !dnaHash || pendingAcousticSecret || paperShare || paperShareSaved) return;
+    void preparePaperSplit();
+  }, [quizPassed, dnaHash, pendingAcousticSecret, paperShare, paperShareSaved, preparePaperSplit]);
 
   const handleCommitToStarknet = useCallback(async () => {
     if (!dnaHash || !isConnected) return;
@@ -293,46 +353,49 @@ export default function SonicGuardian() {
       return;
     }
 
+    if (!pendingAcousticSecret && !paperShareSaved) {
+      setStatus('Write down the paper key first, then lock.');
+      return;
+    }
+
     setIsCommiting(true);
     setOnChainStatus('pending');
-      setStatus('Locking recovery on-chain…');
+    setStatus('Locking recovery on-chain…');
 
     try {
-      // Key decoupling: the secret whose public key is registered on-chain is a
-      // RANDOM high-entropy key, not pattern-derived. The pattern is only one
-      // Shamir factor for reconstructing it (see DIRECTION.md).
-      const acousticSecret = generateAcousticSecret();
-      await registerGuardian(btcAddress, dnaHash, blinding, acousticSecret);
-      sessionManager.updateSession({ btcAddress });
-      setOnChainStatus('success');
-      setStatus('Recovery locked. Write down the paper key — it is shown only once.');
-
-      // M3 recovery split: split the random acoustic secret 2-of-3 —
-      // share 1 = pattern (recomputed from DNA hash at recovery, never stored),
-      // share 2 = device (persisted in the session), share 3 = paper (shown once).
-      try {
+      const acousticSecret = pendingAcousticSecret ?? generateAcousticSecret();
+      if (!pendingAcousticSecret) {
         const split = await createRecoverySplit(feltToBytes(acousticSecret), dnaHash);
         sessionManager.updateSession({
-          // Encrypted at rest under a non-extractable wrapping key (R3): the
-          // raw share bytes never touch localStorage in the clear.
           deviceShare: await encryptDeviceShare(split.deviceShare),
           secretDigest: split.secretDigest,
         });
-        setPaperShare(split.paperShare);
-      } catch (splitError) {
-        console.error('Recovery split failed:', splitError);
-        setStatus(
-          'Recovery locked, but the paper key could not be created. This device plus the music can still recover you.',
-        );
       }
+      await registerGuardian(btcAddress, dnaHash, blinding, acousticSecret);
+      sessionManager.updateSession({ btcAddress });
+      if (packedSecret) {
+        saveRehearsal({ phrases: packedSecret, btcAddress, code: generatedCode });
+      }
+      setOnChainStatus('success');
+      setStatus('Recovery locked. Try Recover with the card you copied.');
     } catch (error) {
       console.error(error);
       setOnChainStatus('failed');
-      setStatus('❌ Transaction failed. Ensure your wallet has gas funds.');
+      setStatus('Lock failed. Your paper key is still valid — connect a funded Starknet wallet and try again.');
     } finally {
       setIsCommiting(false);
     }
-  }, [dnaHash, isConnected, btcAddress, blinding, registerGuardian]);
+  }, [
+    dnaHash,
+    isConnected,
+    btcAddress,
+    blinding,
+    registerGuardian,
+    pendingAcousticSecret,
+    paperShareSaved,
+    packedSecret,
+    generatedCode,
+  ]);
 
   const handleDecentralizedBackup = useCallback(async () => {
     if (!generatedCode || !blinding || !btcAddress) {
@@ -475,6 +538,10 @@ export default function SonicGuardian() {
               paperSharePending={!!paperShare}
               dnaSequence={dna?.dna}
               visualizerTheme={visualizerTheme}
+              recallLines={recallLines}
+              packedSecret={packedSecret}
+              quizPassed={quizPassed}
+              onQuizPassed={handleQuizPassed}
             />
             {(status || showExplainer) && (
               <div className="max-w-2xl mx-auto mt-4 space-y-3">
@@ -539,10 +606,16 @@ export default function SonicGuardian() {
         )}
       </main>
 
-      <footer className="relative z-10 py-10 mt-10 border-t border-[color:var(--color-border)] text-center">
+      <footer className="relative z-10 py-10 mt-10 border-t border-[color:var(--color-border)] text-center space-y-2">
         <p className="text-sm text-[color:var(--color-muted)]">
           Sonic Guardian · musical recovery · 2026
         </p>
+        <a
+          href="/pool"
+          className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] underline-offset-2 hover:underline"
+        >
+          Privacy pool demo
+        </a>
       </footer>
 
       {paperShare && (

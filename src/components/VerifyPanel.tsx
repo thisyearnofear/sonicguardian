@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { isValidBtcAddress } from '@/lib/crypto';
+import { readRehearsal, type RehearsalDraft } from '@/lib/rehearsal';
 import { StatusBanner } from './StatusBanner';
 import { FlowState } from './FlowState';
 import { RecoveryFactors } from './RecoveryFactors';
@@ -24,6 +26,8 @@ interface ValidationState {
   type: 'error' | 'warning' | 'success';
 }
 
+export type RecoveryPair = 'music' | 'music+device' | 'music+paper';
+
 export interface VerifyPanelProps {
   btcAddress: string;
   setBtcAddress: (v: string) => void;
@@ -38,6 +42,17 @@ export interface VerifyPanelProps {
   decoupled?: boolean;
   acousticSecret?: string | null;
   onAcousticSecret?: (secret: string | null) => void;
+  hasDeviceShare?: boolean;
+  paperShareInput?: string;
+  setPaperShareInput?: (v: string) => void;
+  recoveryPair?: RecoveryPair | null;
+}
+
+function pairCopy(pair: RecoveryPair | null | undefined): string {
+  if (pair === 'music+device') return 'The music plus this device unlocked you.';
+  if (pair === 'music+paper') return 'The music plus your paper backup unlocked you.';
+  if (pair === 'music') return 'The music unlocked you.';
+  return 'Recovery matched. Your pattern was never revealed on-chain.';
 }
 
 export function VerifyPanel({
@@ -54,10 +69,25 @@ export function VerifyPanel({
   decoupled,
   acousticSecret,
   onAcousticSecret,
+  hasDeviceShare = true,
+  paperShareInput = '',
+  setPaperShareInput,
+  recoveryPair,
 }: VerifyPanelProps) {
   const recoveryValidation = validationStates.get('recovery-phrase');
   const btcValidation = validationStates.get('btc-address');
   const verified = status?.includes('Verified') ?? false;
+  const [rehearsal, setRehearsal] = useState<RehearsalDraft | null>(null);
+
+  useEffect(() => {
+    setRehearsal(readRehearsal());
+  }, []);
+
+  const useRehearsal = () => {
+    if (!rehearsal) return;
+    setRecoveryVibe(rehearsal.phrases);
+    setBtcAddress(rehearsal.btcAddress);
+  };
 
   if (verifiedDnaHash && awaitingSecondFactor && !verified) {
     return (
@@ -97,12 +127,12 @@ export function VerifyPanel({
           variant="success"
           icon="♩"
           title="You’re back"
-          description="Recovery matched. Your pattern was never revealed on-chain."
+          description={pairCopy(recoveryPair)}
         />
         <RecoveryFactors
           pattern="ready"
-          device={acousticSecret || !decoupled ? 'ready' : 'pending'}
-          paper={acousticSecret && decoupled ? 'ready' : 'pending'}
+          device={recoveryPair === 'music+device' || !decoupled ? 'ready' : 'pending'}
+          paper={recoveryPair === 'music+paper' ? 'ready' : 'pending'}
         />
         {status && <StatusBanner message={status} />}
         <PromotedShareNotice />
@@ -127,6 +157,14 @@ export function VerifyPanel({
             onResolved={onAcousticSecret}
           />
         )}
+        <details className="text-sm text-[color:var(--color-muted)]">
+          <summary className="cursor-pointer font-medium">More options</summary>
+          <div className="mt-3">
+            <Link href="/pool" prefetch className="min-h-11 py-2 rounded-lg border border-[color:var(--color-border)] text-sm font-semibold text-center block">
+              Privacy pool demo
+            </Link>
+          </div>
+        </details>
         <div className="pt-2 border-t border-[color:var(--color-border)] text-center">
           <Link
             href="/"
@@ -148,30 +186,46 @@ export function VerifyPanel({
           Recover with what you have
         </h2>
         <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
-          Paste the phrases you remembered. Any two keys — the music, this device, or paper — are enough.
+          {hasDeviceShare
+            ? 'Paste the phrases you remembered. This device already holds one key.'
+            : 'This looks like a new phone. Paste the phrases and the paper backup you wrote down.'}
         </p>
       </div>
 
+      {rehearsal && (
+        <button
+          type="button"
+          onClick={useRehearsal}
+          className="w-full min-h-11 py-3 rounded-xl border border-[color:var(--color-primary)]/30 bg-[color:var(--color-primary)]/8 text-sm font-semibold text-[color:var(--color-primary)]"
+          data-testid="use-rehearsal"
+        >
+          Use what you just made
+        </button>
+      )}
+
       <RecoveryFactors
         pattern={recoveryVibe.trim() ? 'ready' : 'needed'}
-        device="pending"
-        paper="pending"
+        device={hasDeviceShare ? 'ready' : 'missing'}
+        paper={!hasDeviceShare && paperShareInput.trim() ? 'ready' : !hasDeviceShare ? 'needed' : 'pending'}
       />
 
       <div>
         <label htmlFor="recovery-secret" className="field-label">
           The phrases you remember
         </label>
-        <input
+        <textarea
           id="recovery-secret"
-          type="text"
           value={recoveryVibe}
           onChange={(e) => setRecoveryVibe(e.target.value)}
-          placeholder="sawtooth c2 · sine c4 · …"
+          placeholder="Paste the recovery card, or the lines you remember"
+          rows={3}
           className="input-mobile"
           disabled={isProcessing}
           autoComplete="off"
         />
+        <p className="text-xs text-[color:var(--color-muted)] mt-1.5">
+          If you copied the card, paste the whole thing — including the hidden SG2 line.
+        </p>
         {recoveryVibe.trim() && recoveryValidation && (
           <p
             className={`text-sm mt-1.5 ${
@@ -214,6 +268,30 @@ export function VerifyPanel({
         )}
       </div>
 
+      {!hasDeviceShare && setPaperShareInput && (
+        <div>
+          <label htmlFor="recover-paper" className="field-label">
+            Paper backup
+          </label>
+          <input
+            id="recover-paper"
+            type="text"
+            value={paperShareInput}
+            onChange={(e) => setPaperShareInput(e.target.value)}
+            placeholder="SGS1:3:…"
+            className="input-mobile font-mono text-sm"
+            disabled={isProcessing}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-testid="recover-paper-input"
+          />
+          <p className="text-xs text-[color:var(--color-muted)] mt-1.5">
+            Shown once when you created this recovery, before lock. Starts with SGS1:3:
+          </p>
+        </div>
+      )}
+
       {status && <StatusBanner message={status} />}
 
       <button
@@ -227,6 +305,15 @@ export function VerifyPanel({
           <span className="w-4 h-4 border-2 border-[color:var(--background)] border-t-transparent rounded-full animate-spin" />
         )}
       </button>
+
+      <details className="text-sm text-[color:var(--color-muted)]">
+        <summary className="cursor-pointer font-medium">More options</summary>
+        <div className="mt-3">
+          <Link href="/pool" prefetch className="min-h-11 py-2 rounded-lg border border-[color:var(--color-border)] text-sm font-semibold text-center block">
+            Privacy pool demo
+          </Link>
+        </div>
+      </details>
 
       <div className="pt-4 border-t border-[color:var(--color-border)] text-center">
         <Link

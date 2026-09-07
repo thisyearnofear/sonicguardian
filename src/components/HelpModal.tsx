@@ -66,7 +66,8 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   <div>
                     <h3 className="font-bold">Create a musical secret</h3>
                     <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                      Random phrases are strongest. Remember them the way you would a short song.
+                      Random phrases are strongest — they are one of three keys, not the whole secret. Hear the clip,
+                      then pick yours so you know you can remember it.
                     </p>
                   </div>
                 </div>
@@ -77,7 +78,8 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   <div>
                     <h3 className="font-bold">Link the Bitcoin address to protect</h3>
                     <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                      Paste it, connect a Bitcoin wallet, or use the demo address. No funds are required to try this.
+                      Paste it, connect a Bitcoin wallet, or use the demo address. No Bitcoin moves. A Starknet wallet
+                      is only needed later, to lock.
                     </p>
                   </div>
                 </div>
@@ -86,10 +88,10 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     3
                   </div>
                   <div>
-                    <h3 className="font-bold">Write down the paper key</h3>
+                    <h3 className="font-bold">Write down the paper key, then lock</h3>
                     <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                      After you lock recovery, a paper backup is shown once. This device also keeps a copy. Any two of
-                      the three keys recover you later.
+                      The paper sheet appears once after you pick your clip — before any Starknet transaction. This
+                      device keeps the third key. Any two recover you later.
                     </p>
                   </div>
                 </div>
@@ -100,16 +102,15 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   <div>
                     <h3 className="font-bold">Recover on this phone or another</h3>
                     <p className="text-sm text-[color:var(--color-muted)] mt-1">
-                      Open Recover, enter the phrases and the Bitcoin address. If this is a new phone, paste the paper
-                      backup when asked.
+                      Open Recover and use what you just made, or paste the phrases. On a new phone, the paper field is
+                      already there.
                     </p>
                   </div>
                 </div>
               </div>
 
               <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">
-                The privacy pool under <strong>Pool</strong> is a separate demo. You do not need it to create or recover
-                a secret.
+                Privacy pool is a separate demo, linked in the footer after you lock — not part of recovery.
               </p>
             </>
           ) : (
@@ -117,8 +118,8 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div>
                 <h3 className="font-bold mb-2">What do I have to save?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
-                  The musical phrases (in your head) and the paper backup (offline). This device keeps the third key
-                  automatically. Any two are enough.
+                  The musical phrases (in your head) and the paper backup (offline, shown before lock). This device
+                  keeps the third key automatically. Any two are enough.
                 </p>
               </div>
               <div>
@@ -138,7 +139,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                 <h3 className="font-bold mb-2">Which wallet do I connect?</h3>
                 <p className="text-sm text-[color:var(--color-muted)]">
                   Bitcoin wallet (or a pasted address) names what you are protecting. The header wallet is Starknet,
-                  used to lock and recover. Pool uses a privacy-capable Starknet wallet on mainnet.
+                  used only when you lock. The privacy pool is a separate demo and needs its own mainnet wallet.
                 </p>
               </div>
               <div>

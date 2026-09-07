@@ -20,6 +20,8 @@ import {
 } from '@/lib/recovery-split';
 import { serializeShare } from '@/lib/shamir';
 import { decryptDeviceShare, migrateSessionDeviceShare } from '@/lib/share-crypto';
+import { resolveRecoveryCode, spokenInputMatchesPacked } from '@/lib/recall-phrases';
+import { clearRehearsal, readRehearsal } from '@/lib/rehearsal';
 
 export function VerifyRouteApp() {
   const [btcAddress, setBtcAddress] = useState('');
@@ -29,6 +31,9 @@ export function VerifyRouteApp() {
   const [awaitingSecondFactor, setAwaitingSecondFactor] = useState(false);
   const [decoupled, setDecoupled] = useState(false);
   const [acousticSecret, setAcousticSecret] = useState<string | null>(null);
+  const [paperShareInput, setPaperShareInput] = useState('');
+  const [hasDeviceShare, setHasDeviceShare] = useState(true);
+  const [recoveryPair, setRecoveryPair] = useState<'music' | 'music+device' | 'music+paper' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [validationStates, setValidationStates] = useState<
     Map<string, { isValid: boolean; message: string; type: 'error' | 'warning' | 'success' }>
@@ -91,6 +96,7 @@ export function VerifyRouteApp() {
     // R2/R3 hardening: re-persist any legacy plaintext device share as an
     // encrypted-at-rest envelope (non-extractable wrapping key in IndexedDB).
     void migrateSessionDeviceShare().catch(() => {});
+    setHasDeviceShare(Boolean(sessionManager.getCurrentSession()?.deviceShare));
   }, []);
 
   const handleRecovery = async () => {
@@ -100,6 +106,8 @@ export function VerifyRouteApp() {
     }
 
     setIsProcessing(true);
+    setRecoveryPair(null);
+    setAwaitingSecondFactor(false);
     setStatus('Checking your recovery…');
 
     try {
@@ -127,7 +135,11 @@ export function VerifyRouteApp() {
         finalDnaHash = backup.dnaHash;
       } else {
         setStatus('Reading the pattern…');
-        const agentResponse = await generateStrudelCode(recoveryVibe, { useRealAI });
+        const rehearsal = readRehearsal();
+        const rehearsalCode =
+          rehearsal && spokenInputMatchesPacked(recoveryVibe, rehearsal.phrases) ? rehearsal.code : null;
+        const resolved = resolveRecoveryCode(recoveryVibe, rehearsalCode);
+        const code = resolved ?? (await generateStrudelCode(recoveryVibe, { useRealAI })).code;
         // Continuity (THREAT_MODEL_REVIEW.md R1): guardians minted before the
         // deterministic-salt fix were hashed with a session-random salt. When
         // this device's session belongs to the guardian being verified, reuse
@@ -136,7 +148,7 @@ export function VerifyRouteApp() {
         const session = sessionManager.getCurrentSession();
         const continuitySalt =
           session?.storedSalt && session.btcAddress === btcAddress ? session.storedSalt : undefined;
-        const dna = await extractSonicDNA(agentResponse.code, continuitySalt);
+        const dna = await extractSonicDNA(code, continuitySalt);
         if (!dna) throw new Error('DNA extraction failed');
         finalDnaHash = dna.hash;
       }
@@ -154,18 +166,24 @@ export function VerifyRouteApp() {
 
       if (!isDecoupled) {
         // Legacy guardian: the pattern-derived key is registered on-chain.
-        setStatus('Checking your keys on-chain…');
-        await authorizeWithAcousticSignature(btcAddress, finalDnaHash);
-        setStatus('Verified. Recovery matched without revealing your pattern.');
-        sessionManager.addRecoveryAttempt(true); // R2: no prompt material persisted
+        setRecoveryPair('music');
+        await finishAuthorization(finalDnaHash);
       } else {
         // Decoupled guardian: the on-chain key is a random secret — a pattern
         // signature alone can never match it. Reconstruct the secret from two
-        // Shamir shares first: pattern + device share locally, else ask for
-        // the paper share (cross-device).
-        const secret = await tryLocalReconstruction(finalDnaHash, onChain.acousticKey);
-        if (secret) {
-          await finishAuthorization(finalDnaHash, secret);
+        // Shamir shares first: pattern + device share locally, else paper.
+        const localSecret = await tryLocalReconstruction(finalDnaHash, onChain.acousticKey);
+        if (localSecret) {
+          setRecoveryPair('music+device');
+          await finishAuthorization(finalDnaHash, localSecret);
+          return;
+        }
+        const paperSecret = paperShareInput.trim()
+          ? await tryPaperReconstruction(finalDnaHash, onChain.acousticKey, paperShareInput)
+          : null;
+        if (paperSecret) {
+          setRecoveryPair('music+paper');
+          await finishAuthorization(finalDnaHash, paperSecret);
         } else {
           setAwaitingSecondFactor(true);
           setStatus(
@@ -215,14 +233,35 @@ export function VerifyRouteApp() {
     }
   };
 
+  const tryPaperReconstruction = async (
+    dnaHash: string,
+    onChainAcousticKey: string,
+    paperShare: string,
+  ): Promise<string | null> => {
+    try {
+      const patternShare = serializeShare(await derivePatternShare(dnaHash, 32));
+      const secretBytes = await recoverFromSharesByPubKey(
+        [patternShare, paperShare.trim()],
+        onChainAcousticKey,
+      );
+      if (!secretBytes) return null;
+      const felt = bytesToFelt(secretBytes);
+      if (BigInt(getPublicKeyFromSecret(felt)) !== BigInt(onChainAcousticKey)) return null;
+      return felt;
+    } catch {
+      return null;
+    }
+  };
+
   /** Complete verification: authorize on-chain with the reconstructed secret. */
-  const finishAuthorization = async (dnaHash: string, secret: string) => {
+  const finishAuthorization = async (dnaHash: string, secret?: string) => {
     setStatus('Checking your keys on-chain…');
     await authorizeWithAcousticSignature(btcAddress, dnaHash, secret);
-    setAcousticSecret(secret);
+    if (secret) setAcousticSecret(secret);
     setAwaitingSecondFactor(false);
     setStatus('Verified. Recovery matched without revealing your pattern.');
     sessionManager.addRecoveryAttempt(true); // R2: no prompt material persisted
+    clearRehearsal();
   };
 
   /**
@@ -236,6 +275,7 @@ export function VerifyRouteApp() {
     }
     setIsProcessing(true);
     try {
+      setRecoveryPair('music+paper');
       await finishAuthorization(verifiedDnaHash, secret);
     } catch (error) {
       console.error(error);
@@ -255,7 +295,7 @@ export function VerifyRouteApp() {
         <PageHero
           compact
           title="Recover"
-          subtitle="Replay the music you remember. If this is a new phone, you’ll be asked for the paper backup."
+          subtitle="Use what you just made, or paste the recovery card. On a new phone, the paper field is already there."
         />
 
         <VerifyPanel
@@ -272,6 +312,10 @@ export function VerifyRouteApp() {
           decoupled={decoupled}
           acousticSecret={acousticSecret}
           onAcousticSecret={(s) => void handleAcousticSecretResolved(s)}
+          hasDeviceShare={hasDeviceShare}
+          paperShareInput={paperShareInput}
+          setPaperShareInput={setPaperShareInput}
+          recoveryPair={recoveryPair}
         />
       </main>
     </div>

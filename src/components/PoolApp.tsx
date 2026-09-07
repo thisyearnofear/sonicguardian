@@ -21,6 +21,12 @@ export function PoolApp() {
           subtitle="Separate from recovery. Shield, move privately, then unshield — in that order."
         />
         <Strk20Panel />
+        <p className="mt-8 text-sm text-[color:var(--color-muted)] text-center">
+          This is not part of recovery.{' '}
+          <a href="/" className="underline underline-offset-2 hover:text-[color:var(--color-foreground)]">
+            Back to create
+          </a>
+        </p>
       </main>
     </div>
   );
