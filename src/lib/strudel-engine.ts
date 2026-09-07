@@ -21,6 +21,8 @@ class StrudelEngine {
   private currentCpm: number = 120;
   private playing = false;
   private playStartedAt = 0;
+  private playLock: Promise<void> = Promise.resolve();
+  private generation = 0;
 
   private setTempoFromCode(code: string): void {
     const cpmMatch = code.match(/\.cpm\((\d+(?:\.\d+)?)\)/);
@@ -39,6 +41,12 @@ class StrudelEngine {
   public async init(): Promise<void> {
     if (this.status === 'ready') return;
     if (this.initPromise) return this.initPromise;
+    // Never call initStrudel twice — a second repl leaves the first cyclist running
+    // and hush() only stops the latest one.
+    if (this.strudel && this.replInstance) {
+      this.status = 'ready';
+      return;
+    }
 
     this.status = 'initializing';
     this.initPromise = (async () => {
@@ -96,6 +104,16 @@ class StrudelEngine {
   }
 
   public async play(code: string): Promise<boolean> {
+    let ok = false;
+    const next = this.playLock.then(async () => {
+      ok = await this.playExclusive(code);
+    });
+    this.playLock = next.then(() => undefined, () => undefined);
+    await next;
+    return ok;
+  }
+
+  private async playExclusive(code: string): Promise<boolean> {
     try {
       if (this.status !== 'ready') {
         await this.init();
@@ -107,24 +125,45 @@ class StrudelEngine {
         await ctx.resume();
       }
 
-      // Evaluate exactly the source the user authored and that Sonic Guardian hashes.
+      this.halt();
+      const mine = this.generation;
+      // Let the cyclist clock actually halt before autostart, or two start()
+      // calls race and keep querying after hush.
+      await new Promise((resolve) => window.setTimeout(resolve, 40));
+      if (this.generation !== mine) return false;
+
       this.setTempoFromCode(code);
       await this.strudel.evaluate(code, true);
+      if (this.generation !== mine) {
+        this.halt();
+        return false;
+      }
       this.playing = true;
       this.playStartedAt = ctx.currentTime;
       return true;
     } catch (error) {
       console.error('[Strudel] play error:', error);
-      this.playing = false;
+      this.halt();
       return false;
     }
   }
 
   public stop(): void {
+    this.generation += 1;
+    this.halt();
+  }
+
+  private halt(): void {
     try {
       this.strudel?.hush();
     } catch {
+      // hush is repl.stop — fall through to the stored instance
+    }
+    try {
       this.replInstance?.stop?.();
+      this.replInstance?.scheduler?.stop?.();
+    } catch {
+      // already stopped
     }
     this.playing = false;
     this.lastHaps = [];

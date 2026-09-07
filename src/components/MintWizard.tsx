@@ -13,6 +13,7 @@ import { FlowState } from './FlowState';
 import { RecoveryFactors } from './RecoveryFactors';
 import { VisualizerPanel } from './VisualizerPanel';
 import { HearAndQuiz } from './HearAndQuiz';
+import { LyricCard } from './LyricCard';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import dynamic from 'next/dynamic';
 
@@ -508,23 +509,13 @@ export const MintWizard = React.memo(function MintWizard(props: MintWizardProps)
 
               {recallLines.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold">Remember these lines</p>
-                  {recallLines.map((line, i) => (
-                    <div key={i} className="flex gap-2 p-3 rounded-lg bg-[color:var(--color-foreground)]/5 border border-[color:var(--color-border)] text-sm">
-                      <span className="text-[color:var(--color-primary)] font-bold">{i + 1}.</span>
-                      <span className="flex-1">{line}</span>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
+                  <LyricCard
+                    lines={recallLines}
+                    onCopy={() => {
                       navigator.clipboard.writeText(packedSecret || recallLines.join(' · '));
                       setStatus?.('Recovery card copied.');
                     }}
-                    className="w-full min-h-11 py-2 rounded-lg border border-[color:var(--color-primary)]/30 text-sm font-semibold text-[color:var(--color-primary)]"
-                  >
-                    Copy recovery card
-                  </button>
+                  />
                   <p className="text-xs text-[color:var(--color-muted)]">
                     Keep the spoken lines in your head. Paste the whole card on Recover — Recover needs the complete copy.
                   </p>

@@ -91,7 +91,7 @@ body {
   }
 
   .btn-primary {
-    @apply touch-target min-h-12 w-full rounded-xl font-bold uppercase tracking-widest text-xs;
+    @apply touch-target min-h-12 w-full rounded-xl font-semibold text-sm;
     @apply bg-[color:var(--color-foreground)] text-[color:var(--background)];
     @apply active:scale-[0.98] transition-transform disabled:opacity-50;
   }
