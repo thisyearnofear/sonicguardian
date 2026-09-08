@@ -14,7 +14,7 @@ import { RecoveryFactors } from './RecoveryFactors';
 import { VisualizerPanel } from './VisualizerPanel';
 import { HearAndQuiz } from './HearAndQuiz';
 import { LyricCard } from './LyricCard';
-import { ConnectWalletModal } from './ConnectWalletModal';
+import { BTC_ADDRESS_EVENT, ConnectWalletModal } from './ConnectWalletModal';
 import dynamic from 'next/dynamic';
 
 const StrudelEditor = dynamic(
@@ -161,6 +161,15 @@ function BtcAddressField({
     const payment = addresses.find((a) => a.purpose === 'payment') ?? addresses[0];
     setBtcAddress(payment.address);
   }, [isBtcConnected, addresses, btcAddress, setBtcAddress]);
+
+  useEffect(() => {
+    const onBtc = (event: Event) => {
+      const address = (event as CustomEvent<{ address?: string }>).detail?.address;
+      if (address) setBtcAddress(address);
+    };
+    window.addEventListener(BTC_ADDRESS_EVENT, onBtc);
+    return () => window.removeEventListener(BTC_ADDRESS_EVENT, onBtc);
+  }, [setBtcAddress]);
 
   return (
     <div className="relative group" id="btc-address-input">

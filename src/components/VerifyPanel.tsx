@@ -8,6 +8,7 @@ import { StatusBanner } from './StatusBanner';
 import { FlowState } from './FlowState';
 import { RecoveryFactors } from './RecoveryFactors';
 import { PromotedShareNotice } from './PromotedShareNotice';
+import { BTC_ADDRESS_EVENT } from './ConnectWalletModal';
 import dynamic from 'next/dynamic';
 
 const PrivateRecoveryPanel = dynamic(
@@ -82,6 +83,15 @@ export function VerifyPanel({
   useEffect(() => {
     setRehearsal(readRehearsal());
   }, []);
+
+  useEffect(() => {
+    const onBtc = (event: Event) => {
+      const address = (event as CustomEvent<{ address?: string }>).detail?.address;
+      if (address) setBtcAddress(address);
+    };
+    window.addEventListener(BTC_ADDRESS_EVENT, onBtc);
+    return () => window.removeEventListener(BTC_ADDRESS_EVENT, onBtc);
+  }, [setBtcAddress]);
 
   const useRehearsal = () => {
     if (!rehearsal) return;
